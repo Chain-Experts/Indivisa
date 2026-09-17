@@ -52,7 +52,7 @@ proof1With topology = do
 
   -- Allocation phase: asynchronous, one command per allocation.
   sendCid <- allocateSend cast cash run
-  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  receiptCids <- allocateReceipts cast cash run agreements
 
   -- The agent's 3,000 is now locked, not spent.
   awaitBalance cash cast.payingAgent 7000.0
@@ -172,7 +172,7 @@ proof4With topology = do
 
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
   sendCid <- allocateSend cast cash run
-  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  receiptCids <- allocateReceipts cast cash run agreements
 
   r <- trySettle cast cash runCid (sendCid :: receiptCids)
   case r of
@@ -214,7 +214,7 @@ proof4bWith topology = do
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
   (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
   sendCid <- allocateSend cast cash run
-  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  receiptCids <- allocateReceipts cast cash run agreements
 
   -- A second run over four legs tries to settle with the three-leg allocations.
   let bonusLeg = PaymentLeg with legId = "leg-4"; recipient = cast.alice; amount = 1.0
@@ -243,7 +243,7 @@ proof2With topology = do
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
   sendCid <- allocateSend cast cash run
-  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  receiptCids <- allocateReceipts cast cash run agreements
 
   -- Before settlement: the paying agent sees every allocation of the run.
   agentAllocs <- queryInterface @V2.Allocation cast.payingAgent

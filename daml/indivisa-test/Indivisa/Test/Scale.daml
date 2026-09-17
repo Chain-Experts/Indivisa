@@ -103,7 +103,7 @@ scaleAllocateOnlyWith args = do
 
   -- Allocation phase: 1 + N commands.
   sendCid <- allocateSend cast cash run
-  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  receiptCids <- allocateReceipts cast cash run agreements
   lockedBalance cash cast.payingAgent >>= (=== total)
   pure Prepared with
     cast

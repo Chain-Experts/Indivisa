@@ -6,6 +6,8 @@ module Indivisa.Test.Fixtures where
 
 import DA.Exception (GeneralError(..), fromAnyException)
 import DA.Assert ((===))
+import DA.Foldable (forA_)
+import DA.List (chunksOf)
 import DA.Optional (isNone, isSome)
 import DA.Text qualified as T
 import DA.TextMap qualified as TextMap
@@ -250,10 +252,25 @@ onboard cast cash holder = do
   pure agreementCid
 
 -- | Onboard several holders; returns (holder, agreement) pairs.
+--
+-- The proposals are the paying agent's and go out in batches of fifty per
+-- command (one transaction each). The acceptances are one command per
+-- holder, necessarily: each holder submits its own. That is the whole cost
+-- of onboarding, paid once.
 onboardAll : Cast -> Cash -> [Party] -> Script [(Party, ContractId PaymentAgreement)]
-onboardAll cast cash holders = forA holders $ \h -> do
-  a <- onboard cast cash h
-  pure (h, a)
+onboardAll cast cash holders = do
+  proposals <- fmap concat $ forA (chunksOf 50 holders) $ \batch ->
+    submit cast.payingAgent $ forA batch $ \holder ->
+      createCmd PaymentProposal with
+        payingAgent = cast.payingAgent
+        holder
+        account = basicAccount holder
+        instrument = cash.instrument
+  agreements <- forA (zip holders proposals) $ \(holder, proposal) -> do
+    awaitVisible holder proposal
+    submit holder $ exerciseCmd proposal Accept
+  forA_ agreements (awaitVisible cast.payingAgent)
+  pure (zip holders agreements)
 
 threeLegs : Cast -> [PaymentLeg]
 threeLegs c =

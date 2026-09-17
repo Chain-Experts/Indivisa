@@ -9,8 +9,8 @@ Two kinds of measurement, kept apart:
    us whether the settlement logic is linear in N and where the client falls
    over. Done 17 September 2026, below.
 2. **Participant (LocalNet, then DevNet).** Real transaction bytes, view
-   count, submission-to-commit latency, and the actual ceiling. Pending
-   Phase 0b.
+   count, submission-to-commit latency, and the actual ceiling. Started 17
+   September on LocalNet, section 2.
 
 Everything here is `TestTokenV2` as the cash instrument, one committed send
 allocation carrying all N legs, N receipt allocations created by the paying
@@ -88,22 +88,68 @@ chunk the allocation loop; the paying agent's real client would batch anyway.
 
 ---
 
-## 2. Participant — pending
+## 2. LocalNet, 17 September 2026 — in progress
 
-Same script, pointed at LocalNet (`infra/localnet/`), then DevNet.
+Same scripts, real participants: `infra/localnet/` (Canton 3.5.17, protocol
+version 35, one BFT sequencer, one mediator, five participants in one JVM on
+one workstation, in-memory storage). Registry, agent and each of the three
+holder nodes are separate participants; scale-run holders are spread
+round-robin over the three holder nodes.
 
-Per N to record: transaction size in bytes, view count, submission to commit
-latency, estimated traffic cost, and the failure reason if rejected. Two
-shapes: one send allocation carrying N legs, versus N send allocations. Note
-whether the limit is a hard cap or a latency wall; they imply different
-product answers.
+### Method
 
-| N | Bytes | Views | Latency | Shape | Result |
-|---|---|---|---|---|---|
-| 3 | | | | | |
-| 10 | | | | | |
-| 50 | | | | | |
-| 100 | | | | | |
-| 250 | | | | | |
-| 500 | | | | | |
-| 1000 | | | | | |
+`Indivisa.Test.Scale:scaleWith` with `{"topology":"LocalNet","holders":N}`
+and `--participant-config infra/localnet/participants.json`. The settle's
+submission-to-commit time is bracketed inside the script (`getTime` is wall
+time on a participant). Request size and envelope count come from the
+sequencer's own INFO log line for the agent's submission:
+
+```
+GrpcSequencerService ... 'PAR::agent::...' sends request with id '...'
+  of size 101449 bytes with 7 envelopes.
+```
+
+The settle is the agent's largest request in the run by a wide margin, so it
+is unambiguous. Envelopes are per recipient node (mediator plus the
+participants that must confirm), not per leg; with five participants the
+count stays at 7 whatever N is. On DevNet it grows with the number of
+validators hosting holders.
+
+### Results
+
+| N holders | Allocations settled | Settle request size | Envelopes | Settle, submission to commit | Whole day (sequential client) | Result |
+|---|---|---|---|---|---|---|
+| 3 | 4 | 19.5 KB | 7 | (proofs; not timed) | 40–55 s incl. JVM start | settled |
+| 10 | 11 | 30.4 KB | 7 | within noise of the two-run method | 113 s | settled |
+| 50 | 51 | 101.4 KB | 7 | ~20 s by the two-run method (±10 s) | 453 s | settled |
+| 100 | | | | | | pending |
+| 250 | | | | | | pending |
+| 500 | | | | | | pending |
+| 1000 | | | | | | pending |
+
+### Reading it so far
+
+- **Size is linear: about 1.8 KB per allocation plus ~12 KB.** Extrapolated,
+  500 holders is ~0.9 MB and 1,000 is ~1.8 MB. The sequencer's default
+  `maxRequestPayloadBytes` is 10,485,760, which puts the hard cap near 5,500
+  allocations per batch on this configuration. To be confirmed by hitting it.
+- **The whole day is dominated by the client, not the ledger.** Sequentially,
+  each command costs about a second of round trip on a real synchronizer:
+  55 party allocations and ~210 commands make 7.5 minutes for 50 holders.
+  The paying agent submits every receipt allocation itself, so a real client
+  batches them: fifty exercises per command, one transaction per batch
+  (`Indivisa.Test.Agent.allocateReceipts`, `Fixtures.onboardAll`). The
+  settle is not batched; it is one transaction by design.
+- Party allocation is a topology transaction per party and is the slowest
+  single step (2–3 s each). It is onboarding, paid once, and on DevNet the
+  holders' parties already exist.
+
+### Still to do
+
+- N = 100, 250, 500, 1000 with the in-script settle timing and the batched
+  client.
+- Push N until the sequencer rejects the settle; record the message and the
+  size it names. That is the ceiling.
+- The second shape (N send allocations instead of one) for comparison.
+- Whether the registry participant, which confirms every allocation, is the
+  latency wall: read its confirmation times from `canton.log`.

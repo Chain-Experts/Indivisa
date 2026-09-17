@@ -8,6 +8,8 @@
 -- same Indivisa.Utils functions, so the two must agree.
 module Indivisa.Test.Agent where
 
+import DA.List (chunksOf)
+
 import Daml.Script
 
 import Splice.Api.Token.MetadataV1 (emptyMetadata)
@@ -96,6 +98,38 @@ allocateReceipt cast cash run (holder, agreementCid) = do
         inputHoldingCids = []
         extraArgs = cash.extraArgs
         actors = [holder]
+
+-- | All receipt allocations for a run, in batches. Every exercise is still
+-- one agreement, one holder; what they share is the submission: the paying
+-- agent is the submitter of all of them, so `batchSize` of them go into one
+-- command and land as one transaction. On a real synchronizer each command
+-- costs about a second of round trip (measured 17 Sep), so 500 holders as
+-- 500 commands is eight minutes and as ten batches is under a minute.
+--
+-- Batching does not change what settles: the batch of allocations and the
+-- settlement are still separate transactions, and only the settlement is
+-- atomic.
+allocateReceipts : Cast -> Cash -> DistributionRun -> [(Party, ContractId PaymentAgreement)] -> Script [ContractId V2.Allocation]
+allocateReceipts cast cash run agreements = do
+  now <- requestedAt
+  fmap concat $ forA (chunksOf batchSize agreements) $ \batch ->
+    submit (actAs cast.payingAgent <> disclose cash.rules) $
+      forA batch $ \(holder, agreementCid) ->
+        exerciseCmd agreementCid CreateReceiptAllocation with
+          factoryCid = toInterfaceContractId cash.rulesCid
+          choiceArg = V2.AllocationFactory_Allocate with
+            settlement = runSettlementInfo run
+            allocation = runReceiptAllocationSpec run holder
+            requestedAt = now
+            inputHoldingCids = []
+            extraArgs = cash.extraArgs
+            actors = [holder]
+
+-- | Receipt allocations per command. Fifty keeps each allocation transaction
+-- well under the sequencer's request cap and is the shape a real client
+-- would use; the settle itself is not batched, it is one transaction.
+batchSize : Int
+batchSize = 50
 
 -- ---------------------------------------------------------------------------
 -- Settlement phase: one transaction
