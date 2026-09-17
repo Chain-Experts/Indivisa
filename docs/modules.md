@@ -35,7 +35,7 @@ Indivisa/
 │           ├── Distribution.daml          exists
 │           ├── Register.daml              planned
 │           ├── Entitlement.daml           planned
-│           ├── Scale.daml                 planned
+│           ├── Scale.daml                 exists
 │           └── Demo.daml                  planned
 │
 ├── ui/
@@ -65,7 +65,7 @@ Indivisa/
     ├── modules.md                 this file
     ├── architecture.md
     ├── explainer.html             the story for a beginner, standalone page
-    ├── benchmark.md               proof 5 results
+    ├── benchmark.md               proof 5 results (interpreter done; participant pending)
     └── demo-script.md             shot list for the recording
 ```
 
@@ -101,7 +101,7 @@ example: they are the paying agent's client logic, so they sit in
 | `Distribution.daml` | The proofs, assertions only: batch settles (1), per-holder visibility in single-participant form (2), holders authorise once and the delegation cannot be abused (3), one bad leg settles zero with the rejection recorded (4). |
 | `Register.daml` | Positions, transfers before the record date, the snapshot freezing correctly. |
 | `Entitlement.daml` | The arithmetic. Rounding, the residual, and that legs sum to the announced total exactly. |
-| `Scale.daml` | N = 3 → 1000 harness. Output writes `benchmark.md`. |
+| `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle so the difference is the one transaction. Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file. Results in `benchmark.md`. |
 | `Demo.daml` | Seats the demo: realistic holders, announces the coupon, arms the deliberate failure. |
 
 ## `ui/` — four panes

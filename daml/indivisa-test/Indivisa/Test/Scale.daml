@@ -1,0 +1,154 @@
+-- | Proof 5, script form: the full onboard -> allocate -> settle path for N
+-- holders, one committed send allocation carrying all N legs and N receipt
+-- allocations, settled in one SettleBatch.
+--
+-- What this proves and what it does not. The IDE ledger has no transaction
+-- size limit and no network, so it cannot find the ceiling. It does show
+-- whether the settle path stays linear in N (the standard's utils build sets
+-- and check uniqueness over every leg), and the same script runs unchanged
+-- against a real participant over gRPC, where the ceiling, the bytes and the
+-- latency are read off the participant. See docs/benchmark.md.
+--
+-- Run one size from the standalone runner (static time; see Fixtures):
+--
+--   dpm script --dar .daml/dist/indivisa-test-0.1.0.dar \
+--     --script-name Indivisa.Test.Scale:scale --input-file n.json \
+--     --ide-ledger --static-time
+--
+-- where n.json holds the holder count, e.g. 500. The fixed sizes below run
+-- under `dpm test`; keep them small so the proofs stay quick.
+module Indivisa.Test.Scale where
+
+import DA.Assert ((===))
+import DA.Text qualified as T
+
+import Daml.Script
+
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount)
+
+import Indivisa.Types
+import Indivisa.Model.Distribution
+import Indivisa.Test.Agent
+import Indivisa.Test.Fixtures
+
+-- | What one run tells us. Wall time is measured outside the script.
+data ScaleResult = ScaleResult
+  with
+    holders            : Int
+    legsSettled        : Int
+    allocationsSettled : Int
+    total              : Decimal
+  deriving (Eq, Show)
+
+-- | N holders, N legs, amounts 100 + i so no two legs are alike and the
+-- total is exact.
+scaleLegs : [Party] -> [PaymentLeg]
+scaleLegs holders =
+  [ PaymentLeg with
+      legId = "leg-" <> pad i
+      recipient = h
+      amount = 100.0 + intToDecimal i
+  | (i, h) <- zip [1..length holders] holders  -- Daml is strict; no infinite lists
+  ]
+  where
+    pad i = let s = show i in T.implode (replicate (4 - T.length s) "0") <> s
+
+-- | What the allocation phase leaves behind for the settle.
+data Prepared = Prepared
+  with
+    cast           : Cast
+    cash           : Cash
+    runCid         : ContractId DistributionRun
+    allocationCids : [ContractId V2.Allocation]
+    holders        : [Party]
+    legs           : [PaymentLeg]
+    total          : Decimal
+
+-- | Everything up to the settle: parties, funding, onboarding, the run and
+-- all allocations. Returns what settle needs. Timed on its own so that
+-- (scale n) minus (scaleAllocateOnly n) is the cost of the one transaction.
+scaleAllocateOnly : Int -> Script Prepared
+scaleAllocateOnly n = do
+  (cast, cash) <- setup
+  holders <- forA [1..n] $ \i -> allocateParty ("Holder-" <> show i)
+  let legs = scaleLegs holders
+      total = sum (map (.amount) legs)
+  fund cash cast.payingAgent (total + 1000.0)
+
+  -- Onboarding: N proposals, N acceptances. Shown once in the demo.
+  agreements <- onboardAll cast cash holders
+
+  -- The run.
+  (runCid, run) <- createRun cast cash ("SCALE-" <> show n) legs
+  runTotal run === total
+
+  -- Allocation phase: 1 + N commands.
+  sendCid <- allocateSend cast cash run
+  receiptCids <- forA agreements (allocateReceipt cast cash run)
+  lockedBalance cash cast.payingAgent >>= (=== total)
+  pure Prepared with
+    cast
+    cash
+    runCid
+    allocationCids = sendCid :: receiptCids
+    holders
+    legs
+    total
+
+-- | The paying agent's day, for N holders.
+scale : Int -> Script ScaleResult
+scale n = do
+  Prepared {..} <- scaleAllocateOnly n
+
+  -- Settlement phase: one transaction.
+  (receiptCid, result) <- settle cast cash runCid allocationCids
+  Some receipt <- queryContractId cast.payingAgent receiptCid
+
+  -- Spot checks rather than N queries: first, last and the agent.
+  case (holders, legs) of
+    (first :: _, firstLeg :: _) -> balance cash first >>= (=== firstLeg.amount)
+    _ -> pure ()
+  case (reverse holders, reverse legs) of
+    (lastH :: _, lastLeg :: _) -> balance cash lastH >>= (=== lastLeg.amount)
+    _ -> pure ()
+  balance cash cast.payingAgent >>= (=== 1000.0)
+  lockedBalance cash cast.payingAgent >>= (=== 0.0)
+
+  let r = ScaleResult with
+        holders = n
+        legsSettled = receipt.legsSettled
+        allocationsSettled = length result.allocationSettleResults
+        total = receipt.total
+  r.legsSettled === n
+  r.allocationsSettled === n + 1
+  debug r
+  pure r
+
+-- Fixed sizes for `dpm test`. Larger sizes go through `scale` with an input
+-- file so the test suite stays fast.
+
+scale_003 : Script ()
+scale_003 = do
+  r <- scale 3
+  r.allocationsSettled === 4
+
+scale_010 : Script ()
+scale_010 = do
+  r <- scale 10
+  r.allocationsSettled === 11
+
+scale_050 : Script ()
+scale_050 = do
+  r <- scale 50
+  r.allocationsSettled === 51
+
+-- | Sanity: the leg builder pads ids so they sort, and every recipient is a
+-- distinct basic account.
+scaleLegs_wellFormed : Script ()
+scaleLegs_wellFormed = do
+  ps <- forA [1..12] $ \i -> allocateParty ("H" <> show i)
+  let legs = scaleLegs ps
+  map (.legId) legs === [ "leg-" <> t | t <- ["0001","0002","0003","0004","0005","0006","0007","0008","0009","0010","0011","0012"] ]
+  length (map (basicAccount . (.recipient)) legs) === 12
+  sum (map (.amount) legs) === 1278.0

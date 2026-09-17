@@ -165,8 +165,23 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 - [ ] Still to add: an expired or insufficient **send** allocation as the bad
       leg, once settlement deadlines are in play.
 
-### Proof 5 — where is the ceiling? **KILL SWITCH**
-- [ ] N = 3, 10, 50, 100, 250, 500, 1000. Push past 1000 if it holds.
+### Proof 5 — where is the ceiling? **KILL SWITCH** — script form done, participant form pending
+
+Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
+- [x] N = 3, 10, 50 under `dpm test -p scale`; 250, 500, 1000, 2000 through
+      `dpm script ... Scale:scale --input-file n.json --ide-ledger --static-time`.
+      **All settle.** 2,000 legs, 2,001 allocations, one `SettleBatch`.
+- [x] The settle is **linear**: about 4 ms per leg in the interpreter, flat
+      from 250 to 2000 (`scale n` minus `scaleAllocateOnly n`). Nothing
+      quadratic in the standard's utils at these sizes.
+- [x] One send allocation carrying all N legs works at every N tried, so the
+      batch is N+1 allocations, not 2N.
+- [x] Client limit found and recorded: the script runner overflows its JVM
+      stack at N = 2000 (`forA` over 2,000 submissions); `-Xss64m` lifts it.
+      Client, not ledger. Chunk the loop or keep the flag on LocalNet.
+
+Participant form (needs Phase 0b):
+- [ ] Same script against LocalNet, N = 3 → 1000 and past it.
 - [ ] Per N: transaction size, view count, submission-to-completion latency,
       estimated traffic cost, failure reason if rejected.
 - [ ] Two shapes per N: **one** send allocation carrying N `transferLegSides`,
@@ -179,7 +194,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
       every leg in its instrument.
 - [ ] Note whether the limit is a hard cap or a latency wall. They imply
       different product answers.
-- [ ] Write `docs/benchmark.md`.
+- [ ] Fill in section 2 of `docs/benchmark.md`.
 
 > LocalNet is the right place for this: push to failure without spending real
 > traffic, and control the configuration while you do.
