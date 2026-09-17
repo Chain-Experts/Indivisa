@@ -5,13 +5,17 @@
 module Indivisa.Test.Fixtures where
 
 import DA.Exception (GeneralError(..), fromAnyException)
+import DA.Assert ((===))
 import DA.Optional (isNone, isSome)
+import DA.Text qualified as T
 import DA.TextMap qualified as TextMap
+import DA.Time (milliseconds)
 
 import Daml.Script
 
 import Splice.Api.Token.MetadataV1
 import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.TransferInstructionV2 qualified as V2
 import Splice.TokenStandard.Utils (basicAccount, toAnyContractId)
 import Splice.Testing.Tokens.TestTokenV2 qualified as TestTokenV2
 import Splice.Testing.Tokens.TestTokenV2.Util (tokenRulesContextKey)
@@ -24,8 +28,41 @@ import Indivisa.Model.Distribution
 -- Parties and cash
 -- ---------------------------------------------------------------------------
 
+-- | Where the parties live. The same proofs run on both; only party
+-- allocation differs.
+--
+--   Ide       one in-memory ledger inside dpm test or the script runner
+--   LocalNet  infra/localnet: five participants, one synchronizer, parties
+--             allocated on the participant named for them (see the
+--             participants.json passed with --participant-config)
+data Topology
+  = Ide
+  | LocalNet
+  deriving (Eq, Show)
+
+-- | Allocate a party on the participant it belongs to. On LocalNet the name
+-- carries a time tag so the proofs can be re-run against a ledger that still
+-- holds earlier runs; on the IDE ledger every run starts empty.
+allocateOn : Topology -> Text -> Text -> Script Party
+allocateOn Ide name _ = allocateParty name
+allocateOn LocalNet name participant = do
+  t <- getTime
+  allocatePartyOn (name <> "-" <> timeTag t) (ParticipantName participant)
+  where
+    timeTag t = T.implode (filter (`elem` map show [0..9]) (T.explode (show t)))
+
+-- | Holders in the scale runs are spread round-robin over the three holder
+-- participants, which is what a real coupon run looks like: many holders on
+-- a few custodians' nodes.
+holderParticipant : Int -> Text
+holderParticipant i = case i % 3 of
+  0 -> "alice"
+  1 -> "bob"
+  _ -> "charlie"
+
 data Cast = Cast
   with
+    topology    : Topology
     registry    : Party
     payingAgent : Party
     alice       : Party
@@ -44,13 +81,13 @@ data Cash = Cash
     extraArgs  : ExtraArgs
     rules      : Disclosure
 
-setup : Script (Cast, Cash)
-setup = do
-  registry    <- allocateParty "CashRegistry"
-  payingAgent <- allocateParty "PayingAgent"
-  alice       <- allocateParty "Alice"
-  bob         <- allocateParty "Bob"
-  charlie     <- allocateParty "Charlie"
+setupOn : Topology -> Script (Cast, Cash)
+setupOn topology = do
+  registry    <- allocateOn topology "CashRegistry" "registry"
+  payingAgent <- allocateOn topology "PayingAgent"  "agent"
+  alice       <- allocateOn topology "Alice"        "alice"
+  bob         <- allocateOn topology "Bob"          "bob"
+  charlie     <- allocateOn topology "Charlie"      "charlie"
   let cast = Cast with ..
 
   rulesCid <- submit registry $ createCmd TestTokenV2.TokenRules with admin = registry
@@ -63,21 +100,37 @@ setup = do
         meta = emptyMetadata
   pure (cast, Cash with ..)
 
--- | SIMULATED cash. The registry and the owner jointly create a holding,
--- exactly as Splice's own TestTokenV2 test environment does for fixtures. A
--- production registry mints through its own choice (TokenRules_OfferMint
--- here); nothing proven depends on how the agent was funded.
+setup : Script (Cast, Cash)
+setup = setupOn Ide
+
+-- | SIMULATED cash, minted the way the reference token mints: the registry
+-- offers (TokenRules_OfferMint), the owner accepts the resulting transfer
+-- instruction. Two commands from two parties, which is also why it works
+-- across participants. Nothing proven depends on how the agent was funded.
 fund : Cash -> Party -> Decimal -> Script ()
 fund cash owner amount = do
-  _ <- submit (actAs cash.instrument.admin <> actAs owner) $
-    createCmd TestTokenV2.Token with
-      holding = V2.HoldingView with
-        account = basicAccount owner
-        instrumentId = cash.instrument
-        amount
-        lock = None
-        meta = emptyMetadata
-  pure ()
+  let registry = cash.instrument.admin
+      account = basicAccount owner
+  now <- requestedAt
+  offer <- submit registry $ exerciseCmd cash.rulesCid TestTokenV2.TokenRules_OfferMint with
+    receiver = account
+    amount
+    instrumentId = cash.instrument
+    offeredAt = now
+    receiverConfig = TestTokenV2.AccountConfig with
+      admin = registry
+      account
+      ownerConfig = TestTokenV2.PartyConfig with canInitiate = True; mustApprove = True
+      providerConfig = TestTokenV2.PartyConfig with canInitiate = False; mustApprove = False
+  awaitVisible owner offer.offerCid
+  result <- submit (actAs owner <> disclose cash.rules) $
+    exerciseCmd (toInterfaceContractId @V2.TransferInstruction offer.offerCid)
+      V2.TransferInstruction_Accept with
+        actors = [owner]
+        extraArgs = cash.extraArgs
+  case result.output of
+    V2.TransferInstructionResult_Completed _ -> pure ()
+    _ -> fail "mint offer was not completed on accept"
 
 -- | What a wallet stamps on an allocation request: its clock, now. TestTokenV2
 -- requires ledger time >= requestedAt as a ledger-time bound
@@ -91,6 +144,61 @@ fund cash owner amount = do
 -- Verified 17 Sep 2026; not a Canton behaviour.
 requestedAt : Script Time
 requestedAt = getTime
+
+-- ---------------------------------------------------------------------------
+-- Waiting for other participants
+-- ---------------------------------------------------------------------------
+
+-- | Participants learn of a transaction independently. A script that submits
+-- on one participant and immediately acts on another races the second one:
+-- on LocalNet the first attempt failed with CONTRACT_NOT_FOUND at exactly
+-- that point (17 Sep). So every handoff between parties on different
+-- participants waits, bounded, until the receiving party can see the
+-- contract. On the IDE ledger the first poll succeeds and nothing is slower.
+awaitVisible : (Template t, HasEnsure t) => Party -> ContractId t -> Script ()
+awaitVisible p cid = awaitVisibleLoop p cid 200
+
+awaitVisibleLoop : (Template t, HasEnsure t) => Party -> ContractId t -> Int -> Script ()
+awaitVisibleLoop p cid 0 = fail ("contract never became visible to " <> show p <> ": " <> show cid)
+awaitVisibleLoop p cid n = do
+  r <- queryContractId p cid
+  case r of
+    Some _ -> pure ()
+    None -> do
+      sleep (milliseconds 100)
+      awaitVisibleLoop p cid (n - 1)
+
+-- | The same, through an interface.
+awaitInterface : (Template i, HasInterfaceView i v) => Party -> ContractId i -> Script ()
+awaitInterface p cid = awaitInterfaceLoop p cid 200
+
+awaitInterfaceLoop : (Template i, HasInterfaceView i v) => Party -> ContractId i -> Int -> Script ()
+awaitInterfaceLoop p cid 0 = fail ("interface contract never became visible to " <> show p <> ": " <> show cid)
+awaitInterfaceLoop p cid n = do
+  r <- queryInterfaceContractId p cid
+  case r of
+    Some _ -> pure ()
+    None -> do
+      sleep (milliseconds 100)
+      awaitInterfaceLoop p cid (n - 1)
+
+-- | Wait until a party's unlocked balance is the expected one, then assert
+-- it. Used after a settlement, whose effects reach each holder's participant
+-- a moment after the agent's submission returns.
+awaitBalance : Cash -> Party -> Decimal -> Script ()
+awaitBalance cash p expected = awaitBalanceLoop cash p expected 200
+
+awaitBalanceLoop : Cash -> Party -> Decimal -> Int -> Script ()
+awaitBalanceLoop cash p expected 0 = do
+  actual <- balance cash p
+  actual === expected
+awaitBalanceLoop cash p expected n = do
+  actual <- balance cash p
+  if actual == expected
+    then pure ()
+    else do
+      sleep (milliseconds 100)
+      awaitBalanceLoop cash p expected (n - 1)
 
 -- ---------------------------------------------------------------------------
 -- Balances, through the V2 Holding interface
@@ -136,7 +244,10 @@ onboard cast cash holder = do
     holder
     account = basicAccount holder
     instrument = cash.instrument
-  submit holder $ exerciseCmd proposal Accept
+  awaitVisible holder proposal
+  agreementCid <- submit holder $ exerciseCmd proposal Accept
+  awaitVisible cast.payingAgent agreementCid
+  pure agreementCid
 
 -- | Onboard several holders; returns (holder, agreement) pairs.
 onboardAll : Cast -> Cash -> [Party] -> Script [(Party, ContractId PaymentAgreement)]

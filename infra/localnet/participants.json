@@ -1,0 +1,11 @@
+{
+  "default_participant": { "host": "localhost", "port": 5021 },
+  "participants": {
+    "registry": { "host": "localhost", "port": 5011 },
+    "agent":    { "host": "localhost", "port": 5021 },
+    "alice":    { "host": "localhost", "port": 5031 },
+    "bob":      { "host": "localhost", "port": 5041 },
+    "charlie":  { "host": "localhost", "port": 5051 }
+  },
+  "party_participants": {}
+}

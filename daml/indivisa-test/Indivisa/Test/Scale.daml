@@ -9,18 +9,26 @@
 -- against a real participant over gRPC, where the ceiling, the bytes and the
 -- latency are read off the participant. See docs/benchmark.md.
 --
--- Run one size from the standalone runner (static time; see Fixtures):
+-- IDE ledger, one size (static time; see Fixtures):
 --
 --   dpm script --dar .daml/dist/indivisa-test-0.1.0.dar \
 --     --script-name Indivisa.Test.Scale:scale --input-file n.json \
 --     --ide-ledger --static-time
 --
--- where n.json holds the holder count, e.g. 500. The fixed sizes below run
+-- LocalNet (infra/localnet), one size:
+--
+--   dpm script --dar .daml/dist/indivisa-test-0.1.0.dar \
+--     --script-name Indivisa.Test.Scale:scaleWith --input-file args.json \
+--     --participant-config ../../infra/localnet/participants.json
+--
+-- n.json holds the holder count; args.json holds ScaleArgs. Give the runner
+-- JAVA_TOOL_OPTIONS=-Xss64m above ~1000 holders. The fixed sizes below run
 -- under `dpm test`; keep them small so the proofs stay quick.
 module Indivisa.Test.Scale where
 
 import DA.Assert ((===))
 import DA.Text qualified as T
+import DA.Time (convertRelTimeToMicroseconds, subTime)
 
 import Daml.Script
 
@@ -65,13 +73,23 @@ data Prepared = Prepared
     legs           : [PaymentLeg]
     total          : Decimal
 
+-- | The runner's input: which ledger and how many holders. As JSON for
+-- --input-file: {"topology": "LocalNet", "holders": 500}  (Topology is an enum)
+data ScaleArgs = ScaleArgs
+  with
+    topology : Topology
+    holders  : Int
+  deriving (Eq, Show)
+
 -- | Everything up to the settle: parties, funding, onboarding, the run and
 -- all allocations. Returns what settle needs. Timed on its own so that
--- (scale n) minus (scaleAllocateOnly n) is the cost of the one transaction.
-scaleAllocateOnly : Int -> Script Prepared
-scaleAllocateOnly n = do
-  (cast, cash) <- setup
-  holders <- forA [1..n] $ \i -> allocateParty ("Holder-" <> show i)
+-- (scaleWith args) minus (scaleAllocateOnlyWith args) is the cost of the one
+-- transaction.
+scaleAllocateOnlyWith : ScaleArgs -> Script Prepared
+scaleAllocateOnlyWith args = do
+  let n = args.holders
+  (cast, cash) <- setupOn args.topology
+  holders <- forA [1..n] $ \i -> allocateOn args.topology ("Holder-" <> show i) (holderParticipant i)
   let legs = scaleLegs holders
       total = sum (map (.amount) legs)
   fund cash cast.payingAgent (total + 1000.0)
@@ -97,22 +115,28 @@ scaleAllocateOnly n = do
     total
 
 -- | The paying agent's day, for N holders.
-scale : Int -> Script ScaleResult
-scale n = do
-  Prepared {..} <- scaleAllocateOnly n
+scaleWith : ScaleArgs -> Script ScaleResult
+scaleWith args = do
+  let n = args.holders
+  Prepared {..} <- scaleAllocateOnlyWith args
 
-  -- Settlement phase: one transaction.
+  -- Settlement phase: one transaction. On a real ledger getTime is wall
+  -- time, so the two stamps bracket submission-to-commit of the one
+  -- SettleBatch; on the IDE ledger time is static and the difference is 0.
+  t0 <- getTime
   (receiptCid, result) <- settle cast cash runCid allocationCids
+  t1 <- getTime
+  debug ("settle wall time: " <> show (convertRelTimeToMicroseconds (subTime t1 t0) / 1000) <> " ms for " <> show n <> " legs")
   Some receipt <- queryContractId cast.payingAgent receiptCid
 
   -- Spot checks rather than N queries: first, last and the agent.
   case (holders, legs) of
-    (first :: _, firstLeg :: _) -> balance cash first >>= (=== firstLeg.amount)
+    (first :: _, firstLeg :: _) -> awaitBalance cash first firstLeg.amount
     _ -> pure ()
   case (reverse holders, reverse legs) of
-    (lastH :: _, lastLeg :: _) -> balance cash lastH >>= (=== lastLeg.amount)
+    (lastH :: _, lastLeg :: _) -> awaitBalance cash lastH lastLeg.amount
     _ -> pure ()
-  balance cash cast.payingAgent >>= (=== 1000.0)
+  awaitBalance cash cast.payingAgent 1000.0
   lockedBalance cash cast.payingAgent >>= (=== 0.0)
 
   let r = ScaleResult with
@@ -125,8 +149,15 @@ scale n = do
   debug r
   pure r
 
--- Fixed sizes for `dpm test`. Larger sizes go through `scale` with an input
--- file so the test suite stays fast.
+-- IDE-ledger entry points, by holder count.
+scale : Int -> Script ScaleResult
+scale n = scaleWith (ScaleArgs Ide n)
+
+scaleAllocateOnly : Int -> Script Prepared
+scaleAllocateOnly n = scaleAllocateOnlyWith (ScaleArgs Ide n)
+
+-- Fixed sizes for `dpm test`. Larger sizes go through `scale` or `scaleWith`
+-- with an input file so the test suite stays fast.
 
 scale_003 : Script ()
 scale_003 = do

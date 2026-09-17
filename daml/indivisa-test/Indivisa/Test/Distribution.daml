@@ -39,8 +39,11 @@ import Indivisa.Test.Fixtures
 -- ---------------------------------------------------------------------------
 
 proof1_batchSettles : Script ()
-proof1_batchSettles = do
-  (cast, cash) <- setup
+proof1_batchSettles = proof1With Ide
+
+proof1With : Topology -> Script ()
+proof1With topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
 
@@ -52,18 +55,18 @@ proof1_batchSettles = do
   receiptCids <- forA agreements (allocateReceipt cast cash run)
 
   -- The agent's 3,000 is now locked, not spent.
-  balance cash cast.payingAgent >>= (=== 7000.0)
+  awaitBalance cash cast.payingAgent 7000.0
   lockedBalance cash cast.payingAgent >>= (=== 3000.0)
-  forA_ [cast.alice, cast.bob, cast.charlie] $ \h -> balance cash h >>= (=== 0.0)
+  forA_ [cast.alice, cast.bob, cast.charlie] $ \h -> awaitBalance cash h 0.0
 
   -- Settlement phase: one transaction.
   (receiptCid, result) <- settle cast cash runCid (sendCid :: receiptCids)
   length result.allocationSettleResults === 4
 
-  balance cash cast.alice   >>= (=== 500.0)
-  balance cash cast.bob     >>= (=== 1000.0)
-  balance cash cast.charlie >>= (=== 1500.0)
-  balance cash cast.payingAgent >>= (=== 7000.0)
+  awaitBalance cash cast.alice 500.0
+  awaitBalance cash cast.bob 1000.0
+  awaitBalance cash cast.charlie 1500.0
+  awaitBalance cash cast.payingAgent 7000.0
   lockedBalance cash cast.payingAgent >>= (=== 0.0)
 
   Some receipt <- queryContractId cast.payingAgent receiptCid
@@ -81,8 +84,11 @@ proof1_batchSettles = do
 -- | After onboardAll, every submit below is by the paying agent. Read the
 -- code: there is no holder-side command in either coupon run.
 proof3_holdersAuthoriseOnce : Script ()
-proof3_holdersAuthoriseOnce = do
-  (cast, cash) <- setup
+proof3_holdersAuthoriseOnce = proof3With Ide
+
+proof3With : Topology -> Script ()
+proof3With topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
 
@@ -91,24 +97,27 @@ proof3_holdersAuthoriseOnce = do
   send1 <- allocateSend cast cash run1
   receipts1 <- forA agreements (allocateReceipt cast cash run1)
   _ <- settle cast cash run1Cid (send1 :: receipts1)
-  balance cash cast.alice >>= (=== 500.0)
+  awaitBalance cash cast.alice 500.0
 
   -- Coupon 2. Same agreements, no new holder action. This is the product claim.
   (run2Cid, run2) <- createRun cast cash "ACME-2031-COUPON-02" (threeLegs cast)
   send2 <- allocateSend cast cash run2
   receipts2 <- forA agreements (allocateReceipt cast cash run2)
   _ <- settle cast cash run2Cid (send2 :: receipts2)
-  balance cash cast.alice   >>= (=== 1000.0)
-  balance cash cast.bob     >>= (=== 2000.0)
-  balance cash cast.charlie >>= (=== 3000.0)
-  balance cash cast.payingAgent >>= (=== 4000.0)
+  awaitBalance cash cast.alice 1000.0
+  awaitBalance cash cast.bob 2000.0
+  awaitBalance cash cast.charlie 3000.0
+  awaitBalance cash cast.payingAgent 4000.0
 
 -- | The delegation cannot be abused: the agreement refuses to authorise a
 -- send on the holder's behalf. This is the line in the pitch that says a
 -- holder gives the paying agent the ability to be paid and nothing else.
 proof3_agreementCannotSend : Script ()
-proof3_agreementCannotSend = do
-  (cast, cash) <- setup
+proof3_agreementCannotSend = proof3bWith Ide
+
+proof3bWith : Topology -> Script ()
+proof3bWith topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   fund cash cast.alice 500.0
   aliceAgreement <- onboard cast cash cast.alice
@@ -143,7 +152,7 @@ proof3_agreementCannotSend = do
       let msg = errorText err
       assertMsg ("expected the receipt-only guard, got: " <> msg)
         ("is a receipt leg" `T.isInfixOf` msg)
-  balance cash cast.alice >>= (=== 500.0)
+  awaitBalance cash cast.alice 500.0
 
 -- ---------------------------------------------------------------------------
 -- Proof 4: is it really all or none?
@@ -152,8 +161,11 @@ proof3_agreementCannotSend = do
 -- | One holder has not signed. Nothing moves for anyone; the error names the
 -- missing authorisation; onboarding the holder and retrying pays everyone.
 proof4_allOrNone : Script ()
-proof4_allOrNone = do
-  (cast, cash) <- setup
+proof4_allOrNone = proof4With Ide
+
+proof4With : Topology -> Script ()
+proof4With topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   -- Charlie is not onboarded.
   agreements <- onboardAll cast cash [cast.alice, cast.bob]
@@ -172,10 +184,10 @@ proof4_allOrNone = do
         ("missing authorizations" `T.isInfixOf` msg)
 
   -- Zero of three, not two of three. Every balance exactly as before.
-  balance cash cast.alice   >>= (=== 0.0)
-  balance cash cast.bob     >>= (=== 0.0)
-  balance cash cast.charlie >>= (=== 0.0)
-  balance cash cast.payingAgent >>= (=== 7000.0)
+  awaitBalance cash cast.alice 0.0
+  awaitBalance cash cast.bob 0.0
+  awaitBalance cash cast.charlie 0.0
+  awaitBalance cash cast.payingAgent 7000.0
   lockedBalance cash cast.payingAgent >>= (=== 3000.0)
   Some _ <- queryContractId cast.payingAgent runCid
   receipts <- query @DistributionReceipt cast.payingAgent
@@ -185,16 +197,19 @@ proof4_allOrNone = do
   charlieAgreement <- onboard cast cash cast.charlie
   charlieReceipt <- allocateReceipt cast cash run (cast.charlie, charlieAgreement)
   _ <- settle cast cash runCid (sendCid :: charlieReceipt :: receiptCids)
-  balance cash cast.alice   >>= (=== 500.0)
-  balance cash cast.bob     >>= (=== 1000.0)
-  balance cash cast.charlie >>= (=== 1500.0)
-  balance cash cast.payingAgent >>= (=== 7000.0)
+  awaitBalance cash cast.alice 500.0
+  awaitBalance cash cast.bob 1000.0
+  awaitBalance cash cast.charlie 1500.0
+  awaitBalance cash cast.payingAgent 7000.0
 
 -- | A leg the allocations do not cover is refused too: the transfer legs and
 -- the allocations must match exactly, in both directions.
 proof4_extraLegRefused : Script ()
-proof4_extraLegRefused = do
-  (cast, cash) <- setup
+proof4_extraLegRefused = proof4bWith Ide
+
+proof4bWith : Topology -> Script ()
+proof4bWith topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
   (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
@@ -212,15 +227,18 @@ proof4_extraLegRefused = do
       debug ("proof 4b, rejected batch said: " <> msg)
       assertMsg ("expected 'missing authorizations', got: " <> msg)
         ("missing authorizations" `T.isInfixOf` msg)
-  balance cash cast.alice >>= (=== 0.0)
+  awaitBalance cash cast.alice 0.0
 
 -- ---------------------------------------------------------------------------
 -- Proof 2, single-participant form: does each holder see only its own leg?
 -- ---------------------------------------------------------------------------
 
 proof2_visibility_singleParticipant : Script ()
-proof2_visibility_singleParticipant = do
-  (cast, cash) <- setup
+proof2_visibility_singleParticipant = proof2With Ide
+
+proof2With : Topology -> Script ()
+proof2With topology = do
+  (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
@@ -233,6 +251,8 @@ proof2_visibility_singleParticipant = do
 
   -- Each holder sees exactly one allocation, its own, and nothing about the
   -- other legs: not the other holders' receipts, not the agent's send.
+  -- (Wait for each holder's participant to have received its allocation.)
+  forA_ (zip agreements receiptCids) $ \((holder, _), cid) -> awaitInterface holder cid
   forA_ [(cast.alice, 500.0), (cast.bob, 1000.0), (cast.charlie, 1500.0)] $
     \(holder, expected) -> do
       seen <- queryInterface @V2.Allocation holder
@@ -252,4 +272,4 @@ proof2_visibility_singleParticipant = do
       everything <- queryInterface @V2.Holding holder
       let owners = sort [ v.account | (_, Some v) <- everything ]
       owners === [basicAccount holder]
-      balance cash holder >>= (=== expected)
+      awaitBalance cash holder expected

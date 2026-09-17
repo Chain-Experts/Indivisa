@@ -10,3 +10,6 @@ build/
 !.env.example
 *.log
 .idea/
+
+# LocalNet runtime output
+infra/localnet/log/
