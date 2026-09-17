@@ -4,7 +4,7 @@
 -- This module does NOT implement a token. It drives an existing V2 cash
 -- instrument through SettlementFactory_SettleBatch. The bond is not modelled
 -- here at all; only the cash moves.
-module Indivisa.Distribution.Run where
+module Indivisa.Model.Distribution where
 
 import DA.List (unique)
 
@@ -13,7 +13,7 @@ import Splice.Api.Token.HoldingV2 qualified as V2
 import Splice.Api.Token.AllocationV2 qualified as V2
 
 import Indivisa.Types
-import Indivisa.Distribution.Settlement
+import Indivisa.Utils
 
 -- | The paying agent is the sole signatory and there are NO holder observers.
 -- The earlier scaffold made recipients observers and the visibility proof
@@ -32,7 +32,7 @@ template DistributionRun
 
     ensure
       not (null legs)
-        && all (\l -> l.amount > 0.0) legs
+        && all (\leg -> leg.amount > 0.0) legs
         && unique (map (.legId) legs)
         && agentAccount.owner == Some payingAgent
 

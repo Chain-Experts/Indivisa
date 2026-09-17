@@ -29,8 +29,8 @@ import Splice.Api.Token.AllocationInstructionV2 qualified as V2
 import Splice.TokenStandard.Utils (basicAccount, senderSide)
 
 import Indivisa.Types
-import Indivisa.Distribution.Agreement
-import Indivisa.Distribution.Run
+import Indivisa.Model.Payment
+import Indivisa.Model.Distribution
 import Indivisa.Test.Agent
 import Indivisa.Test.Fixtures
 
@@ -128,7 +128,7 @@ proof3_agreementCannotSend = do
               meta = emptyMetadata
           ]
   r <- trySubmit (actAs cast.payingAgent <> disclose cash.rules) $
-    exerciseCmd aliceAgreement PaymentAgreement_CreateReceiptAllocation with
+    exerciseCmd aliceAgreement CreateReceiptAllocation with
       factoryCid = toInterfaceContractId cash.rulesCid
       choiceArg = V2.AllocationFactory_Allocate with
         settlement = runSettlementInfo run

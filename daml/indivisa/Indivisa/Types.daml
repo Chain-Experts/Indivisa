@@ -1,6 +1,6 @@
 -- | Vocabulary. Plain Daml, no Token Standard V2 here.
 --
--- The V2 mapping happens in Indivisa.Distribution.Settlement.
+-- The V2 mapping happens in Indivisa.Utils.
 module Indivisa.Types where
 
 -- | One holder's share of a distribution.

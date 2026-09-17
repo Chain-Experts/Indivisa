@@ -113,10 +113,12 @@ which is exactly a paying agent's operational view of a coupon run.
 | Module | Holds | Status |
 |---|---|---|
 | `Indivisa.Types` | Vocabulary only. No templates. | `PaymentLeg` built; grows with the model |
-| `Indivisa.Register` | Instrument, positions, record-date snapshot. Plain Daml, no V2. | after the proofs |
-| `Indivisa.Event` | Coupon announcement, rate, dates, status. | after the proofs |
-| `Indivisa.Entitlement` | rate x position x period, rounding policy, the audit record of how each figure was derived. | after the proofs |
-| `Indivisa.Distribution.*` | **The only namespace touching V2.** `Settlement` (our vocabulary in V2 terms), `Agreement` (`PaymentAgreementProposal`, `PaymentAgreement`), `Run` (`DistributionRun.Run_Settle`, `DistributionReceipt`). | **built** |
+| `Indivisa.Model.Register` | Instrument, positions, record-date snapshot. Plain Daml, no V2. | after the proofs |
+| `Indivisa.Model.Event` | Coupon announcement, rate, dates, status. | after the proofs |
+| `Indivisa.Model.Entitlement` | rate x position x period, rounding policy, the audit record of how each figure was derived. | after the proofs |
+| `Indivisa.Utils` | Our vocabulary in V2 terms; `Run_Settle` derives its transfer legs from it. | **built** |
+| `Indivisa.Model.Payment` | The once-only consent: `PaymentProposal`, `PaymentAgreement` with `CreateReceiptAllocation`. Touches V2. | **built** |
+| `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction) and `DistributionReceipt`. Touches V2. | **built** |
 
 Everything else is off-ledger.
 
@@ -196,7 +198,7 @@ Success first, failure second. A failure shown cold reads as a bug.
 | A holder's position or payment | another holder's view |
 | The register | the public |
 | Business logic | the UI |
-| Entitlement arithmetic | anywhere but `Indivisa.Entitlement` |
+| Entitlement arithmetic | anywhere but `Indivisa.Model.Entitlement` |
 | An unlabelled simulated component | the demo |
 
 ---

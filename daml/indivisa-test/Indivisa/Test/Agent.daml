@@ -4,8 +4,8 @@
 -- allocation specifications, submit one allocation per party, then settle.
 -- Nothing on the ledger calls them, which is why they live in the test
 -- package. A UI or daemon reimplements exactly this sequence; the ledger side
--- (Indivisa.Distribution.Run.Run_Settle) derives the transfer legs from the
--- same Indivisa.Distribution.Settlement functions, so the two must agree.
+-- (Indivisa.Model.Distribution.Run_Settle) derives the transfer legs from the
+-- same Indivisa.Utils functions, so the two must agree.
 module Indivisa.Test.Agent where
 
 import Daml.Script
@@ -16,9 +16,9 @@ import Splice.Api.Token.AllocationV2 qualified as V2
 import Splice.Api.Token.AllocationInstructionV2 qualified as V2
 import Splice.TokenStandard.Utils (receiverSide, senderSide)
 
-import Indivisa.Distribution.Agreement
-import Indivisa.Distribution.Run
-import Indivisa.Distribution.Settlement
+import Indivisa.Model.Payment
+import Indivisa.Model.Distribution
+import Indivisa.Utils
 import Indivisa.Test.Fixtures
 
 -- ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ allocateReceipt : Cast -> Cash -> DistributionRun -> (Party, ContractId PaymentA
 allocateReceipt cast cash run (holder, agreementCid) = do
   now <- requestedAt
   submit (actAs cast.payingAgent <> disclose cash.rules) $
-    exerciseCmd agreementCid PaymentAgreement_CreateReceiptAllocation with
+    exerciseCmd agreementCid CreateReceiptAllocation with
       factoryCid = toInterfaceContractId cash.rulesCid
       choiceArg = V2.AllocationFactory_Allocate with
         settlement = runSettlementInfo run

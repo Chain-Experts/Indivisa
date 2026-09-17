@@ -18,14 +18,14 @@ Indivisa/
 │   ├── indivisa/                  package `indivisa` — uploaded to participants
 │   │   ├── daml.yaml
 │   │   └── Indivisa/
-│   │       ├── Types.daml                 exists
-│   │       ├── Register.daml              planned
-│   │       ├── Event.daml                 planned
-│   │       ├── Entitlement.daml           planned
-│   │       └── Distribution/              the V2 boundary, exists
-│   │           ├── Settlement.daml
-│   │           ├── Agreement.daml
-│   │           └── Run.daml
+│   │       ├── Types.daml                 exists; vocabulary, no V2
+│   │       ├── Utils.daml                 exists; our vocabulary in V2 terms
+│   │       ├── Model/
+│   │       │   ├── Payment.daml           exists; the once-only consent (V2)
+│   │       │   ├── Distribution.daml      exists; the run and its settle (V2)
+│   │       │   ├── Register.daml          planned
+│   │       │   ├── Event.daml             planned
+│   │       │   └── Entitlement.daml       planned
 │   │
 │   └── indivisa-test/             package `indivisa-test` — never uploaded
 │       ├── daml.yaml
@@ -74,15 +74,17 @@ Indivisa/
 | Module | Contains | Touches V2 |
 |---|---|---|
 | `Types.daml` | Vocabulary, no templates. `PaymentLeg` today; `Isin`, `RunId`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy` as Phase 2 adds them. | no |
-| `Register.daml` | `Instrument` — ISIN, name, coupon rate, currency, payment dates. `Position` — instrument, holder, quantity. `RegisterSnapshot` — the record-date freeze. The bond is **not** tokenized. | no |
-| `Event.daml` | `CorporateAction` — instrument, kind, rate, record date, payment date, status. Announce, fix record date, cancel. | no |
-| `Entitlement.daml` | rate x position x period. `EntitlementSchedule` recording each holder's amount and the rounding policy applied. The residual is resolved here so the legs total the announced distribution exactly. | no |
-| `Distribution/Settlement.daml` | Our vocabulary in V2 terms: `settlementInfo`, `holderAccount`, `transferLegOf`. Used by the ledger itself (`Run_Settle` derives the transfer legs from these), so anything a client builds must agree with them. | **yes** |
-| `Distribution/Agreement.daml` | `PaymentAgreementProposal` (agent proposes) and `PaymentAgreement` (holder accepts, once). Its one choice lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation` plus admin and instrument checks. | **yes** |
-| `Distribution/Run.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
+| `Utils.daml` | Our vocabulary in V2 terms: `settlementInfo`, `holderAccount`, `transferLegOf`. Used by the ledger itself (`Run_Settle` derives the transfer legs from these), so anything a client builds must agree with them. | **yes** |
+| `Model/Payment.daml` | `PaymentProposal` (agent proposes; holder `Accept`s once, or `Decline`s; agent may `Withdraw`) and `PaymentAgreement`. Its one choice, `CreateReceiptAllocation`, lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation` plus admin and instrument checks. | **yes** |
+| `Model/Distribution.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
+| `Model/Register.daml` | `Instrument` — ISIN, name, coupon rate, currency, payment dates. `Position` — instrument, holder, quantity. `RegisterSnapshot` — the record-date freeze. The bond is **not** tokenized. | no |
+| `Model/Event.daml` | `CorporateAction` — instrument, kind, rate, record date, payment date, status. Announce, fix record date, cancel. | no |
+| `Model/Entitlement.daml` | rate x position x period. `EntitlementSchedule` recording each holder's amount and the rounding policy applied. The residual is resolved here so the legs total the announced distribution exactly. | no |
 
-**One namespace knows about Token Standard V2: `Indivisa.Distribution.*`.** If
-V2 changes, those three files change and nothing else.
+**Token Standard V2 is touched by `Indivisa.Utils` and `Indivisa.Model.*`, and
+nothing else.** `Types` and the future `Register`, `Event` and `Entitlement`
+are plain Daml. If V2 changes, `Utils`, `Model/Payment` and
+`Model/Distribution` change.
 
 Rule for what lives in the model: only what the ledger executes or what the
 ledger's own choices call. Functions used solely by scripts belong in the test

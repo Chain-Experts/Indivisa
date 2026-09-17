@@ -7,7 +7,7 @@
 -- (Indivisa.Test.Agent); nothing on the ledger calls them.
 --
 -- Verified against canton-network/splice tag 0.8.1, 17 September 2026.
-module Indivisa.Distribution.Settlement
+module Indivisa.Utils
   ( settlementInfo
   , holderAccount
   , transferLegOf

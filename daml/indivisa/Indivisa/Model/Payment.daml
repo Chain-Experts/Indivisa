@@ -14,7 +14,7 @@
 -- Verified against canton-network/splice tag 0.8.1, 17 September 2026.
 -- Reference: CIP-0112, approved 2026-06-12.
 -- https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md
-module Indivisa.Distribution.Agreement where
+module Indivisa.Model.Payment where
 
 import DA.Foldable (forA_)
 
@@ -25,7 +25,7 @@ import Splice.TokenStandard.Utils (ensureIsReceiptAllocation, require)
 
 -- | The onboarding step. The paying agent proposes; the holder accepts once.
 -- This is the single click a holder ever makes, and the demo shows it once.
-template PaymentAgreementProposal
+template PaymentProposal
   with
     payingAgent : Party
     holder      : Party
@@ -37,15 +37,15 @@ template PaymentAgreementProposal
 
     ensure account.owner == Some holder
 
-    choice PaymentAgreementProposal_Accept : ContractId PaymentAgreement
+    choice Accept : ContractId PaymentAgreement
       controller holder
       do create PaymentAgreement with ..
 
-    choice PaymentAgreementProposal_Decline : ()
+    choice Decline : ()
       controller holder
       do pure ()
 
-    choice PaymentAgreementProposal_Withdraw : ()
+    choice Withdraw : ()
       controller payingAgent
       do pure ()
 
@@ -71,7 +71,7 @@ template PaymentAgreement
     -- | Create a receipt allocation for the holder. The paying agent is the
     -- controller; the holder's authority comes from its signature on this
     -- contract and reaches the factory call because actors = [holder].
-    nonconsuming choice PaymentAgreement_CreateReceiptAllocation : ContractId V2.Allocation
+    nonconsuming choice CreateReceiptAllocation : ContractId V2.Allocation
       with
         factoryCid : ContractId V2.AllocationFactory
         choiceArg  : V2.AllocationFactory_Allocate
