@@ -1,0 +1,4 @@
+# Keep the repository LF on every platform; Daml, YAML and Markdown are LF here.
+* text=auto eol=lf
+*.dar binary
+*.png binary

@@ -1,0 +1,12 @@
+.daml/
+*.dar
+!daml/dars/*.dar
+target/
+node_modules/
+dist/
+build/
+*.env
+.env.*
+!.env.example
+*.log
+.idea/

@@ -1,0 +1,4 @@
+# dpm build --all builds both packages below, in dependency order.
+packages:
+  - daml/indivisa
+  - daml/indivisa-test

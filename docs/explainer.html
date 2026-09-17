@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indivisa in Plain English</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F6F7F3;
+    --ink: #1B2622;
+    --muted: #5C6964;
+    --line: #C9D3CD;
+    --ledger: #1E6B48;
+    --ledger-soft: #DDEBE2;
+    --stub: #B9862A;
+    --stub-soft: #F3E9D2;
+    --hidden: #E4E8E5;
+    --hidden-stripe: #CFD6D2;
+    --display: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #121815;
+      --ink: #E4EAE6;
+      --muted: #96A39C;
+      --line: #2C3833;
+      --ledger: #57B784;
+      --ledger-soft: #1B2823;
+      --stub: #D2A24A;
+      --stub-soft: #2A2317;
+      --hidden: #1A211E;
+      --hidden-stripe: #263029;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #121815;
+    --ink: #E4EAE6;
+    --muted: #96A39C;
+    --line: #2C3833;
+    --ledger: #57B784;
+    --ledger-soft: #1B2823;
+    --stub: #D2A24A;
+    --stub-soft: #2A2317;
+    --hidden: #1A211E;
+    --hidden-stripe: #263029;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.6;
+    padding-inline: 20px;
+    padding-block: 0 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 68ch; margin: 0 auto; }
+  .wide { max-width: 900px; margin-inline: auto; }
+
+  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.5rem, 3.6vw, 2rem); font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  h3 { font-size: 1.15rem; font-weight: 700; line-height: 1.25; }
+  p { margin: 0; }
+  p + p { margin-top: 1em; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ledger);
+    font-weight: 500;
+  }
+
+  header.masthead { padding-block: 56px 8px; display: grid; gap: 14px; }
+  .standfirst { font-size: 1.2rem; line-height: 1.5; color: var(--ink); max-width: 60ch; }
+  .standfirst strong { color: var(--ledger); }
+
+  section { padding-block: 40px 0; display: grid; gap: 16px; }
+  section > .eyebrow { margin-bottom: -6px; }
+  .rule { border: 0; border-top: 1px solid var(--line); margin: 44px 0 0; }
+
+  ol.promises { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+
+  /* --- The bond certificate ------------------------------------------- */
+  figure { margin: 8px 0 0; display: grid; gap: 12px; }
+  figcaption { font-size: 0.95rem; color: var(--muted); line-height: 1.5; max-width: 62ch; }
+  .certificate {
+    border: 1px solid var(--ink);
+    outline: 3px double var(--ink);
+    outline-offset: 4px;
+    margin: 6px;
+    background: var(--paper);
+    display: grid;
+  }
+  .cert-body { padding: 22px 24px 18px; display: grid; gap: 10px; }
+  .cert-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .cert-title { font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: 0.02em; text-transform: uppercase; }
+  .cert-no { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+  .cert-amount { font-family: var(--display); font-weight: 800; font-size: clamp(2.4rem, 8vw, 3.6rem); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .cert-terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 20px; margin-top: 4px; }
+  .cert-terms div { display: grid; gap: 2px; }
+  .cert-terms dt { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .cert-terms dd { margin: 0; font-weight: 600; }
+  .cert-fine { font-size: 0.92rem; color: var(--muted); font-style: italic; }
+  .stubs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 2px dashed var(--line);
+    background: var(--stub-soft);
+  }
+  .stub {
+    position: relative;
+    padding: 12px 12px 12px 14px;
+    border-left: 2px dashed var(--line);
+    display: grid;
+    gap: 3px;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    line-height: 1.35;
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .stub:first-child { border-left: 0; }
+  .stub .lbl { color: var(--stub); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.66rem; }
+  .stub .amt { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stub.paid { opacity: 0.55; }
+  .stub.paid::after {
+    content: "CUT OFF · PAID";
+    position: absolute;
+    inset: auto -6px 8px auto;
+    transform: rotate(-8deg);
+    border: 2px solid var(--stub);
+    color: var(--stub);
+    padding: 2px 7px;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    background: var(--paper);
+  }
+  @media (max-width: 560px) {
+    .stubs { grid-template-columns: repeat(2, 1fr); }
+    .stub:nth-child(3) { border-left: 0; border-top: 2px dashed var(--line); }
+    .stub:nth-child(4) { border-top: 2px dashed var(--line); }
+  }
+
+  /* --- The cast ------------------------------------------------------- */
+  .cast { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 4px; }
+  .cast article {
+    border-top: 2px solid var(--ledger);
+    padding: 12px 0 4px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .cast h3 { color: var(--ink); }
+  .cast p { font-size: 1rem; line-height: 1.5; }
+  .cast .sees { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+  .cast .sees b { color: var(--ledger); font-weight: 500; }
+  @media (max-width: 600px) { .cast { grid-template-columns: 1fr; } }
+
+  /* --- The words ------------------------------------------------------ */
+  dl.words { margin: 4px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; align-items: baseline; }
+  dl.words dt { font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
+  dl.words dd { margin: 0; font-size: 1rem; line-height: 1.5; }
+  @media (max-width: 520px) {
+    dl.words { grid-template-columns: 1fr; gap: 2px; }
+    dl.words dd { margin-bottom: 10px; }
+  }
+
+  /* --- The steps ------------------------------------------------------ */
+  ol.steps { list-style: none; margin: 4px 0 0; padding: 0; counter-reset: step; display: grid; gap: 22px; }
+  ol.steps li { counter-increment: step; display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: start; }
+  ol.steps li::before {
+    content: counter(step);
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--ledger);
+    padding-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  ol.steps li > div { display: grid; gap: 4px; }
+  ol.steps h3 { font-size: 1.12rem; }
+  ol.steps p { font-size: 1rem; line-height: 1.5; }
+  ol.steps .callout {
+    margin-top: 6px;
+    background: var(--ledger-soft);
+    border-left: 3px solid var(--ledger);
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* --- Who sees what -------------------------------------------------- */
+  .pages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 4px; }
+  .ledgerpage {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    display: grid;
+    align-content: start;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+  .ledgerpage .owner {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--ledger-soft);
+    color: var(--ledger);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+  }
+  .ledgerpage .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .ledgerpage .row:last-child { border-bottom: 0; }
+  .ledgerpage .row .who { color: var(--ink); }
+  .ledgerpage .row .amt { color: var(--ink); font-weight: 500; }
+  .ledgerpage .row.mine { background: var(--ledger-soft); }
+  .ledgerpage .row.mine .amt { color: var(--ledger); }
+  .ledgerpage .row.gone {
+    grid-template-columns: 1fr;
+    background: repeating-linear-gradient(135deg, var(--hidden) 0 6px, var(--hidden-stripe) 6px 8px);
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.72rem;
+  }
+  .ledgerpage .row.more { color: var(--muted); grid-template-columns: 1fr; }
+  @media (max-width: 680px) { .pages { grid-template-columns: 1fr; } }
+
+  .closing { font-size: 1.15rem; line-height: 1.55; }
+  .closing strong { color: var(--ledger); }
+
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 0.74rem; color: var(--muted); line-height: 1.6; }
+</style>
+
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">A one-page explainer</div>
+    <h1>Indivisa in Plain English</h1>
+    <p class="standfirst">A company borrows money from a lot of people. Every year it owes them all a small thank-you payment. Indivisa pays them all with <strong>one button</strong>, all at the same instant, and <strong>nobody sees anyone else's line</strong>. Here is the whole story, from the very start.</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">Part one · Someone needs money</div>
+    <h2>Northwind Rail wants to build a train line</h2>
+    <p>It will cost $50 million. No single bank wants to lend that much to one company, so Northwind does what companies and governments have done for hundreds of years: it borrows a little from a lot of people.</p>
+    <p>It creates 50,000 IOUs of $1,000 each. Anyone can buy one. Buy one and you have lent Northwind $1,000. In return, Northwind promises you two things:</p>
+    <ol class="promises">
+      <li>Every year on 1 December, it pays you a thank-you of <strong>$40</strong>. That is 4% of your $1,000.</li>
+      <li>On 1 December 2031, it gives your <strong>$1,000</strong> back.</li>
+    </ol>
+    <p>That IOU is called a <strong>bond</strong>. Whoever holds it is a <strong>holder</strong>. Northwind, the borrower, is the <strong>issuer</strong>. In our story the 50,000 bonds end up with about 500 holders: some people own one bond, some pension funds own hundreds.</p>
+  </section>
+
+  <figure class="wide">
+    <div class="certificate" aria-label="A paper bond certificate with four coupon stubs along the bottom">
+      <div class="cert-body">
+        <div class="cert-head">
+          <div class="cert-title">Northwind Rail · 4% Bond</div>
+          <div class="cert-no">No. 03 417 of 50 000</div>
+        </div>
+        <div class="cert-amount">$1,000</div>
+        <dl class="cert-terms">
+          <div><dt>Borrowed from</dt><dd>The holder of this paper</dd></div>
+          <div><dt>Thank-you each year</dt><dd>$40, every 1 December</dd></div>
+          <div><dt>Paid back in full</dt><dd>1 December 2031</dd></div>
+        </dl>
+        <p class="cert-fine">Northwind Rail owes the holder of this certificate one thousand dollars, and promises the payments printed on the tickets below.</p>
+      </div>
+      <div class="stubs">
+        <div class="stub paid"><span class="lbl">Coupon 1</span><span>1 Dec 2027</span><span class="amt">$40</span></div>
+        <div class="stub"><span class="lbl">Coupon 2</span><span>1 Dec 2028</span><span class="amt">$40</span></div>
+        <div class="stub"><span class="lbl">Coupon 3</span><span>1 Dec 2029</span><span class="amt">$40</span></div>
+        <div class="stub"><span class="lbl">Coupon 4</span><span>1 Dec 2030</span><span class="amt">$40</span></div>
+      </div>
+    </div>
+    <figcaption>Old bonds were paper. Along the bottom ran a row of little tickets, one per year. On payday you cut one off and took it to a bank for your money. The ticket was called the <strong>coupon</strong>. The paper is long gone; the word stayed.</figcaption>
+  </figure>
+
+  <section>
+    <div class="eyebrow">Part two · The thank-you payment</div>
+    <h2>1 December comes round</h2>
+    <p>Northwind now owes $40 for every one of its 50,000 bonds. That is $2 million, going out to 500 different holders, on one day.</p>
+    <p>Northwind does not do this itself. It hires a bank, the <strong>paying agent</strong>, and sends it the $2 million. The paying agent looks at the <strong>register</strong>, the list of who holds how many bonds, works out what each holder is owed, and pays them.</p>
+    <p>Today that means spreadsheets, files sent from bank to bank, and a lot of checking. Mistakes are common enough that the industry has a number for them: its own research says roughly 3 to 10 in every 100 of these events go wrong somewhere, and fixing them costs a typical bank millions a year.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">The cast</div>
+    <h2>Who is who</h2>
+    <div class="cast">
+      <article>
+        <h3>The issuer</h3>
+        <p>Northwind Rail. It borrowed the money and owes the coupon. On payday it sends one lump sum to the paying agent and its job is done.</p>
+        <div class="sees">Sees: <b>its own payment</b> to the paying agent</div>
+      </article>
+      <article>
+        <h3>The holders</h3>
+        <p>Maya, Omar, the Pine Pension Fund and 497 others. They lent the money. Each is owed a coupon. How much they lent is nobody else's business.</p>
+        <div class="sees">Sees: <b>only their own line</b></div>
+      </article>
+      <article>
+        <h3>The paying agent</h3>
+        <p>The bank Northwind hired to hand out the money. It reads the register, does the maths, and presses the button.</p>
+        <div class="sees">Sees: <b>the whole list</b>, because that is its job</div>
+      </article>
+      <article>
+        <h3>The register</h3>
+        <p>Not a person: the list. Who holds how many bonds, frozen on an agreed day (the <em>record date</em>) so everyone agrees exactly who gets paid.</p>
+        <div class="sees">Kept private. <b>Never published.</b></div>
+      </article>
+      <article>
+        <h3>The cash registry</h3>
+        <p>The system that runs the money itself, a bit like the central bank behind a currency. It confirms every movement of its own currency.</p>
+        <div class="sees">Sees: <b>every movement of its currency</b>, nothing else</div>
+      </article>
+      <article>
+        <h3>The ledger (Canton)</h3>
+        <p>The shared record book everyone trusts because nobody can secretly change it. Its special trick: each person only sees the pages that concern them.</p>
+        <div class="sees">Shows each party <b>only its own pages</b></div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The words</div>
+    <h2>Six words that carry the whole thing</h2>
+    <dl class="words">
+      <dt>Bond</dt>
+      <dd>An IOU. A big loan chopped into thousands of equal pieces so many people can each lend a bit.</dd>
+      <dt>Coupon</dt>
+      <dd>The yearly thank-you payment on a bond. Named after the paper tickets you used to cut off.</dd>
+      <dt>Corporate action</dt>
+      <dd>Any event where a company does something to everyone who holds its bonds or shares at once: paying a coupon, paying a dividend, paying the loan back. Coupons are our example; the others work the same way.</dd>
+      <dt>Payment, or leg</dt>
+      <dd>One holder's slice of the payout. "Maya's leg" is the $40 going to Maya.</dd>
+      <dt>Transaction</dt>
+      <dd>One entry in the record book. Normally one entry means one payment. A <strong>batch</strong> is many payments packed into one entry.</dd>
+      <dt>Atomic</dt>
+      <dd>All or nothing. Either the whole batch goes into the book, or none of it does. Never half.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <div class="eyebrow">The steps</div>
+    <h2>How one coupon gets paid</h2>
+    <ol class="steps">
+      <li><div>
+        <h3>Sign up, once</h3>
+        <p>Each holder signs one agreement with the paying agent. It is like giving your bank details to a new employer. After this, the holder never has to do anything again, for this coupon or any future one.</p>
+      </div></li>
+      <li><div>
+        <h3>Payday is announced</h3>
+        <p>Northwind says: "On 1 December we pay $40 per bond to everyone on the register as of 15 November."</p>
+      </div></li>
+      <li><div>
+        <h3>The paying agent does the maths</h3>
+        <p>It reads the register and works out each holder's amount. It checks that all the pennies add up to exactly the $2 million Northwind sent. If they are off by one cent, nothing goes out.</p>
+        <div class="callout">Maya · 1 bond · $40<br>Omar · 5 bonds · $200<br>Pine Pension Fund · 310 bonds · $12,400</div>
+      </div></li>
+      <li><div>
+        <h3>The money is lined up</h3>
+        <p>For each holder, the paying agent sets aside the exact amount and, using the sign-up from step 1, marks it "ready to be received by Maya". This happens holder by holder in the background. It can take a while, and that is fine.</p>
+      </div></li>
+      <li><div>
+        <h3>One button</h3>
+        <p>The paying agent sends a single instruction to the ledger: <em>pay all of these, now.</em> That is one entry in the record book, however many holders there are.</p>
+      </div></li>
+      <li><div>
+        <h3>All or nothing</h3>
+        <p>If even one payment cannot go through, say one holder never signed up, the ledger throws out the whole batch. Nobody is paid, nothing is half done. The paying agent fixes the problem and presses again.</p>
+      </div></li>
+      <li><div>
+        <h3>Everyone checks their own page</h3>
+        <p>Maya sees $40 arrived. She cannot see Omar's $200 or the Pine Fund's $12,400. She cannot even see that they exist.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="wide">
+    <div class="eyebrow">Who sees what</div>
+    <h2>The same payday, on three different pages</h2>
+    <div class="pages">
+      <div class="ledgerpage" aria-label="The paying agent's page">
+        <div class="owner">Paying agent's page</div>
+        <div class="row"><span class="who">→ Maya</span><span class="amt">$40</span></div>
+        <div class="row"><span class="who">→ Omar</span><span class="amt">$200</span></div>
+        <div class="row"><span class="who">→ Pine Pension Fund</span><span class="amt">$12,400</span></div>
+        <div class="row more">… and 497 more, every one of them</div>
+      </div>
+      <div class="ledgerpage" aria-label="Maya's page">
+        <div class="owner">Maya's page</div>
+        <div class="row mine"><span class="who">→ Maya</span><span class="amt">$40</span></div>
+        <div class="row gone">nothing else here</div>
+        <div class="row gone">nothing else here</div>
+        <div class="row gone">nothing else here</div>
+      </div>
+      <div class="ledgerpage" aria-label="Omar's page">
+        <div class="owner">Omar's page</div>
+        <div class="row gone">nothing else here</div>
+        <div class="row mine"><span class="who">→ Omar</span><span class="amt">$200</span></div>
+        <div class="row gone">nothing else here</div>
+        <div class="row gone">nothing else here</div>
+      </div>
+    </div>
+    <p style="max-width:68ch; margin-inline:auto; font-size:1rem; color:var(--muted);">The striped rows are not "hidden" data. On Maya's page they simply do not exist. There is nothing to hack, leak or accidentally forward.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <div class="eyebrow">Why this needs Canton</div>
+    <h2>On a normal blockchain, everything is public</h2>
+    <p class="closing">The moment the coupon was paid, the whole register, who lent how much, would be on the internet for anyone to read. That is against the law in most places and embarrassing everywhere. Canton lets one bank pay five hundred people in one entry while each of them sees only their own line. <strong>That is the whole point of Indivisa.</strong></p>
+  </section>
+
+  <footer>
+    Indivisa is being built by Chain-Experts for HackCanton Season 3, September to October 2026. Northwind Rail, Maya, Omar and the Pine Pension Fund are made up. The error-rate figure comes from Canton Network's own post-trade research and covers all corporate actions, not just bond coupons.
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,460 @@
+-- | Proofs 1, 2, 3 and 4 as executable assertions against TestTokenV2, the
+-- CIP-0112 reference cash token, in pure Daml Script. No network.
+--
+-- Proof 2 here is the single-participant form. Daml Script's queries are
+-- party-scoped, which proves that a party's own queries return only its own
+-- contracts. It does NOT prove multi-participant projection. The claim in
+-- the pitch rests on the four-participant run in Phase 0b; until then these
+-- assertions are necessary but not sufficient, and this comment stays.
+--
+-- Proof 5 (the ceiling) needs a real participant to read sizes and latency
+-- off, and lives in Indivisa.Test.Scale once LocalNet is up.
+
+module Indivisa.Test.Distribution where
+
+import DA.Assert ((===))
+import DA.Exception (GeneralError(..), fromAnyException)
+import DA.Foldable (forA_)
+import DA.List (sort)
+import DA.Optional (isNone, isSome)
+import DA.Text qualified as T
+import DA.TextMap qualified as TextMap
+
+import Daml.Script
+
+import Splice.Api.Token.MetadataV1
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.Api.Token.AllocationInstructionV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount, senderSide, toAnyContractId)
+import Splice.Testing.Tokens.TestTokenV2 qualified as TestTokenV2
+import Splice.Testing.Tokens.TestTokenV2.Util (tokenRulesContextKey)
+
+import Indivisa.Distribution
+
+-- ---------------------------------------------------------------------------
+-- Fixture
+-- ---------------------------------------------------------------------------
+
+data Cast = Cast
+  with
+    registry    : Party
+    payingAgent : Party
+    alice       : Party
+    bob         : Party
+    charlie     : Party
+
+-- | The cash instrument as the paying agent's client sees it: the registry's
+-- factory contract (disclosed, so non-signatories can exercise it), the
+-- instrument id, and the registry's choice context. In production the last
+-- two come from the registry's off-ledger API; TestTokenV2 wants exactly one
+-- entry, its own rules contract.
+data Cash = Cash
+  with
+    rulesCid   : ContractId TestTokenV2.TokenRules
+    instrument : V2.InstrumentId
+    extraArgs  : ExtraArgs
+    rules      : Disclosure
+
+setup : Script (Cast, Cash)
+setup = do
+  registry    <- allocateParty "CashRegistry"
+  payingAgent <- allocateParty "PayingAgent"
+  alice       <- allocateParty "Alice"
+  bob         <- allocateParty "Bob"
+  charlie     <- allocateParty "Charlie"
+  let cast = Cast with ..
+
+  rulesCid <- submit registry $ createCmd TestTokenV2.TokenRules with admin = registry
+  Some rules <- queryDisclosure registry rulesCid
+  let instrument = V2.InstrumentId with admin = registry; id = "USD"
+      extraArgs = ExtraArgs with
+        context = ChoiceContext with
+          values = TextMap.fromList
+            [(tokenRulesContextKey, AV_ContractId (toAnyContractId rulesCid))]
+        meta = emptyMetadata
+  pure (cast, Cash with ..)
+
+-- | SIMULATED cash. The registry and the owner jointly create a holding,
+-- exactly as Splice's own TestTokenV2 test environment does for fixtures. A
+-- production registry mints through its own choice (TokenRules_OfferMint
+-- here); nothing proven below depends on how the agent was funded.
+fund : Cash -> Party -> Decimal -> Script ()
+fund cash owner amount = do
+  _ <- submit (actAs cash.instrument.admin <> actAs owner) $
+    createCmd TestTokenV2.Token with
+      holding = V2.HoldingView with
+        account = basicAccount owner
+        instrumentId = cash.instrument
+        amount
+        lock = None
+        meta = emptyMetadata
+  pure ()
+
+-- | Holdings of a party's own basic account, through the V2 Holding
+-- interface. That is the strong form: the query does not know our templates.
+holdings : Cash -> Party -> Script [(ContractId V2.Holding, V2.HoldingView)]
+holdings cash p = do
+  hs <- queryInterface @V2.Holding p
+  pure
+    [ (cid, v)
+    | (cid, Some v) <- hs
+    , v.account == basicAccount p
+    , v.instrumentId == cash.instrument
+    ]
+
+balance : Cash -> Party -> Script Decimal
+balance cash p = do
+  hs <- holdings cash p
+  pure $ sum [ v.amount | (_, v) <- hs, isNone v.lock ]
+
+lockedBalance : Cash -> Party -> Script Decimal
+lockedBalance cash p = do
+  hs <- holdings cash p
+  pure $ sum [ v.amount | (_, v) <- hs, isSome v.lock ]
+
+unlockedHoldingCids : Cash -> Party -> Script [ContractId V2.Holding]
+unlockedHoldingCids cash p = do
+  hs <- holdings cash p
+  pure [ cid | (cid, v) <- hs, isNone v.lock ]
+
+-- | What a wallet stamps on an allocation request: its clock, now. TestTokenV2
+-- requires ledger time >= requestedAt as a ledger-time bound
+-- (DA.Assert.assertDeadlineExceeded), which a participant satisfies because it
+-- assigns ledger time at submission.
+--
+-- Runner note: dpm test (static time) passes. The standalone runner against
+-- the IDE ledger must be given --static-time; in its wall-clock mode getTime
+-- returns wall time while ledger-time bounds are checked against a static
+-- clock, so even a stamp a day in the past is "strictly before" ledger time.
+-- Verified 17 Sep 2026; not a Canton behaviour.
+requestedAt : Script Time
+requestedAt = getTime
+
+-- | The onboarding step. Paying agent proposes, holder accepts: the one and
+-- only command a holder ever submits.
+onboard : Cast -> Cash -> Party -> Script (ContractId PaymentAgreement)
+onboard cast cash holder = do
+  proposal <- submit cast.payingAgent $ createCmd PaymentAgreementProposal with
+    payingAgent = cast.payingAgent
+    holder
+    account = basicAccount holder
+    instrument = cash.instrument
+  submit holder $ exerciseCmd proposal PaymentAgreementProposal_Accept
+
+threeLegs : Cast -> [PaymentLeg]
+threeLegs c =
+  [ PaymentLeg with legId = "leg-1"; recipient = c.alice;   amount =  500.0
+  , PaymentLeg with legId = "leg-2"; recipient = c.bob;     amount = 1000.0
+  , PaymentLeg with legId = "leg-3"; recipient = c.charlie; amount = 1500.0
+  ]
+
+createRun : Cast -> Cash -> Text -> [PaymentLeg] -> Script (ContractId DistributionRun, DistributionRun)
+createRun cast cash runId legs = do
+  let run = DistributionRun with
+        payingAgent = cast.payingAgent
+        runId
+        instrument = cash.instrument
+        agentAccount = basicAccount cast.payingAgent
+        legs
+  cid <- submit cast.payingAgent $ createCmd run
+  pure (cid, run)
+
+-- | The paying agent funds every leg of the run with one committed allocation.
+allocateSend : Cast -> Cash -> DistributionRun -> Script (ContractId V2.Allocation)
+allocateSend cast cash run = do
+  now <- requestedAt
+  inputHoldingCids <- unlockedHoldingCids cash cast.payingAgent
+  result <- submit (actAs cast.payingAgent <> disclose cash.rules) $
+    exerciseCmd (toInterfaceContractId @V2.AllocationFactory cash.rulesCid)
+      V2.AllocationFactory_Allocate with
+        settlement = runSettlementInfo run
+        allocation = runSendAllocationSpec run
+        requestedAt = now
+        inputHoldingCids
+        extraArgs = cash.extraArgs
+        actors = [cast.payingAgent]
+  case result.output of
+    V2.AllocationInstructionResult_Completed cid -> pure cid
+    _ -> fail "send allocation did not complete"
+
+-- | The paying agent creates a holder's receipt allocation under the
+-- agreement. Note who submits: the paying agent, alone.
+allocateReceipt : Cast -> Cash -> DistributionRun -> (Party, ContractId PaymentAgreement) -> Script (ContractId V2.Allocation)
+allocateReceipt cast cash run (holder, agreementCid) = do
+  now <- requestedAt
+  submit (actAs cast.payingAgent <> disclose cash.rules) $
+    exerciseCmd agreementCid PaymentAgreement_CreateReceiptAllocation with
+      factoryCid = toInterfaceContractId cash.rulesCid
+      choiceArg = V2.AllocationFactory_Allocate with
+        settlement = runSettlementInfo run
+        allocation = runReceiptAllocationSpec run holder
+        requestedAt = now
+        inputHoldingCids = []
+        extraArgs = cash.extraArgs
+        actors = [holder]
+
+-- | One transaction.
+trySettle
+  : Cast -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
+  -> Script (Either SubmitError (ContractId DistributionReceipt, V2.SettlementFactory_SettleBatchResult))
+trySettle cast cash runCid allocationCids =
+  trySubmit (actAs cast.payingAgent <> disclose cash.rules) $
+    exerciseCmd runCid Run_Settle with
+      factoryCid = toInterfaceContractId cash.rulesCid
+      allocationCids
+      extraArgs = cash.extraArgs
+
+settle
+  : Cast -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
+  -> Script (ContractId DistributionReceipt, V2.SettlementFactory_SettleBatchResult)
+settle cast cash runCid allocationCids = do
+  r <- trySettle cast cash runCid allocationCids
+  case r of
+    Right ok -> pure ok
+    Left err -> fail ("settlement failed: " <> errorText err)
+
+-- | The message a failed submission carries. Recorded, not just matched: error
+-- shapes change between Canton releases and the regression test should say
+-- what it saw.
+errorText : SubmitError -> Text
+errorText err = case err of
+  UnhandledException (Some exc) ->
+    case fromAnyException exc of
+      Some (GeneralError msg) -> msg
+      None -> "unhandled exception of another type"
+  UnhandledException None -> "unhandled exception"
+  AuthorizationError msg -> "authorization error: " <> msg
+  other -> show other
+
+-- ---------------------------------------------------------------------------
+-- Proof 1: does the batch settle at all?
+-- ---------------------------------------------------------------------------
+
+proof1_batchSettles : Script ()
+proof1_batchSettles = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- forA [cast.alice, cast.bob, cast.charlie] $ \h -> do
+    a <- onboard cast cash h
+    pure (h, a)
+
+  (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  runTotal run === 3000.0
+
+  -- Allocation phase: asynchronous, one command per allocation.
+  sendCid <- allocateSend cast cash run
+  receiptCids <- forA agreements (allocateReceipt cast cash run)
+
+  -- The agent's 3,000 is now locked, not spent.
+  balance cash cast.payingAgent >>= (=== 7000.0)
+  lockedBalance cash cast.payingAgent >>= (=== 3000.0)
+  forA_ [cast.alice, cast.bob, cast.charlie] $ \h -> balance cash h >>= (=== 0.0)
+
+  -- Settlement phase: one transaction.
+  (receiptCid, result) <- settle cast cash runCid (sendCid :: receiptCids)
+  length result.allocationSettleResults === 4
+
+  balance cash cast.alice   >>= (=== 500.0)
+  balance cash cast.bob     >>= (=== 1000.0)
+  balance cash cast.charlie >>= (=== 1500.0)
+  balance cash cast.payingAgent >>= (=== 7000.0)
+  lockedBalance cash cast.payingAgent >>= (=== 0.0)
+
+  Some receipt <- queryContractId cast.payingAgent receiptCid
+  receipt.legsSettled === 3
+  receipt.total === 3000.0
+
+  -- The run is consumed; the receipt is what remains.
+  runs <- query @DistributionRun cast.payingAgent
+  runs === []
+
+-- ---------------------------------------------------------------------------
+-- Proof 3: do holders authorise once, at onboarding, and never again?
+-- ---------------------------------------------------------------------------
+
+-- | After onboard, every submit below is by the paying agent. Read the code:
+-- there is no holder-side command in either coupon run.
+proof3_holdersAuthoriseOnce : Script ()
+proof3_holdersAuthoriseOnce = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- forA [cast.alice, cast.bob, cast.charlie] $ \h -> do
+    a <- onboard cast cash h
+    pure (h, a)
+
+  -- Coupon 1.
+  (run1Cid, run1) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  send1 <- allocateSend cast cash run1
+  receipts1 <- forA agreements (allocateReceipt cast cash run1)
+  _ <- settle cast cash run1Cid (send1 :: receipts1)
+  balance cash cast.alice >>= (=== 500.0)
+
+  -- Coupon 2. Same agreements, no new holder action. This is the product claim.
+  (run2Cid, run2) <- createRun cast cash "ACME-2031-COUPON-02" (threeLegs cast)
+  send2 <- allocateSend cast cash run2
+  receipts2 <- forA agreements (allocateReceipt cast cash run2)
+  _ <- settle cast cash run2Cid (send2 :: receipts2)
+  balance cash cast.alice   >>= (=== 1000.0)
+  balance cash cast.bob     >>= (=== 2000.0)
+  balance cash cast.charlie >>= (=== 3000.0)
+  balance cash cast.payingAgent >>= (=== 4000.0)
+
+-- | The delegation cannot be abused: the agreement refuses to authorise a
+-- send on the holder's behalf. This is the line in the pitch that says a
+-- holder gives the paying agent the ability to be paid and nothing else.
+proof3_agreementCannotSend : Script ()
+proof3_agreementCannotSend = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  fund cash cast.alice 500.0
+  aliceAgreement <- onboard cast cash cast.alice
+  (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  now <- requestedAt
+  aliceHoldings <- unlockedHoldingCids cash cast.alice
+
+  -- A "receipt" allocation whose leg is actually a debit of Alice's account.
+  let theft = (runReceiptAllocationSpec run cast.alice) with
+        transferLegSides =
+          [ senderSide V2.TransferLeg with
+              transferLegId = "steal"
+              sender = basicAccount cast.alice
+              receiver = basicAccount cast.payingAgent
+              amount = 500.0
+              instrumentId = cash.instrument.id
+              meta = emptyMetadata
+          ]
+  r <- trySubmit (actAs cast.payingAgent <> disclose cash.rules) $
+    exerciseCmd aliceAgreement PaymentAgreement_CreateReceiptAllocation with
+      factoryCid = toInterfaceContractId cash.rulesCid
+      choiceArg = V2.AllocationFactory_Allocate with
+        settlement = runSettlementInfo run
+        allocation = theft
+        requestedAt = now
+        inputHoldingCids = aliceHoldings
+        extraArgs = cash.extraArgs
+        actors = [cast.alice]
+  case r of
+    Right _ -> fail "the agreement authorised a send; the delegation is broken"
+    Left err -> do
+      let msg = errorText err
+      assertMsg ("expected the receipt-only guard, got: " <> msg)
+        ("is a receipt leg" `T.isInfixOf` msg)
+  balance cash cast.alice >>= (=== 500.0)
+
+-- ---------------------------------------------------------------------------
+-- Proof 4: is it really all or none?
+-- ---------------------------------------------------------------------------
+
+-- | One holder has not signed. Nothing moves for anyone; the error names the
+-- missing authorisation; onboarding the holder and retrying pays everyone.
+proof4_allOrNone : Script ()
+proof4_allOrNone = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  -- Charlie is not onboarded.
+  agreements <- forA [cast.alice, cast.bob] $ \h -> do
+    a <- onboard cast cash h
+    pure (h, a)
+
+  (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast cash run
+  receiptCids <- forA agreements (allocateReceipt cast cash run)
+
+  r <- trySettle cast cash runCid (sendCid :: receiptCids)
+  case r of
+    Right _ -> fail "settled with a receipt allocation missing"
+    Left err -> do
+      let msg = errorText err
+      debug ("proof 4, rejected batch said: " <> msg)
+      assertMsg ("expected 'missing authorizations', got: " <> msg)
+        ("missing authorizations" `T.isInfixOf` msg)
+
+  -- Zero of three, not two of three. Every balance exactly as before.
+  balance cash cast.alice   >>= (=== 0.0)
+  balance cash cast.bob     >>= (=== 0.0)
+  balance cash cast.charlie >>= (=== 0.0)
+  balance cash cast.payingAgent >>= (=== 7000.0)
+  lockedBalance cash cast.payingAgent >>= (=== 3000.0)
+  Some _ <- queryContractId cast.payingAgent runCid
+  receipts <- query @DistributionReceipt cast.payingAgent
+  receipts === []
+
+  -- Fix the leg: onboard Charlie, create the missing receipt, retry.
+  charlieAgreement <- onboard cast cash cast.charlie
+  charlieReceipt <- allocateReceipt cast cash run (cast.charlie, charlieAgreement)
+  _ <- settle cast cash runCid (sendCid :: charlieReceipt :: receiptCids)
+  balance cash cast.alice   >>= (=== 500.0)
+  balance cash cast.bob     >>= (=== 1000.0)
+  balance cash cast.charlie >>= (=== 1500.0)
+  balance cash cast.payingAgent >>= (=== 7000.0)
+
+-- | A leg the allocations do not cover is refused too: the transfer legs and
+-- the allocations must match exactly, in both directions.
+proof4_extraLegRefused : Script ()
+proof4_extraLegRefused = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- forA [cast.alice, cast.bob, cast.charlie] $ \h -> do
+    a <- onboard cast cash h
+    pure (h, a)
+  (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast cash run
+  receiptCids <- forA agreements (allocateReceipt cast cash run)
+
+  -- A second run over four legs tries to settle with the three-leg allocations.
+  let bonusLeg = PaymentLeg with legId = "leg-4"; recipient = cast.alice; amount = 1.0
+  (wrongRunCid, _) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast ++ [bonusLeg])
+  r <- trySettle cast cash wrongRunCid (sendCid :: receiptCids)
+  case r of
+    Right _ -> fail "settled a leg nobody allocated for"
+    Left err -> do
+      let msg = errorText err
+      debug ("proof 4b, rejected batch said: " <> msg)
+      assertMsg ("expected 'missing authorizations', got: " <> msg)
+        ("missing authorizations" `T.isInfixOf` msg)
+  balance cash cast.alice >>= (=== 0.0)
+
+-- ---------------------------------------------------------------------------
+-- Proof 2, single-participant form: does each holder see only its own leg?
+-- ---------------------------------------------------------------------------
+
+proof2_visibility_singleParticipant : Script ()
+proof2_visibility_singleParticipant = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- forA [cast.alice, cast.bob, cast.charlie] $ \h -> do
+    a <- onboard cast cash h
+    pure (h, a)
+  (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast cash run
+  receiptCids <- forA agreements (allocateReceipt cast cash run)
+
+  -- Before settlement: the paying agent sees every allocation of the run.
+  agentAllocs <- queryInterface @V2.Allocation cast.payingAgent
+  length agentAllocs === 4
+
+  -- Each holder sees exactly one allocation, its own, and nothing about the
+  -- other legs: not the other holders' receipts, not the agent's send.
+  forA_ [(cast.alice, 500.0), (cast.bob, 1000.0), (cast.charlie, 1500.0)] $
+    \(holder, expected) -> do
+      seen <- queryInterface @V2.Allocation holder
+      let mine = [ v | (_, Some v) <- seen ]
+      length mine === 1
+      let [v] = mine
+      v.allocation.authorizer === basicAccount holder
+      map (.amount) v.allocation.transferLegSides === [expected]
+      -- and no DistributionRun at all
+      runs <- query @DistributionRun holder
+      runs === []
+
+  -- After settlement: each holder's holdings are its own and only its own.
+  _ <- settle cast cash runCid (sendCid :: receiptCids)
+  forA_ [(cast.alice, 500.0), (cast.bob, 1000.0), (cast.charlie, 1500.0)] $
+    \(holder, expected) -> do
+      everything <- queryInterface @V2.Holding holder
+      let owners = sort [ v.account | (_, Some v) <- everything ]
+      owners === [basicAccount holder]
+      balance cash holder >>= (=== expected)
+
+
