@@ -18,21 +18,25 @@ Indivisa/
 │   ├── indivisa/                  package `indivisa` — uploaded to participants
 │   │   ├── daml.yaml
 │   │   └── Indivisa/
-│   │       ├── Types.daml
-│   │       ├── Register.daml
-│   │       ├── Event.daml
-│   │       ├── Entitlement.daml
-│   │       └── Distribution.daml
+│   │       ├── Types.daml                 exists
+│   │       ├── Register.daml              planned
+│   │       ├── Event.daml                 planned
+│   │       ├── Entitlement.daml           planned
+│   │       └── Distribution/              the V2 boundary, exists
+│   │           ├── Settlement.daml
+│   │           ├── Agreement.daml
+│   │           └── Run.daml
 │   │
 │   └── indivisa-test/             package `indivisa-test` — never uploaded
 │       ├── daml.yaml
 │       └── Indivisa/Test/
-│           ├── Fixtures.daml
-│           ├── Register.daml
-│           ├── Entitlement.daml
-│           ├── Distribution.daml
-│           ├── Scale.daml
-│           └── Demo.daml
+│           ├── Fixtures.daml              exists
+│           ├── Agent.daml                 exists
+│           ├── Distribution.daml          exists
+│           ├── Register.daml              planned
+│           ├── Entitlement.daml           planned
+│           ├── Scale.daml                 planned
+│           └── Demo.daml                  planned
 │
 ├── ui/
 │   ├── package.json
@@ -69,26 +73,32 @@ Indivisa/
 
 | Module | Contains | Touches V2 |
 |---|---|---|
-| `Types.daml` | Vocabulary, no templates. `Isin`, `RunId`, `LegId`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy`, `DistributionOutcome`. | no |
+| `Types.daml` | Vocabulary, no templates. `PaymentLeg` today; `Isin`, `RunId`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy` as Phase 2 adds them. | no |
 | `Register.daml` | `Instrument` — ISIN, name, coupon rate, currency, payment dates. `Position` — instrument, holder, quantity. `RegisterSnapshot` — the record-date freeze. The bond is **not** tokenized. | no |
 | `Event.daml` | `CorporateAction` — instrument, kind, rate, record date, payment date, status. Announce, fix record date, cancel. | no |
 | `Entitlement.daml` | rate x position x period. `EntitlementSchedule` recording each holder's amount and the rounding policy applied. The residual is resolved here so the legs total the announced distribution exactly. | no |
-| `Distribution.daml` | `PaymentAgreement` (signed once per holder; lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation`). Builds send and receipt `AllocationSpecification`s, drives `AllocationFactory_Allocate` per allocation, exercises `SettlementFactory_SettleBatch`, records the outcome and update id. | **yes** |
+| `Distribution/Settlement.daml` | Our vocabulary in V2 terms: `settlementInfo`, `holderAccount`, `transferLegOf`. Used by the ledger itself (`Run_Settle` derives the transfer legs from these), so anything a client builds must agree with them. | **yes** |
+| `Distribution/Agreement.daml` | `PaymentAgreementProposal` (agent proposes) and `PaymentAgreement` (holder accepts, once). Its one choice lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation` plus admin and instrument checks. | **yes** |
+| `Distribution/Run.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
 
-**One module knows about Token Standard V2.** If V2 changes, one file changes.
+**One namespace knows about Token Standard V2: `Indivisa.Distribution.*`.** If
+V2 changes, those three files change and nothing else.
 
-`Distribution.daml` was built first and is verified against the real Splice
-0.8.1 DARs; no `VERIFY:` markers remain. It also holds `PaymentAgreementProposal`
-(the onboarding step) and `DistributionReceipt` (what the agent keeps after a run).
+Rule for what lives in the model: only what the ledger executes or what the
+ledger's own choices call. Functions used solely by scripts belong in the test
+package, however product-like they are. The allocation-spec builders are the
+example: they are the paying agent's client logic, so they sit in
+`Indivisa.Test.Agent`.
 
 ## `daml/indivisa-test/` — scripts
 
-| Module | Proves |
+| Module | Holds |
 |---|---|
-| `Fixtures.daml` | Party setup, one instrument, N holders. Shared by the rest. |
+| `Fixtures.daml` | `Cast` (parties), `Cash` (the reference token: rules contract, disclosure, choice context), `setup`, `fund` (simulated cash), balances through the V2 `Holding` interface, `onboard` / `onboardAll`, `threeLegs`, `createRun`, `requestedAt`, `errorText`. Shared by the rest. |
+| `Agent.daml` | The paying agent's client moves: `sendAllocationSpec`, `receiptAllocationSpec` and their `run*` forms, `allocateSend`, `allocateReceipt`, `trySettle`, `settle`. A UI or daemon reimplements exactly this sequence. |
+| `Distribution.daml` | The proofs, assertions only: batch settles (1), per-holder visibility in single-participant form (2), holders authorise once and the delegation cannot be abused (3), one bad leg settles zero with the rejection recorded (4). |
 | `Register.daml` | Positions, transfers before the record date, the snapshot freezing correctly. |
 | `Entitlement.daml` | The arithmetic. Rounding, the residual, and that legs sum to the announced total exactly. |
-| `Distribution.daml` | The five proofs: batch settles, per-holder visibility, holders authorise once and never per coupon (plus the negative: a missing agreement fails the whole batch), one bad leg settles zero, error shape on failure. |
 | `Scale.daml` | N = 3 → 1000 harness. Output writes `benchmark.md`. |
 | `Demo.daml` | Seats the demo: realistic holders, announces the coupon, arms the deliberate failure. |
 

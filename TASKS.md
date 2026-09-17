@@ -16,7 +16,7 @@ Done on 16 September: dpm-sdk 3.5.10 confirmed, `sdk-version` corrected, two
 missing imports fixed, `dpm build --all` green, `dpm test` gives proof 1 and 4
 scaffolds passing and proof 2 failing on the intended assertion.
 
-Done on 17 September: ten V2 DARs vendored from Splice 0.8.1; `Indivisa.Distribution`
+Done on 17 September: ten V2 DARs vendored from Splice 0.8.1; `Indivisa.Distribution.*`
 rewritten against the real API (`PaymentAgreementProposal`, `PaymentAgreement`,
 `DistributionRun.Run_Settle` exercising the real `SettlementFactory_SettleBatch`);
 **proofs 1, 3 and 4 pass, and proof 2 passes in its single-participant form**,
@@ -87,7 +87,7 @@ Committed to `infra/localnet/`.
 
 ## Phase 1 — The five proofs (days 2–8)
 
-Written in `Indivisa.Distribution` and `Indivisa.Test.Distribution` — the real
+Written in `Indivisa.Distribution.*` and `Indivisa.Test.*` — the real
 packages. Nothing here is throwaway.
 
 Proofs 1, 3 and 4 are Daml Script against `TestTokenV2`, run with `dpm test`.
@@ -110,7 +110,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 ### Proof 3 — do holders authorise once, at onboarding, and never again? **PASSES**
 
 - [x] `PaymentAgreementProposal` (agent proposes) and `PaymentAgreement`
-      (holder accepts, once) in `Indivisa.Distribution`.
+      (holder accepts, once) in `Indivisa.Distribution.Agreement`.
       `PaymentAgreement_CreateReceiptAllocation` is controller paying agent,
       guarded by `ensureIsReceiptAllocation` plus our own admin and instrument
       checks; modelled on `TradeSettlementAgreement_CreateReceiptAllocation`.
@@ -193,16 +193,17 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 
 ## Phase 2 — The model (days 8–13)
 
-- [ ] `Indivisa.Types` — vocabulary, no templates.
+- [ ] `Indivisa.Types` — vocabulary, no templates. `PaymentLeg` is there (17 Sep);
+      the rest arrives with Register, Event and Entitlement.
 - [ ] `Indivisa.Register` — instrument, positions, record-date snapshot. Plain
       Daml, no V2.
 - [ ] `Indivisa.Event` — coupon announcement: rate, record date, payment date.
 - [ ] `Indivisa.Entitlement` — rate x position x period. **Settle the rounding
       policy here and record it on-ledger.** The legs must total the announced
       distribution exactly; a settlement off by one cent does not settle.
-- [ ] `Indivisa.Distribution` — generalise from the proof into the real path.
-      `PaymentAgreement` stays here; it touches V2 and this is the only module
-      allowed to.
+- [ ] `Indivisa.Distribution.*` — generalise from the proof into the real path.
+      `PaymentAgreement` stays in `.Agreement`; this namespace is the only one
+      allowed to touch V2. Client-side builders stay in `Test.Agent`.
 - [ ] Scripts: `Test.Register`, `Test.Entitlement`, and `Test.Distribution`
       extended to a holder base at whatever N proof 5 established.
 

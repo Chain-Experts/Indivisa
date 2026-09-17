@@ -1,0 +1,94 @@
+-- | A coupon run, reduced to its cash legs, and the one transaction that
+-- settles it.
+--
+-- This module does NOT implement a token. It drives an existing V2 cash
+-- instrument through SettlementFactory_SettleBatch. The bond is not modelled
+-- here at all; only the cash moves.
+module Indivisa.Distribution.Run where
+
+import DA.List (unique)
+
+import Splice.Api.Token.MetadataV1 (ExtraArgs)
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.AllocationV2 qualified as V2
+
+import Indivisa.Types
+import Indivisa.Distribution.Settlement
+
+-- | The paying agent is the sole signatory and there are NO holder observers.
+-- The earlier scaffold made recipients observers and the visibility proof
+-- failed exactly as predicted: observers see the whole payload, so every
+-- holder read every other holder's amount. Holders learn of their payment
+-- from their own Holding and their own receipt allocation, never from here.
+template DistributionRun
+  with
+    payingAgent  : Party
+    runId        : Text
+    instrument   : V2.InstrumentId
+    agentAccount : V2.Account
+    legs         : [PaymentLeg]
+  where
+    signatory payingAgent
+
+    ensure
+      not (null legs)
+        && all (\l -> l.amount > 0.0) legs
+        && unique (map (.legId) legs)
+        && agentAccount.owner == Some payingAgent
+
+    -- | Settle every leg in one transaction. All or none: if any allocation is
+    -- missing or unfunded the factory aborts and this choice, the receipt and
+    -- every debit and credit roll back together.
+    --
+    -- The caller supplies the factory (disclosed by the cash registry), the
+    -- allocation contract ids (the agent's send allocation plus one receipt
+    -- allocation per holder) and the registry's choice context in extraArgs.
+    choice Run_Settle : (ContractId DistributionReceipt, V2.SettlementFactory_SettleBatchResult)
+      with
+        factoryCid     : ContractId V2.SettlementFactory
+        allocationCids : [ContractId V2.Allocation]
+        extraArgs      : ExtraArgs
+      controller payingAgent
+      do
+        result <- exercise factoryCid V2.SettlementFactory_SettleBatch with
+          settlement = runSettlementInfo this
+          transferLegs = runTransferLegs this
+          allocations =
+            [ V2.FinalizedAllocation with
+                allocationCid
+                extraTransferLegSides = []
+                nextIterationFunding = None
+            | allocationCid <- allocationCids
+            ]
+          actors = [payingAgent]
+          extraArgs
+        receipt <- create DistributionReceipt with
+          payingAgent
+          runId
+          instrument
+          legsSettled = length legs
+          total = runTotal this
+        pure (receipt, result)
+
+-- | What the paying agent keeps after a successful run.
+template DistributionReceipt
+  with
+    payingAgent : Party
+    runId       : Text
+    instrument  : V2.InstrumentId
+    legsSettled : Int
+    total       : Decimal
+  where
+    signatory payingAgent
+
+-- | Total to be distributed. The legs must equal the announced distribution
+-- exactly; the rounding residual becomes Indivisa.Entitlement's problem in
+-- Phase 2 and it is not a detail. Off by one cent does not settle.
+runTotal : DistributionRun -> Decimal
+runTotal run = sum (map (.amount) run.legs)
+
+runSettlementInfo : DistributionRun -> V2.SettlementInfo
+runSettlementInfo run = settlementInfo run.payingAgent run.runId
+
+runTransferLegs : DistributionRun -> [V2.TransferLeg]
+runTransferLegs run = map (transferLegOf run.instrument run.agentAccount) run.legs

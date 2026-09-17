@@ -1,0 +1,92 @@
+-- | The holder's once-only consent.
+--
+-- Authorisation, in one paragraph. The standard's default settlement logic
+-- (settlementFactoryV2_settleBatchDefaultImpl in Splice.TokenStandard.Utils)
+-- requires, for every transfer leg, an Allocation authorised by the sender's
+-- account AND one authorised by the receiver's account, or the batch fails
+-- with "missing authorizations". The paying agent's send allocation is its own
+-- to create. The holder's receipt allocation is created by the paying agent
+-- under a PaymentAgreement the holder signed once, guarded by the standard's
+-- own ensureIsReceiptAllocation so the delegation can only ever authorise
+-- receipts. This is the pattern the standard's authors use for the venue in
+-- Splice.Testing.Apps.TradingAppV2 (TradeSettlementAgreement_CreateReceiptAllocation).
+--
+-- Verified against canton-network/splice tag 0.8.1, 17 September 2026.
+-- Reference: CIP-0112, approved 2026-06-12.
+-- https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md
+module Indivisa.Distribution.Agreement where
+
+import DA.Foldable (forA_)
+
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.Api.Token.AllocationInstructionV2 qualified as V2
+import Splice.TokenStandard.Utils (ensureIsReceiptAllocation, require)
+
+-- | The onboarding step. The paying agent proposes; the holder accepts once.
+-- This is the single click a holder ever makes, and the demo shows it once.
+template PaymentAgreementProposal
+  with
+    payingAgent : Party
+    holder      : Party
+    account     : V2.Account
+    instrument  : V2.InstrumentId
+  where
+    signatory payingAgent
+    observer holder
+
+    ensure account.owner == Some holder
+
+    choice PaymentAgreementProposal_Accept : ContractId PaymentAgreement
+      controller holder
+      do create PaymentAgreement with ..
+
+    choice PaymentAgreementProposal_Decline : ()
+      controller holder
+      do pure ()
+
+    choice PaymentAgreementProposal_Withdraw : ()
+      controller payingAgent
+      do pure ()
+
+-- | Signed once by holder and paying agent. From then on the paying agent
+-- alone can create the holder's receipt allocations for this instrument.
+--
+-- What the holder delegates: the ability to be paid. What it does not
+-- delegate: anything else. ensureIsReceiptAllocation refuses sender-side legs,
+-- input holdings, committed allocations, next-iteration funding and extra
+-- metadata. We add: the allocation's admin and every leg's instrument must be
+-- this agreement's instrument.
+template PaymentAgreement
+  with
+    payingAgent : Party
+    holder      : Party
+    account     : V2.Account
+    instrument  : V2.InstrumentId
+  where
+    signatory payingAgent, holder
+
+    ensure account.owner == Some holder
+
+    -- | Create a receipt allocation for the holder. The paying agent is the
+    -- controller; the holder's authority comes from its signature on this
+    -- contract and reaches the factory call because actors = [holder].
+    nonconsuming choice PaymentAgreement_CreateReceiptAllocation : ContractId V2.Allocation
+      with
+        factoryCid : ContractId V2.AllocationFactory
+        choiceArg  : V2.AllocationFactory_Allocate
+      controller payingAgent
+      do
+        ensureIsReceiptAllocation [payingAgent] holder account choiceArg
+        require "allocation is for this agreement's instrument admin"
+          (choiceArg.allocation.admin == instrument.admin)
+        forA_ choiceArg.allocation.transferLegSides $ \side ->
+          require ("transferLeg[" <> side.transferLegId <> "] is for this agreement's instrument")
+            (side.instrumentId == instrument.id)
+        result <- exercise factoryCid choiceArg
+        case result.output of
+          V2.AllocationInstructionResult_Completed allocationCid -> pure allocationCid
+          V2.AllocationInstructionResult_Pending _ ->
+            abort "receipt allocation came back pending; multi-step allocation is not supported"
+          V2.AllocationInstructionResult_Failed ->
+            abort ("receipt allocation failed: " <> show result.meta)

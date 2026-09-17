@@ -1,0 +1,12 @@
+-- | Vocabulary. Plain Daml, no Token Standard V2 here.
+--
+-- The V2 mapping happens in Indivisa.Distribution.Settlement.
+module Indivisa.Types where
+
+-- | One holder's share of a distribution.
+data PaymentLeg = PaymentLeg
+  with
+    legId     : Text
+    recipient : Party
+    amount    : Decimal
+  deriving (Eq, Show, Ord)

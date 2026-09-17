@@ -1,0 +1,180 @@
+-- | Shared fixture for the proofs: parties, the cash instrument, funding,
+-- balances, onboarding, run creation and error text.
+--
+-- Everything here is test scaffolding. Nothing on the ledger depends on it.
+module Indivisa.Test.Fixtures where
+
+import DA.Exception (GeneralError(..), fromAnyException)
+import DA.Optional (isNone, isSome)
+import DA.TextMap qualified as TextMap
+
+import Daml.Script
+
+import Splice.Api.Token.MetadataV1
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount, toAnyContractId)
+import Splice.Testing.Tokens.TestTokenV2 qualified as TestTokenV2
+import Splice.Testing.Tokens.TestTokenV2.Util (tokenRulesContextKey)
+
+import Indivisa.Types
+import Indivisa.Distribution.Agreement
+import Indivisa.Distribution.Run
+
+-- ---------------------------------------------------------------------------
+-- Parties and cash
+-- ---------------------------------------------------------------------------
+
+data Cast = Cast
+  with
+    registry    : Party
+    payingAgent : Party
+    alice       : Party
+    bob         : Party
+    charlie     : Party
+
+-- | The cash instrument as the paying agent's client sees it: the registry's
+-- factory contract (disclosed, so non-signatories can exercise it), the
+-- instrument id, and the registry's choice context. In production the last
+-- two come from the registry's off-ledger API; TestTokenV2 wants exactly one
+-- entry, its own rules contract.
+data Cash = Cash
+  with
+    rulesCid   : ContractId TestTokenV2.TokenRules
+    instrument : V2.InstrumentId
+    extraArgs  : ExtraArgs
+    rules      : Disclosure
+
+setup : Script (Cast, Cash)
+setup = do
+  registry    <- allocateParty "CashRegistry"
+  payingAgent <- allocateParty "PayingAgent"
+  alice       <- allocateParty "Alice"
+  bob         <- allocateParty "Bob"
+  charlie     <- allocateParty "Charlie"
+  let cast = Cast with ..
+
+  rulesCid <- submit registry $ createCmd TestTokenV2.TokenRules with admin = registry
+  Some rules <- queryDisclosure registry rulesCid
+  let instrument = V2.InstrumentId with admin = registry; id = "USD"
+      extraArgs = ExtraArgs with
+        context = ChoiceContext with
+          values = TextMap.fromList
+            [(tokenRulesContextKey, AV_ContractId (toAnyContractId rulesCid))]
+        meta = emptyMetadata
+  pure (cast, Cash with ..)
+
+-- | SIMULATED cash. The registry and the owner jointly create a holding,
+-- exactly as Splice's own TestTokenV2 test environment does for fixtures. A
+-- production registry mints through its own choice (TokenRules_OfferMint
+-- here); nothing proven depends on how the agent was funded.
+fund : Cash -> Party -> Decimal -> Script ()
+fund cash owner amount = do
+  _ <- submit (actAs cash.instrument.admin <> actAs owner) $
+    createCmd TestTokenV2.Token with
+      holding = V2.HoldingView with
+        account = basicAccount owner
+        instrumentId = cash.instrument
+        amount
+        lock = None
+        meta = emptyMetadata
+  pure ()
+
+-- | What a wallet stamps on an allocation request: its clock, now. TestTokenV2
+-- requires ledger time >= requestedAt as a ledger-time bound
+-- (DA.Assert.assertDeadlineExceeded), which a participant satisfies because it
+-- assigns ledger time at submission.
+--
+-- Runner note: dpm test (static time) passes. The standalone runner against
+-- the IDE ledger must be given --static-time; in its wall-clock mode getTime
+-- returns wall time while ledger-time bounds are checked against a static
+-- clock, so even a stamp a day in the past is "strictly before" ledger time.
+-- Verified 17 Sep 2026; not a Canton behaviour.
+requestedAt : Script Time
+requestedAt = getTime
+
+-- ---------------------------------------------------------------------------
+-- Balances, through the V2 Holding interface
+-- ---------------------------------------------------------------------------
+
+-- | Holdings of a party's own basic account, through the V2 Holding
+-- interface. That is the strong form: the query does not know our templates.
+holdings : Cash -> Party -> Script [(ContractId V2.Holding, V2.HoldingView)]
+holdings cash p = do
+  hs <- queryInterface @V2.Holding p
+  pure
+    [ (cid, v)
+    | (cid, Some v) <- hs
+    , v.account == basicAccount p
+    , v.instrumentId == cash.instrument
+    ]
+
+balance : Cash -> Party -> Script Decimal
+balance cash p = do
+  hs <- holdings cash p
+  pure $ sum [ v.amount | (_, v) <- hs, isNone v.lock ]
+
+lockedBalance : Cash -> Party -> Script Decimal
+lockedBalance cash p = do
+  hs <- holdings cash p
+  pure $ sum [ v.amount | (_, v) <- hs, isSome v.lock ]
+
+unlockedHoldingCids : Cash -> Party -> Script [ContractId V2.Holding]
+unlockedHoldingCids cash p = do
+  hs <- holdings cash p
+  pure [ cid | (cid, v) <- hs, isNone v.lock ]
+
+-- ---------------------------------------------------------------------------
+-- Onboarding and runs
+-- ---------------------------------------------------------------------------
+
+-- | The onboarding step. Paying agent proposes, holder accepts: the one and
+-- only command a holder ever submits.
+onboard : Cast -> Cash -> Party -> Script (ContractId PaymentAgreement)
+onboard cast cash holder = do
+  proposal <- submit cast.payingAgent $ createCmd PaymentAgreementProposal with
+    payingAgent = cast.payingAgent
+    holder
+    account = basicAccount holder
+    instrument = cash.instrument
+  submit holder $ exerciseCmd proposal PaymentAgreementProposal_Accept
+
+-- | Onboard several holders; returns (holder, agreement) pairs.
+onboardAll : Cast -> Cash -> [Party] -> Script [(Party, ContractId PaymentAgreement)]
+onboardAll cast cash holders = forA holders $ \h -> do
+  a <- onboard cast cash h
+  pure (h, a)
+
+threeLegs : Cast -> [PaymentLeg]
+threeLegs c =
+  [ PaymentLeg with legId = "leg-1"; recipient = c.alice;   amount =  500.0
+  , PaymentLeg with legId = "leg-2"; recipient = c.bob;     amount = 1000.0
+  , PaymentLeg with legId = "leg-3"; recipient = c.charlie; amount = 1500.0
+  ]
+
+createRun : Cast -> Cash -> Text -> [PaymentLeg] -> Script (ContractId DistributionRun, DistributionRun)
+createRun cast cash runId legs = do
+  let run = DistributionRun with
+        payingAgent = cast.payingAgent
+        runId
+        instrument = cash.instrument
+        agentAccount = basicAccount cast.payingAgent
+        legs
+  cid <- submit cast.payingAgent $ createCmd run
+  pure (cid, run)
+
+-- ---------------------------------------------------------------------------
+-- Error text
+-- ---------------------------------------------------------------------------
+
+-- | The message a failed submission carries. Recorded, not just matched: error
+-- shapes change between Canton releases and the regression test should say
+-- what it saw.
+errorText : SubmitError -> Text
+errorText err = case err of
+  UnhandledException (Some exc) ->
+    case fromAnyException exc of
+      Some (GeneralError msg) -> msg
+      None -> "unhandled exception of another type"
+  UnhandledException None -> "unhandled exception"
+  AuthorizationError msg -> "authorization error: " <> msg
+  other -> show other

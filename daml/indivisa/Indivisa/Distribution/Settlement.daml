@@ -1,0 +1,46 @@
+-- | Our vocabulary in Token Standard V2 terms.
+--
+-- The functions here are used by the ledger itself: DistributionRun.Run_Settle
+-- derives the transfer legs and the settlement info from them, so whatever a
+-- client builds for the allocation phase must agree with these exactly. The
+-- client-side builders for the allocations live in the test package
+-- (Indivisa.Test.Agent); nothing on the ledger calls them.
+--
+-- Verified against canton-network/splice tag 0.8.1, 17 September 2026.
+module Indivisa.Distribution.Settlement
+  ( settlementInfo
+  , holderAccount
+  , transferLegOf
+  ) where
+
+import Splice.Api.Token.MetadataV1 (emptyMetadata)
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount)
+
+import Indivisa.Types
+
+-- | The settlement every allocation of a run refers to. The paying agent is
+-- the sole executor: it sees every leg, which is a paying agent's job.
+settlementInfo : Party -> Text -> V2.SettlementInfo
+settlementInfo payingAgent runId = V2.SettlementInfo with
+  executors = [payingAgent]
+  id = runId
+  cid = None
+  meta = emptyMetadata
+
+-- | A holder's cash account. Basic (self-custodial) accounts for now; a
+-- provider (custodian) account is a Phase 2 concern and changes only this
+-- function and the agreement's ensure clause.
+holderAccount : Party -> V2.Account
+holderAccount = basicAccount
+
+-- | One V2 transfer leg per payment leg: paying agent to holder.
+transferLegOf : V2.InstrumentId -> V2.Account -> PaymentLeg -> V2.TransferLeg
+transferLegOf instrument agentAccount leg = V2.TransferLeg with
+  transferLegId = leg.legId
+  sender = agentAccount
+  receiver = holderAccount leg.recipient
+  amount = leg.amount
+  instrumentId = instrument.id
+  meta = emptyMetadata

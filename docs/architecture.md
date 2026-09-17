@@ -112,11 +112,11 @@ which is exactly a paying agent's operational view of a coupon run.
 
 | Module | Holds | Status |
 |---|---|---|
-| `Indivisa.Types` | Vocabulary only. No templates. | with the model |
+| `Indivisa.Types` | Vocabulary only. No templates. | `PaymentLeg` built; grows with the model |
 | `Indivisa.Register` | Instrument, positions, record-date snapshot. Plain Daml, no V2. | after the proofs |
 | `Indivisa.Event` | Coupon announcement, rate, dates, status. | after the proofs |
 | `Indivisa.Entitlement` | rate x position x period, rounding policy, the audit record of how each figure was derived. | after the proofs |
-| `Indivisa.Distribution` | **The only module touching V2.** `PaymentAgreement`, the send and receipt allocation specifications, `SettleBatch`, the recorded outcome. | **first** |
+| `Indivisa.Distribution.*` | **The only namespace touching V2.** `Settlement` (our vocabulary in V2 terms), `Agreement` (`PaymentAgreementProposal`, `PaymentAgreement`), `Run` (`DistributionRun.Run_Settle`, `DistributionReceipt`). | **built** |
 
 Everything else is off-ledger.
 
