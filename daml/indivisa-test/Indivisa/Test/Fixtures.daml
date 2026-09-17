@@ -62,6 +62,27 @@ holderParticipant i = case i % 3 of
   1 -> "bob"
   _ -> "charlie"
 
+holderParticipants : [Text]
+holderParticipants = ["alice", "bob", "charlie"]
+
+-- | N holder parties for a scale run. On LocalNet, holders left by earlier
+-- runs are reused and only the missing ones are allocated: a party is a
+-- topology transaction, about 5 s each on a real synchronizer (measured
+-- 17 Sep), and it is onboarding cost, not settlement. Reuse is safe because
+-- every run has its own registry, instrument and agent, so an old holder's
+-- earlier holdings and agreements belong to other instruments. On the IDE
+-- ledger every run starts empty.
+scaleHolders : Topology -> Int -> Script [Party]
+scaleHolders Ide n = forA [1..n] $ \i -> allocateParty ("Holder-" <> show i)
+scaleHolders LocalNet n = do
+  existing <- fmap concat $ forA holderParticipants $ \p -> do
+    ds <- listKnownPartiesOn (ParticipantName p)
+    pure [ d.party | d <- ds, d.isLocal, "Holder-" `T.isPrefixOf` partyToText d.party ]
+  let reused = take n existing
+  fresh <- forA [length reused + 1 .. n] $ \i ->
+    allocateOn LocalNet ("Holder-" <> show i) (holderParticipant i)
+  pure (reused ++ fresh)
+
 data Cast = Cast
   with
     topology    : Topology

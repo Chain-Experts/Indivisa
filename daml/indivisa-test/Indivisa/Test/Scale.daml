@@ -89,7 +89,7 @@ scaleAllocateOnlyWith : ScaleArgs -> Script Prepared
 scaleAllocateOnlyWith args = do
   let n = args.holders
   (cast, cash) <- setupOn args.topology
-  holders <- forA [1..n] $ \i -> allocateOn args.topology ("Holder-" <> show i) (holderParticipant i)
+  holders <- scaleHolders args.topology n
   let legs = scaleLegs holders
       total = sum (map (.amount) legs)
   fund cash cast.payingAgent (total + 1000.0)

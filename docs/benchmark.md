@@ -122,16 +122,16 @@ validators hosting holders.
 | 3 | 4 | 19.5 KB | 7 | (proofs; not timed) | 40–55 s incl. JVM start | settled |
 | 10 | 11 | 30.4 KB | 7 | within noise of the two-run method | 113 s | settled |
 | 50 | 51 | 101.4 KB | 7 | ~20 s by the two-run method (±10 s) | 453 s | settled |
-| 100 | | | | | | pending |
-| 250 | | | | | | pending |
+| 100 | 101 | 187.7 KB | 7 | **5.4 s** | 859 s | settled |
+| 250 | 251 | 440.1 KB | 7 | **15.3 s** | 1,847 s (22 min of it party allocation) | settled |
 | 500 | | | | | | pending |
 | 1000 | | | | | | pending |
 
 ### Reading it so far
 
-- **Size is linear: about 1.8 KB per allocation plus ~12 KB.** Extrapolated,
-  500 holders is ~0.9 MB and 1,000 is ~1.8 MB. The sequencer's default
-  `maxRequestPayloadBytes` is 10,485,760, which puts the hard cap near 5,500
+- **Size is linear: about 1.7 KB per allocation plus ~13 KB.** Extrapolated,
+  500 holders is ~0.86 MB and 1,000 is ~1.7 MB. The sequencer's default
+  `maxRequestPayloadBytes` is 10,485,760, which puts the hard cap near 6,000
   allocations per batch on this configuration. To be confirmed by hitting it.
 - **The whole day is dominated by the client, not the ledger.** Sequentially,
   each command costs about a second of round trip on a real synchronizer:
