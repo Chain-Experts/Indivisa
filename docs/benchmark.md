@@ -124,8 +124,20 @@ validators hosting holders.
 | 50 | 51 | 101.4 KB | 7 | ~20 s by the two-run method (±10 s) | 453 s | settled |
 | 100 | 101 | 187.7 KB | 7 | **5.4 s** | 859 s | settled |
 | 250 | 251 | 440.1 KB | 7 | **15.3 s** | 1,847 s (22 min of it party allocation) | settled |
-| 500 | | | | | | pending |
+| 500 | 501 | 811.5 KB | 7 | 109 s, **not clean** (see below) | 470 s with reused holders | settled |
 | 1000 | | | | | | pending |
+
+### The 500 number is not clean yet
+
+The first N = 500 settle took 109 s, seven times the 250 figure, and a
+repeat of N = 250 on the same ledger took 24 s where it had taken 15 s
+earlier. LocalNet at that point was one 4 GB JVM hosting all five nodes,
+sitting at 3.9 GB, with 668 parties and several thousand contracts in its
+in-memory stores; the sequencer log shows ~80 s of participant silence in
+the middle of the 500 settle, which is what heap pressure looks like.
+LocalNet has been restarted with a 12 GB heap and the sweep 250 / 500 / 1000
+re-run on it; those rows replace the ones above when in. The size column is
+unaffected: it is the serialised request, not a timing.
 
 ### Reading it so far
 

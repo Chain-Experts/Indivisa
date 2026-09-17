@@ -77,6 +77,16 @@ Things learned on 17 September that a fresh reader will hit:
   that, the second command fails with `CONTRACT_NOT_FOUND`.
 - Party names carry a time tag on LocalNet so scripts can be re-run against
   a ledger that still holds earlier runs.
+- **The script runner only knows where a party lives if it allocated that
+  party in the same run.** Any party that already exists must be listed in
+  `party_participants`, or its submissions go to the default participant and
+  fail with `NO_SYNCHRONIZER_ON_WHICH_ALL_SUBMITTERS_CAN_SUBMIT`.
+  `participants-with-parties.ps1` reads every participant's JSON Ledger API
+  and writes that map. This matters for DevNet too: the holders' parties
+  exist before the script does.
+- One JVM for five nodes wants heap. At 4 GB it sat at 3.9 GB after a few
+  hundred parties and thousands of contracts and settle times inflated;
+  `up.ps1 -Heap 12g`.
 - The sequencer's `maxRequestPayloadBytes` is 10 MB by default. That is the
   hard ceiling candidate for one batch.
 
