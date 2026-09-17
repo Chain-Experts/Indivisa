@@ -55,33 +55,43 @@ No LocalNet needed for this phase. Everything here is a download and a build.
       whether regular DevNet now carries V2 or the June "Token Standard V2
       DevNet" (protocol version 35) is still the target.
 
-### Phase 0b — LocalNet, four participants (days 1–5) · *DevOps, in parallel*
-
-Needed only for proofs 2 and 5. Do not let it block Phase 1.
+### Phase 0b — LocalNet, five participants · **DONE 17 Sep, no Docker**
 
 `TestTokenV2` has no Splice runtime dependency and no contract keys, so
-**LocalNet is a plain Canton synchronizer plus participants** — no SV, no
-Amulet, no Scan, no Keycloak. `cn-quickstart` is the wrong tool here; it is only
-worth reaching for if the DevNet evidence run uses Canton Coin. Use the Canton
-image from the Splice 0.8.1 release and a hand-written `canton.conf`.
+LocalNet is a plain Canton synchronizer plus participants. It turned out not
+to need Docker either: the Canton 3.5.17 JAR that dpm installed runs any
+topology from a config file, in one JVM, in memory.
 
-Proof 2 needs each party on its **own** participant. A single-participant setup
-cannot prove privacy, and privacy is the claim the whole pitch rests on.
+- [x] `infra/localnet/localnet.conf`: BFT sequencer, mediator, **five**
+      participants (registry, agent, alice, bob, charlie), each holder on its
+      own node. `bootstrap.canton` bootstraps the synchronizer, connects all
+      five, uploads the ten DARs plus `indivisa`, pings across. `up.ps1`
+      starts and stops it (~5 minutes to boot; DAR uploads dominate).
+- [x] Protocol version 35 (the same as the June V2 DevNet), by default.
+- [x] `participants.json` for Daml Script; proofs take a `Topology` input so
+      the **same script** runs on the IDE ledger and on LocalNet.
+- [x] Proofs 1, 2, 3, 3b, 4, 4b all pass on LocalNet (17 Sep, 40 to 55 s
+      each including JVM start).
+- [ ] Party tokens / JSON API auth for the UI: LocalNet has no auth, so this
+      is a Phase 4 item, not a blocker.
+- [ ] Transaction size and view count per N: see proof 5.
 
-- [ ] Start Docker Desktop. It does not start on its own.
-- [ ] Four participants, four Postgres, one synchronizer, in Docker Compose.
-      Paying agent, Alice, Bob, Charlie.
-- [ ] Upload the V2 DARs, `splice-test-token-v2`, and `indivisa` to all four.
-- [ ] Four party tokens, all valid simultaneously — the UI opens four panes
-      against four identities at once.
-- [ ] Read transaction size, view count and submission-to-completion latency off
-      a participant. Proof 5 needs these numbers, not impressions.
+Things the real network taught that the IDE ledger could not:
+- Parties on different participants cannot co-sign one command. Funding now
+  goes through the token's own mint (`TokenRules_OfferMint`, then the agent
+  accepts), which is the honest path anyway.
+- Participants learn of transactions independently; every cross-participant
+  handoff waits for visibility (`awaitVisible`, `awaitInterface`,
+  `awaitBalance` in `Test.Fixtures`) or the next command fails with
+  `CONTRACT_NOT_FOUND`.
+- A rejection arrives as `DAML_FAILURE(9, …): … UNHANDLED_EXCEPTION/…
+  GeneralError … missing authorizations`, a different wrapper from the IDE
+  ledger's. The regression test matches on the inner text.
+- The sequencer's `maxRequestPayloadBytes` defaults to 10 MB. That is the
+  hard-cap candidate for one batch.
 
-> Environment setup is the most-cited friction point in the Canton developer
-> survey. If this runs past five days, say so and re-plan. Phase 1 proceeds
-> regardless.
-
-Committed to `infra/localnet/`.
+Postgres storage and Docker remain an option if the demo needs a ledger that
+survives restarts; `localnet.conf` is the only file that changes.
 
 ---
 
@@ -130,15 +140,17 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
       only its own amount; the agent sees four. After settlement each holder's
       `V2.Holding` query returns only its own account. No holder sees a
       `DistributionRun` (holders are no longer observers of it).
-- [ ] Re-run on the **four-participant** LocalNet.
-- [ ] Assert from each party's own participant: Alice sees her leg and neither
-      Bob's nor Charlie's. Likewise B and C. Paying agent sees all three.
-- [ ] Assert over the V2 **Holding** interface, not just our own templates — the
-      strong claim is that Alice cannot see a Holding belonging to Bob.
+- [x] **Re-run on LocalNet with each holder on its own participant: PASSES**
+      (`proof2With LocalNet`, 17 Sep). Alice's participant holds one
+      allocation (hers) and one account's holdings (hers); likewise Bob and
+      Charlie; the agent's participant holds all four allocations. Asserted
+      over the V2 `Allocation` and `Holding` interfaces, not our templates.
+      This is projection, not party-scoped filtering: Bob's data never
+      reaches Alice's node.
 
 > Daml Script's `query` is party-scoped. On one participant that proves
-> party-scoped queries, **not** projection. Only the four-participant run proves
-> the privacy claim.
+> party-scoped queries, **not** projection. The five-participant run is what
+> proves the privacy claim, and it now does.
 
 ### Proof 4 — is it really all or none? **PASSES**
 - [x] `proof4_allOrNone`: Charlie not onboarded, so his receipt allocation is

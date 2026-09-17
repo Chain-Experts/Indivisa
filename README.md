@@ -125,7 +125,7 @@ usable corporate-actions primitive before building anything on top of it.
 | Proof | Question | Status |
 |---|---|---|
 | 1 | Does one payer settle to three recipients in one batch? | **passes** (Daml Script, 17 Sep) |
-| 2 | Does each recipient see only its own leg? | single-participant form passes; four-participant run pending |
+| 2 | Does each recipient see only its own leg? | **passes** on LocalNet, each holder on its own participant (17 Sep) |
 | 3 | Do holders authorise **once**, at onboarding, and never per coupon? | **passes** (two coupons, no holder command; misuse refused) |
 | 4 | Does one bad leg settle **zero**, not N−1? | **passes** (rejection recorded) |
 | 5 | How many legs fit in one transaction? | 2,000 legs settle in one batch in the interpreter, linear in N; the participant ceiling is pending LocalNet |

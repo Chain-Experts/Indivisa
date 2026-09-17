@@ -58,8 +58,12 @@ Indivisa/
 │           └── StatusPill.tsx
 │
 ├── infra/
-│   ├── README.md
-│   └── localnet/docker-compose.yml
+│   ├── README.md                  what any network needs; LocalNet; DevNet handover
+│   └── localnet/
+│       ├── localnet.conf          1 synchronizer, 5 participants, in memory
+│       ├── bootstrap.canton       connect, upload DARs, ping
+│       ├── participants.json      party-to-participant map for Daml Script
+│       └── up.ps1                 start / -Down
 │
 └── docs/
     ├── modules.md                 this file
