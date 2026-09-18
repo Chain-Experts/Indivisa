@@ -3,6 +3,7 @@
 #   pwsh infra/localnet/demo.ps1 seat    -Holders 250 -Tag sep18   # once per demo instance
 #   pwsh infra/localnet/demo.ps1 attempt -Tag sep18 -Withhold 1    # rejected: one holder not ready
 #   pwsh infra/localnet/demo.ps1 attempt -Tag sep18                # settled: 250/250
+#   pwsh infra/localnet/demo.ps1 prepare -Tag sep18 [-Withhold 1]  # allocations only; the UI button settles
 #
 # Seat output lands in infra/localnet/demo/seat-<tag>.json (git-ignored) and
 # is the input of every attempt. Attempt outcomes go next to it.
@@ -12,7 +13,7 @@
 # command because the seat's parties already exist when the attempt runs.
 
 param(
-  [Parameter(Mandatory = $true, Position = 0)] [ValidateSet("seat", "attempt")] [string] $Command,
+  [Parameter(Mandatory = $true, Position = 0)] [ValidateSet("seat", "prepare", "attempt")] [string] $Command,
   [string] $Tag = "demo",
   [int] $Holders = 250,
   [int] $Withhold = 0
@@ -43,6 +44,20 @@ try {
           Tee-Object -FilePath (Join-Path $demoDir "seat-$Tag.log") | Select-String -Pattern "seated|FailedCmd|Exception" | ForEach-Object { $_.Line }
       }
       Write-Host ("seat '{0}': {1} holders in {2:N0}s -> {3}" -f $Tag, $Holders, $t.TotalSeconds, $seatFile)
+    }
+    "prepare" {
+      $seatFile = Join-Path $demoDir "seat-$Tag.json"
+      if (-not (Test-Path $seatFile)) { throw "No seat '$Tag'. Run: demo.ps1 seat -Tag $Tag" }
+      $argsFile = Join-Path $demoDir "attempt-args-$Tag.json"
+      $outFile = Join-Path $demoDir "prepared-$Tag.json"
+      $seat = Get-Content $seatFile -Raw
+      Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + '}') -NoNewline
+      $t = Measure-Command {
+        & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_prepare" `
+          --input-file $argsFile --output-file $outFile --participant-config $mapFile 2>&1 |
+          Tee-Object -FilePath (Join-Path $demoDir "prepare-$Tag.log") | Select-String -Pattern "withholding|FailedCmd|Exception" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
+      }
+      Write-Host ("prepare '{0}' (withhold {1}): {2:N0}s -> {3}" -f $Tag, $Withhold, $t.TotalSeconds, $outFile)
     }
     "attempt" {
       $seatFile = Join-Path $demoDir "seat-$Tag.json"

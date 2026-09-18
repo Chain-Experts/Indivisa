@@ -39,9 +39,10 @@ Indivisa/
 │           ├── Scale.daml                 exists
 │           └── Demo.daml                  exists; seat a realistic holder base, run the day, arm the failure
 │
-├── ui/
+├── ui/                            exists; the four panes (Vite + React, no backend)
+│   ├── README.md
 │   ├── package.json
-│   ├── vite.config.ts
+│   ├── vite.config.ts             proxy per participant, serves the seat
 │   ├── index.html
 │   └── src/
 │       ├── main.tsx
@@ -51,8 +52,8 @@ Indivisa/
 │       │   ├── client.ts
 │       │   └── queries.ts
 │       ├── panes/
-│       │   ├── PayingAgent.tsx
-│       │   └── Holder.tsx
+│       │   ├── PayingAgent.tsx    every leg, the button, the outcome
+│       │   └── Holder.tsx         one component, three holders
 │       └── components/
 │           ├── Money.tsx
 │           ├── LegTable.tsx
@@ -116,12 +117,13 @@ example: they are the paying agent's client logic, so they sit in
 
 | File | Does |
 |---|---|
-| `ledger/client.ts` | JSON Ledger API v2 over fetch. One client per party, each with its own token. No Java tier. |
-| `ledger/queries.ts` | Distribution summary for the agent; own position and own payment for a holder. |
-| `panes/PayingAgent.tsx` | Instrument, holder count, total due, one button, result with update id. |
+| `ledger/client.ts` | JSON Ledger API v2 over fetch: ledger end, active contracts by template or interface, submit-and-wait, update-by-offset. One client per party, pointed at its participant. No Java tier. |
+| `ledger/queries.ts` | `agentState` (instrument, schedule, run, allocations, rejections, receipt with update id), `holderState` (mine, and the counts of everything else), `factoryDisclosure`, `settle`, `recordRejection`. |
+| `panes/PayingAgent.tsx` | Instrument, holders, total due, allocations ready, the button, the outcome, the schedule table. |
 | `panes/Holder.tsx` | **One component rendered three times** with a different party. Not three files. |
 | `components/*` | `Money` (tabular figures), `LegTable`, `StatusPill`. |
-| `config.ts` | Party ids, tokens, instrument id for the demo. |
+| `config.ts` | Loads the seat and the party-to-participant map; display names from party ids. |
+| `vite.config.ts` | Dev proxy per participant; serves the seat and the map at `/demo/*`. |
 
 ## Not built, deliberately
 
@@ -130,4 +132,4 @@ example: they are the paying agent's client logic, so they sit in
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-Roughly 800–1000 lines of Daml and 400–600 of TypeScript.
+Roughly 1,000 lines of Daml in the model and 1,300 in scripts; about 700 of TypeScript.

@@ -243,8 +243,27 @@ data DemoOutcome
         reason        : Text
   deriving (Eq, Show)
 
-demo_attempt : DemoAttemptArgs -> Script DemoOutcome
-demo_attempt args = do
+-- | What the allocation phase leaves ready for the button. The UI settles
+-- from this: the run, every allocation, and the factory to disclose.
+data DemoPrepared = DemoPrepared
+  with
+    runCid         : ContractId DistributionRun
+    allocationCids : [ContractId V2.Allocation]
+    rulesCid       : ContractId TestTokenV2.TokenRules
+    registry       : Party
+    payingAgent    : Party
+    runId          : Text
+    legs           : Int
+    total          : Decimal
+    withheld       : [Party]
+  deriving (Eq, Show)
+
+-- | The allocation phase only: find or create the run, create whatever
+-- allocations are still missing (minus the withheld ones), stop before the
+-- settle. This is what runs before the button in the UI is pressed; the
+-- button submits Run_Settle over the JSON Ledger API.
+demo_prepare : DemoAttemptArgs -> Script DemoPrepared
+demo_prepare args = do
   let seat = args.seat
       agent = seat.payingAgent
   cash <- cashFor seat.registry seat.rulesCid
@@ -275,10 +294,30 @@ demo_attempt args = do
       withheld = drop (length wanted - args.withhold) wanted
   receiptCids <- allocateReceipts agent cash run toCreate
   forA_ withheld $ \(h, _) -> debug ("withholding the receipt allocation of " <> show h)
+  pure DemoPrepared with
+    runCid
+    allocationCids = existingCids ++ sendCids ++ receiptCids
+    rulesCid = seat.rulesCid
+    registry = seat.registry
+    payingAgent = agent
+    runId = run.runId
+    legs = length run.legs
+    total = runTotal run
+    withheld = map fst withheld
+
+-- | Prepare, then settle in the script itself. What the smoke test and the
+-- shell demo use; the UI uses demo_prepare and presses the button itself.
+demo_attempt : DemoAttemptArgs -> Script DemoOutcome
+demo_attempt args = do
+  prepared <- demo_prepare args
+  let agent = prepared.payingAgent
+      runCid = prepared.runCid
+  cash <- cashFor prepared.registry prepared.rulesCid
+  Some run <- queryContractId agent runCid
 
   -- One transaction.
   t0 <- getTime
-  r <- trySettle agent cash runCid (existingCids ++ sendCids ++ receiptCids)
+  r <- trySettle agent cash runCid prepared.allocationCids
   t1 <- getTime
   case r of
     Right (receiptCid, result) -> do

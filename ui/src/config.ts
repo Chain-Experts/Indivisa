@@ -1,0 +1,60 @@
+// What the panes need to know before they read the ledger: which parties to
+// show and which participant hosts each. Both come from files the demo
+// scripts wrote (served by the dev server; see vite.config.ts).
+
+import type { Party } from "./ledger/client";
+
+/** The seat, as Indivisa.Test.Demo.demo_seat emitted it (JSON of DemoSeat). */
+export interface Seat {
+  tag: string;
+  registry: Party;
+  issuer: Party;
+  payingAgent: Party;
+  holders: Party[];
+  rulesCid: string;
+  scheduleCid: string;
+  isin: string;
+  runId: string;
+  legs: number;
+  total: string;
+}
+
+export interface ParticipantMap {
+  participants: Record<string, { host: string; port: number }>;
+  party_participants: Record<Party, string>;
+}
+
+export interface Config {
+  seat: Seat;
+  /** participant name -> proxied base URL */
+  baseOf: (participant: string) => string;
+  /** party -> participant name */
+  participantOf: (party: Party) => string;
+}
+
+export async function loadConfig(): Promise<Config> {
+  const [seatR, mapR] = await Promise.all([fetch("/demo/seat.json"), fetch("/demo/participants.json")]);
+  if (!seatR.ok) throw new Error("No seat file. Run: pwsh infra/localnet/demo.ps1 seat -Tag <tag>, then start the UI with INDIVISA_SEAT pointing at it.");
+  if (!mapR.ok) throw new Error("No participant map. Run: pwsh infra/localnet/participants-with-parties.ps1");
+  const seat = (await seatR.json()) as Seat;
+  const map = (await mapR.json()) as ParticipantMap;
+  const participantOf = (party: Party): string => {
+    const p = map.party_participants[party];
+    if (!p) throw new Error(`no participant known for ${party}; regenerate participants-with-parties.json`);
+    return p;
+  };
+  return { seat, participantOf, baseOf: (participant) => `/api/${participant}` };
+}
+
+/** "Meridian-Paying-Agent-sep18-20260918...-4f1df03a::1220..." -> "Meridian Paying Agent" */
+export function displayName(party: Party, tag: string): string {
+  const hint = party.split("::")[0];
+  const cut = hint.indexOf(`-${tag}-`);
+  const name = cut > 0 ? hint.slice(0, cut) : hint;
+  return name.replace(/-/g, " ");
+}
+
+/** "...::1220abcd..." -> "1220abcd…" */
+export function shortId(id: string, n = 10): string {
+  return id.length > n ? `${id.slice(0, n)}…` : id;
+}

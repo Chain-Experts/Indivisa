@@ -154,3 +154,14 @@ evidence. Everything below is config; no code changes are expected.
 What NOT to do: do not point the scripts at DevNet while developing. LocalNet
 is free, instant to reset and under our control; DevNet costs traffic and
 uptime we do not own.
+
+### The four panes
+
+```
+cd ui && npm install
+$env:INDIVISA_SEAT = "../infra/localnet/demo/seat-sep18.json"; npm run dev    # http://localhost:5173
+```
+
+The button on the paying agent's pane submits `Run_Settle` over the JSON
+Ledger API; `demo.ps1 prepare` runs before it (allocations), not `attempt`
+(which would settle from the script). See `ui/README.md`.

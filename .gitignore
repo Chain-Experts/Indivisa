@@ -15,3 +15,5 @@ build/
 infra/localnet/log/
 infra/localnet/participants-with-parties.json
 infra/localnet/demo/
+ui/node_modules/
+ui/dist/

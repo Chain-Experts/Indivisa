@@ -290,16 +290,26 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 4 — UI (days 15–17)
+## Phase 4 — UI (days 15–17) · **built 18 Sep**
 
-Four read-only panes. Lists and numbers. No forms, no routing, no state library.
+Four panes. Lists and numbers. No forms, no routing, no state library.
 
-- [ ] Paying agent: instrument, holder count, total due, one button, result with
-      update id.
-- [ ] `Holder.tsx` — **one component rendered three times**, one per party.
-- [ ] Reads the ledger directly over the **JSON Ledger API v2**. No Java tier.
-- [ ] Visibly empty where a holder cannot see another's data. That contrast is
-      the demo, and it works in a plain table.
+- [x] Paying agent: instrument, holders, total due, allocations ready, **one
+      button** that submits `Run_Settle` over the JSON Ledger API with the
+      factory disclosed, then the update id (recovered by offset after a
+      reload) and submit-to-commit time. On refusal: "SETTLEMENT REJECTED ·
+      N requested · 0 executed · NO PARTIAL SETTLEMENT", the reason, and a
+      `SettlementRejected` record written on-ledger.
+- [x] `Holder.tsx` — one component rendered three times: my position, my
+      agreement, my allocation, my cash, and six always-zero counts of what
+      this node holds about anyone else.
+- [x] JSON Ledger API v2 only, through the dev server's proxy (no CORS on
+      the API; nginx in production). No Java tier.
+- [x] Verified live in Chrome on LocalNet (18 Sep): 8-holder seat, prepared
+      with one withheld -> pressed -> rejected naming the holder; prepared
+      again -> pressed -> settled 8/8, $14,371.88, holders paid.
+- [ ] Party tokens for DevNet: `client.ts` has no auth header yet; add a
+      bearer token per participant when the validator requires one.
 
 > Budgeted at one to two days because it is AI-assisted and the surface is
 > small. If Phase 1 or 2 slips, this phase absorbs it — but do not cut it to
