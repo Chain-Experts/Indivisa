@@ -362,10 +362,11 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       postmortem names as a marker of the credible builds — everything else
       was LocalNet. Confirm first (Phase 0 NODERS questions 2 and 3) which
       DevNet carries V2 and what protocol version it demands.
-      **18 Sep: DevOps asked to install Splice 0.8.1 on DevNet**, the release
-      the DARs were built against. If DevNet has moved on (0.8.3 was tagged
-      18 Sep), install what DevNet mandates instead; the V2 DARs are
-      byte-identical through 0.8.3, so nothing on our side changes.
+      **18 Sep: Splice 0.8.1 installed on the DevNet validator** (DevOps
+      confirmed), the release the DARs were built against. Next from the
+      checklist in `infra/README.md`: upload the DARs (step 2), a ledger user
+      with `ParticipantAdmin` and its token (3), fill in `infra/devnet/*.json`
+      (4), smoke with `participants-with-parties.ps1 -Network devnet` (5).
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
 - [ ] Deck: the problem in Canton's own numbers, what V2 changed in June, the
