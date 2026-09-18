@@ -192,10 +192,19 @@ Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
       stack at N = 2000 (`forA` over 2,000 submissions); `-Xss64m` lifts it.
       Client, not ledger. Chunk the loop or keep the flag on LocalNet.
 
-Participant form (needs Phase 0b):
-- [ ] Same script against LocalNet, N = 3 → 1000 and past it.
-- [ ] Per N: transaction size, view count, submission-to-completion latency,
-      estimated traffic cost, failure reason if rejected.
+Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
+- [x] Same script against LocalNet, N = 3, 10, 50, 100, 250, 500, **1000**.
+      Every size settled; 1,001 allocations in one transaction.
+- [x] Per N: request size (1.67 KB per allocation, 1.67 MB at 1000) and
+      submission-to-commit (5 s at 100, 15–28 s at 250, 104 s at 500,
+      333 s at 1000). Envelopes stay at 7: per node, not per leg.
+- [x] **Latency wall, not a hard cap.** Size alone would allow ~6,200 per
+      batch; latency grows about N^1.7 with a silent phase the INFO log
+      cannot attribute. Product answer: a few hundred holders per atomic
+      batch on this hardware; thousands as back-to-back batches.
+- [ ] DEBUG run at N = 500 to attribute the silent phase.
+- [ ] Traffic cost estimate (needs DevNet's fee parameters).
+- [ ] Hit the size cap on purpose to record the rejection message.
 - [ ] Two shapes per N: **one** send allocation carrying N `transferLegSides`,
       versus N send allocations. Expected view count is N receipt allocations
       plus send allocation(s) plus root; measure, do not assume.
