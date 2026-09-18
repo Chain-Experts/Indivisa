@@ -34,6 +34,7 @@ import Daml.Script
 
 import Splice.Api.Token.AllocationV2 qualified as V2
 import Splice.TokenStandard.Utils (basicAccount)
+import Splice.Testing.Tokens.TestTokenV2 qualified as TestTokenV2
 
 import Indivisa.Types
 import Indivisa.Model.Distribution
@@ -72,6 +73,21 @@ data Prepared = Prepared
     holders        : [Party]
     legs           : [PaymentLeg]
     total          : Decimal
+
+-- | The same, as the runner can write it with --output-file: `Cash` carries
+-- a disclosure with a type representation, which has no JSON form (the
+-- runner fails "Illegal TypeRep in Value" on it, 18 Sep). This is the
+-- input of the JSON API settle client, ui/scripts/settle.ts.
+data PreparedOut = PreparedOut
+  with
+    registry       : Party
+    payingAgent    : Party
+    rulesCid       : ContractId TestTokenV2.TokenRules
+    runCid         : ContractId DistributionRun
+    allocationCids : [ContractId V2.Allocation]
+    legs           : Int
+    total          : Decimal
+  deriving (Eq, Show)
 
 -- | The runner's input: which ledger and how many holders. As JSON for
 -- --input-file: {"topology": "LocalNet", "holders": 500}  (Topology is an enum)
@@ -112,6 +128,20 @@ scaleAllocateOnlyWith args = do
     allocationCids = sendCid :: receiptCids
     holders
     legs
+    total
+
+-- | The prepare for the JSON API benchmark (infra/settle.ps1): everything
+-- up to the settle, emitted in a form the runner can write out.
+scalePrepare : ScaleArgs -> Script PreparedOut
+scalePrepare args = do
+  Prepared {..} <- scaleAllocateOnlyWith args
+  pure PreparedOut with
+    registry = cast.registry
+    payingAgent = cast.payingAgent
+    rulesCid = cash.rulesCid
+    runCid
+    allocationCids
+    legs = length legs
     total
 
 -- | The paying agent's day, for N holders.

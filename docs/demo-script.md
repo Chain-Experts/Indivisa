@@ -55,11 +55,12 @@ holder panes say **allocated** and show **0** on every "others" line.
 | 9 | 70–80 | Terminal, one line: `demo.ps1 prepare -Tag take2`. Back to tab B: **251 of 251**. Click. **SETTLED · 250 of 250**. | The missing holder is made ready. Same button. Settled. | real |
 | 10 | 80–90 | Still frame, the settled agent pane. | Corporate actions, settled in one atomic batch, without exposing the register. Chain-Experts · HackCanton Season 3. | |
 
-Keep shot 5 long enough for the commit time to be readable; on LocalNet a
-250-leg settle commits in 15 to 30 seconds, so **start recording shot 4 with
-the click and let it run**; do not cut the wait, caption it ("the ledger is
-validating 250 legs") if it feels long. On an 8-holder seat it is under a
-second, which reads as fake. Use 250.
+On LocalNet a 250-leg settle commits in about 1.6 s, so shot 4 to shot 5 is
+one cut: the button reads *Settling…* for a moment and the pane flips. Hold
+shot 5 long enough for the update id and the commit time to be read; that
+line is the evidence. Do not speed anything up; if a viewer thinks it looks
+too fast, the sequencer log and the benchmark are the answer, not a slower
+cut.
 
 ## What each caption may and may not claim
 
@@ -83,11 +84,10 @@ From `docs/benchmark.md`, LocalNet, Canton 3.5.17, one transaction:
 
 | Legs | Transaction size | Submit to commit |
 |---|---|---|
-| 50 | 101 KB | 1.9 s |
-| 250 | 440 KB | 15 to 28 s |
-| 500 | 0.8 MB | 104 s |
-| 1,000 | 1.67 MB | 333 s |
+| 250 | 440–545 KB | 1.6 s |
+| 500 | 0.8 MB | 4.0 s |
+| 1,000 | 1.67 MB | 11.1 s |
 
 And the sentence: *"Nobody had published how many legs fit in a CIP-112
-batch. We measured it: a thousand in one transaction, and a few hundred is
-the comfortable size."*
+batch. We measured it: a thousand holders, one transaction, 11.1 s on one
+workstation, and we had not found the ceiling."*

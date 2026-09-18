@@ -64,12 +64,14 @@ export class LedgerError extends Error {
 }
 
 export class Ledger {
-  constructor(public readonly base: string, public readonly party: Party) {}
+  // `headers` is for a client outside the browser (scripts/settle.ts), which
+  // has no proxy to add the bearer token for it.
+  constructor(public readonly base: string, public readonly party: Party, private readonly headers: Record<string, string> = {}) {}
 
   private async post<R>(path: string, body: unknown): Promise<R> {
     const r = await fetch(`${this.base}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...this.headers },
       body: JSON.stringify(body),
     });
     const text = await r.text();
@@ -78,7 +80,7 @@ export class Ledger {
   }
 
   async ledgerEnd(): Promise<number> {
-    const r = await fetch(`${this.base}/v2/state/ledger-end`);
+    const r = await fetch(`${this.base}/v2/state/ledger-end`, { headers: this.headers });
     if (!r.ok) throw new LedgerError(r.status, await r.text());
     return (await r.json()).offset as number;
   }

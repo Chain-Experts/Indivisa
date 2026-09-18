@@ -44,6 +44,7 @@ Indivisa/
 │   ├── package.json
 │   ├── vite.config.ts             proxy per participant (ui.json), serves the seat and the map
 │   ├── index.html
+│   ├── scripts/settle.ts          the button's settle, from Node, for the benchmark
 │   └── src/
 │       ├── main.tsx
 │       ├── App.tsx
@@ -63,6 +64,7 @@ Indivisa/
 │   ├── README.md                  what any network needs; LocalNet; DevNet handover
 │   ├── demo.ps1                   seat / prepare / attempt, the demo from a shell (-Network)
 │   ├── participants-with-parties.ps1   adds every existing party to the runner's map
+│   ├── settle.ps1                 prepare N legs by script, settle over the JSON API from Node, time it
 │   ├── localnet/
 │   │   ├── localnet.conf          1 synchronizer, 5 participants, in memory
 │   │   ├── bootstrap.canton       connect, upload DARs, ping
@@ -115,7 +117,7 @@ example: they are the paying agent's client logic, so they sit in
 | `Register.daml` | Positions aggregate and transfer; each holder sees only its own; the snapshot freezes and is verified against real position contracts. |
 | `Entitlement.daml` | The arithmetic: largest remainder hands out the residual cent; half-up lets the total follow; sums are exact across rates and sizes; zero entitlements dropped; the schedule template ensures its total. |
 | `Coupon.daml` | The whole chain: register, announcement, snapshot, on-ledger schedule (Charlie gets the residual cent), run from schedule, one settlement, balances equal the schedule, receipt links the schedule, holders never see the schedule or the run. IDE and LocalNet. |
-| `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle so the difference is the one transaction. Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file. Results in `benchmark.md`. |
+| `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle, `scalePrepare` does the same and emits what the JSON API settle client needs (`PreparedOut`). Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file, settled by `infra/settle.ps1`. Results in `benchmark.md`. |
 | `Demo.daml` | `demo_seat` (parties with realistic names and heavy-tailed positions, cash, instrument, onboarding, announcement, snapshot, on-ledger schedule; emits a `DemoSeat` JSON for the run and the panes) and `demo_attempt` (finds or creates the run, creates only the allocations still missing, settles; `withhold = 1` arms the deliberate failure and writes a `SettlementRejected` record; `withhold = 0` completes). `demo_smoke` runs both under `dpm test`. |
 
 ## `ui/` — four panes
@@ -129,6 +131,7 @@ example: they are the paying agent's client logic, so they sit in
 | `components/*` | `Money` (tabular figures), `LegTable`, `StatusPill`. |
 | `config.ts` | Loads the seat and the party-to-participant map; display names from party ids. |
 | `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer token injected server-side; serves the seat and the party map (stripped to `party_participants`) at `/demo/*`. |
+| `scripts/settle.ts` | The same `settle` call as the button, run from Node against `infra/<network>/ui.json` directly (no proxy; adds the bearer header itself). `infra/settle.ps1` bundles it with esbuild and runs it after a script-side prepare; it is how the benchmark times submit to commit without the Daml Script runner. |
 
 ## Not built, deliberately
 

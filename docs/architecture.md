@@ -238,13 +238,14 @@ thing.
 **How many legs fit in one transaction?** Measured, 17–18 September, on
 LocalNet (`benchmark.md`). One committed send allocation carries every leg,
 so the batch is N+1 allocations. 1,000 legs settle in one transaction:
-1.67 MB, 333 s submit to commit; 250 legs in 15–28 s. Size is linear at
-1.67 KB per allocation and a sixth of the sequencer's 10 MB cap at 1,000;
-latency grows about N^1.7. The ceiling is a latency wall, not a size cap, and
-the product answer is a few hundred holders per atomic batch on that
-hardware, thousands as back-to-back batches. CIP-0120's 100 bytes per view
-was an arithmetic assumption; the measured figure is roughly seventeen
-times that per allocation.
+1.67 MB, 11.1 s submit to commit over the JSON Ledger API (500 in 4.0 s, 250
+in 1.6 s). Size is linear at 1.67 KB per allocation and a sixth of the
+sequencer's 10 MB cap at 1,000; latency is linear at about 4.5 ms per leg
+on the ledger. No ceiling was reached. CIP-0120's 100 bytes per view was an
+arithmetic assumption; the measured figure is roughly seventeen times that
+per allocation. (The first published figures, 104 s and 333 s, were the Daml
+Script runner reading the result back, not the ledger; `benchmark.md`
+explains.)
 
 **What does a failed batch actually return?** `missing authorizations` from
 the standard's own validation, naming the party, leg, side, amount and
@@ -259,12 +260,6 @@ or Canton Coin. If Canton Coin: whether Amulet's V2 implementation accepts a
 receipt allocation created through a third-party agreement the way
 `TestTokenV2` does, or only through its own `TransferPreapproval`, has not been
 checked. The handover assumes `TestTokenV2`.
-
-**Where does the time go above 250 legs?** The sequencer log shows about 25 s
-of visible confirmation traffic at every size, then silence from every node
-until the commit. Whether the cash registry, which confirms every leg in its
-instrument, is the node doing the work is unattributed at INFO level; a DEBUG
-run at 500 would say.
 
 **Does the shape hold on DevNet?** Five nodes in one JVM on one machine is
 not a network. Separate machines add hops and remove contention; more

@@ -9,7 +9,7 @@ not need to spend, and the multi-participant setup that proof 2 requires.
 
 The order matters more than the list. Proofs 1–4 gated everything and passed
 on 17 September; proof 5, the one that could have killed the idea, was measured
-to 1,000 legs on LocalNet on 17–18 September (a latency wall, not a size cap).
+to 1,000 legs on LocalNet on 17–18 September (one transaction, seconds).
 Phases 2 to 4 were built on 18 September. Phase 5 is what is left.
 
 Done on 16 September: dpm-sdk 3.5.10 confirmed, `sdk-version` corrected, two
@@ -177,7 +177,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 - [ ] Still to add: an expired or insufficient **send** allocation as the bad
       leg, once settlement deadlines are in play.
 
-### Proof 5 — where is the ceiling? **MEASURED**: a latency wall, not a size cap
+### Proof 5 — where is the ceiling? **MEASURED**: not reached at 1,000 legs; linear
 
 Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
 - [x] N = 3, 10, 50 under `dpm test -p scale`; 250, 500, 1000, 2000 through
@@ -195,14 +195,17 @@ Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
 Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 - [x] Same script against LocalNet, N = 3, 10, 50, 100, 250, 500, **1000**.
       Every size settled; 1,001 allocations in one transaction.
-- [x] Per N: request size (1.67 KB per allocation, 1.67 MB at 1000) and
-      submission-to-commit (5 s at 100, 15–28 s at 250, 104 s at 500,
-      333 s at 1000). Envelopes stay at 7: per node, not per leg.
-- [x] **Latency wall, not a hard cap.** Size alone would allow ~6,200 per
-      batch; latency grows about N^1.7 with a silent phase the INFO log
-      cannot attribute. Product answer: a few hundred holders per atomic
-      batch on this hardware; thousands as back-to-back batches.
-- [ ] DEBUG run at N = 500 to attribute the silent phase.
+- [x] Per N: request size (1.67 KB per allocation, 1.67 MB at 1000).
+      Envelopes stay at 6 or 7: per node, not per leg.
+- [x] **Corrected 18 Sep.** The in-script timings (15–28 s at 250, 104 s at
+      500, 333 s at 1000) were the Daml Script runner digesting the result,
+      not the ledger: the sequencer log shows the 1,000-leg batch finalised
+      4.7 s after interpretation and the script silent for the next 5 min
+      24 s. Re-timed from the JSON Ledger API (`infra/settle.ps1`,
+      `ui/scripts/settle.ts`, the button's call): **1.6 s at 250, 4.0 s at
+      500, 11.1 s at 1,000.** Linear, about 4.5 ms per leg on the ledger.
+      No latency wall; no ceiling reached below the size cap.
+- [x] The "silent phase" attributed: it was the client. No DEBUG run needed.
 - [ ] Traffic cost estimate (needs DevNet's fee parameters).
 - [ ] Hit the size cap on purpose to record the rejection message.
 - [ ] Two shapes per N: **one** send allocation carrying N `transferLegSides`,
@@ -210,13 +213,13 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
       plus send allocation(s) plus root; measure, do not assume.
 - [x] Pre-settlement cost counted (`docs/benchmark.md`, "Onboarding cost"):
       parties ~5 s each, acceptances ~1 s each, receipt allocations batched
-      fifty per command; the day for 500 existing holders is ~7 minutes, of
-      which 104 s is the settle.
-- [ ] Whether the **cash registry** is the bottleneck: it confirms every leg
-      in its instrument, and the silent phase is unattributed at INFO level.
-      Needs the DEBUG run above.
-- [x] Hard cap or latency wall: **latency wall** (size at 1,000 legs is a
-      sixth of the sequencer cap; latency grows ~N^1.7).
+      fifty per command; the day for 500 existing holders is ~5 minutes, of
+      which 4 s is the settle.
+- [x] Whether the **cash registry** is the bottleneck: not at these sizes.
+      The registry confirms every leg and the whole confirmation round is
+      2.2 s at 500 and 4.7 s at 1,000; nothing stands out per node in the log.
+- [x] Hard cap or latency wall: **neither reached**. Size at 1,000 legs is a
+      sixth of the sequencer cap; latency is linear and single-digit seconds.
 - [x] Section 2 of `docs/benchmark.md` filled in (18 Sep).
 
 > LocalNet is the right place for this: push to failure without spending real

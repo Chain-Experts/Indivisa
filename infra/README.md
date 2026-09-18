@@ -87,10 +87,14 @@ dpm script --dar .daml/dist/indivisa-test-0.1.0.dar \
 ```
 
 The same for `proof2With`, `proof3With`, `proof3bWith`, `proof4With`,
-`proof4bWith`, `Indivisa.Test.Coupon:couponWith`. For the benchmark,
-`Indivisa.Test.Scale:scaleWith` with `{"topology":"LocalNet","holders":500}`
-and `JAVA_TOOL_OPTIONS=-Xss64m` (the script runner's own stack, see
-`docs/benchmark.md`).
+`proof4bWith`, `Indivisa.Test.Coupon:couponWith`.
+
+For the benchmark, `pwsh infra/settle.ps1 -Holders 500`: the script prepares
+N legs on the reused `Holder-*` parties (`Indivisa.Test.Scale:scaleAllocateOnlyWith`),
+then a Node client settles over the JSON Ledger API and prints submit to
+commit. Do not time the settle from inside a script: the Daml Script runner
+takes minutes to digest a large transaction tree after the ledger has
+committed it (`docs/benchmark.md`).
 
 Things learned on 17 September that a fresh reader will hit:
 
