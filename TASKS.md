@@ -282,8 +282,11 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 - [x] `demo_smoke` (12 holders, rejected then settled) under `dpm test`.
 - [x] `infra/localnet/demo.ps1 seat | attempt` drives it from a shell; the
       participant map is regenerated before each command.
-- [ ] Confirm LocalNet carries the full demo at the recording size (250):
-      50-holder seat and both attempts on 18 Sep, 250 next.
+- [x] LocalNet carries the full demo: 50-holder seat (427 s, party creation),
+      attempt with one holder withheld **rejected** (reason names the holder,
+      `SettlementRejected` written), attempt without **settled 50/50**,
+      $252,700.00, 1.9 s (18 Sep).
+- [ ] The same at the recording size, 250 (seat ~20 min).
 
 ---
 

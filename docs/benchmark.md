@@ -123,7 +123,7 @@ validators hosting holders.
 |---|---|---|---|---|---|
 | 3 | 4 | 19.5 KB | (proofs, not timed) | | settled |
 | 10 | 11 | 30.4 KB | 0.7 s | 62 ms | settled |
-| 50 | 51 | 101.4 KB | ~20 s (two-run method, ±10 s) | | settled |
+| 50 | 51 | 101.4 KB | **1.9 s** (demo attempt, in-script) | 37 ms | settled |
 | 100 | 101 | 187.7 KB | **5.4 s** | 53 ms | settled |
 | 250 | 251 | 440.1 KB | **15.3 s** (warm JVM) / 27.8 s (cold, fresh 12 GB instance) | 61–111 ms | settled |
 | 500 | 501 | 811–843 KB | **104 s** (109 s on the 4 GB instance) | 207 ms | settled |
