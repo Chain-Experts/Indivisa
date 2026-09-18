@@ -19,12 +19,14 @@ export interface Seat {
   total: string;
 }
 
+/** What the dev server serves at /demo/participants.json: the map only, never the tokens. */
 export interface ParticipantMap {
-  participants: Record<string, { host: string; port: number }>;
+  network: string;
   party_participants: Record<Party, string>;
 }
 
 export interface Config {
+  network: string;
   seat: Seat;
   /** participant name -> proxied base URL */
   baseOf: (participant: string) => string;
@@ -34,8 +36,8 @@ export interface Config {
 
 export async function loadConfig(): Promise<Config> {
   const [seatR, mapR] = await Promise.all([fetch("/demo/seat.json"), fetch("/demo/participants.json")]);
-  if (!seatR.ok) throw new Error("No seat file. Run: pwsh infra/localnet/demo.ps1 seat -Tag <tag>, then start the UI with INDIVISA_SEAT pointing at it.");
-  if (!mapR.ok) throw new Error("No participant map. Run: pwsh infra/localnet/participants-with-parties.ps1");
+  if (!seatR.ok) throw new Error("No seat file. Run: pwsh infra/demo.ps1 seat -Tag <tag>, then start the UI with INDIVISA_TAG=<tag>.");
+  if (!mapR.ok) throw new Error("No participant map. Run: pwsh infra/participants-with-parties.ps1");
   const seat = (await seatR.json()) as Seat;
   const map = (await mapR.json()) as ParticipantMap;
   const participantOf = (party: Party): string => {
@@ -43,7 +45,7 @@ export async function loadConfig(): Promise<Config> {
     if (!p) throw new Error(`no participant known for ${party}; regenerate participants-with-parties.json`);
     return p;
   };
-  return { seat, participantOf, baseOf: (participant) => `/api/${participant}` };
+  return { network: map.network, seat, participantOf, baseOf: (participant) => `/api/${participant}` };
 }
 
 /** "Meridian-Paying-Agent-sep18-20260918...-4f1df03a::1220..." -> "Meridian Paying Agent" */

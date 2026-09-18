@@ -1,0 +1,11 @@
+{
+  "default_participant": { "host": "validator-a.example.org", "port": 5001, "access_token": "<ledger api bearer token, validator A>", "user_id": "indivisa" },
+  "participants": {
+    "registry": { "host": "validator-a.example.org", "port": 5001, "access_token": "<token A>", "user_id": "indivisa" },
+    "agent":    { "host": "validator-a.example.org", "port": 5001, "access_token": "<token A>", "user_id": "indivisa" },
+    "alice":    { "host": "validator-b.example.org", "port": 5001, "access_token": "<token B>", "user_id": "indivisa" },
+    "bob":      { "host": "validator-b.example.org", "port": 5001, "access_token": "<token B>", "user_id": "indivisa" },
+    "charlie":  { "host": "validator-b.example.org", "port": 5001, "access_token": "<token B>", "user_id": "indivisa" }
+  },
+  "party_participants": {}
+}

@@ -1,6 +1,6 @@
 # Modules
 
-Every file that will exist when this is finished, and what is in it.
+Every file, and what is in it.
 For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
 
 ```
@@ -18,31 +18,31 @@ Indivisa/
 │   ├── indivisa/                  package `indivisa` — uploaded to participants
 │   │   ├── daml.yaml
 │   │   └── Indivisa/
-│   │       ├── Types.daml                 exists; vocabulary, no V2
-│   │       ├── Utils.daml                 exists; our vocabulary in V2 terms
+│   │       ├── Types.daml                 vocabulary, no V2
+│   │       ├── Utils.daml                 our vocabulary in V2 terms
 │   │       ├── Model/
-│   │       │   ├── Payment.daml           exists; the once-only consent (V2)
-│   │       │   ├── Distribution.daml      exists; the run and its settle (V2)
-│   │       │   ├── Register.daml          exists; instrument, positions, snapshot
-│   │       │   ├── Event.daml             exists; the corporate action
-│   │       │   └── Entitlement.daml       exists; rate x position, rounding
+│   │       │   ├── Payment.daml           the once-only consent (V2)
+│   │       │   ├── Distribution.daml      the run and its settle (V2)
+│   │       │   ├── Register.daml          instrument, positions, snapshot
+│   │       │   ├── Event.daml             the corporate action
+│   │       │   └── Entitlement.daml       rate x position, rounding
 │   │
 │   └── indivisa-test/             package `indivisa-test` — never uploaded
 │       ├── daml.yaml
 │       └── Indivisa/Test/
-│           ├── Fixtures.daml              exists
-│           ├── Agent.daml                 exists
-│           ├── Distribution.daml          exists
-│           ├── Register.daml              exists
-│           ├── Entitlement.daml           exists
-│           ├── Coupon.daml                exists; the whole chain, end to end
-│           ├── Scale.daml                 exists
-│           └── Demo.daml                  exists; seat a realistic holder base, run the day, arm the failure
+│           ├── Fixtures.daml              cast, cash, funding, onboarding, waits
+│           ├── Agent.daml                 the paying agent's client moves
+│           ├── Distribution.daml          proofs 1 to 4
+│           ├── Register.daml              positions, transfer, snapshot
+│           ├── Entitlement.daml           the rounding arithmetic
+│           ├── Coupon.daml                the whole chain, end to end
+│           ├── Scale.daml                 proof 5 harness
+│           └── Demo.daml                  seat a realistic holder base, run the day, arm the failure
 │
-├── ui/                            exists; the four panes (Vite + React, no backend)
+├── ui/                            the four panes (Vite + React, no backend)
 │   ├── README.md
 │   ├── package.json
-│   ├── vite.config.ts             proxy per participant, serves the seat
+│   ├── vite.config.ts             proxy per participant (ui.json), serves the seat and the map
 │   ├── index.html
 │   └── src/
 │       ├── main.tsx
@@ -61,27 +61,33 @@ Indivisa/
 │
 ├── infra/
 │   ├── README.md                  what any network needs; LocalNet; DevNet handover
-│   └── localnet/
-│       ├── localnet.conf          1 synchronizer, 5 participants, in memory
-│       ├── bootstrap.canton       connect, upload DARs, ping
-│       ├── participants.json      participants for Daml Script
-│       ├── participants-with-parties.ps1   adds every existing party to the map
-│       ├── up.ps1                 start / -Down
-│       └── demo.ps1               seat / attempt, the demo from a shell
+│   ├── demo.ps1                   seat / prepare / attempt, the demo from a shell (-Network)
+│   ├── participants-with-parties.ps1   adds every existing party to the runner's map
+│   ├── localnet/
+│   │   ├── localnet.conf          1 synchronizer, 5 participants, in memory
+│   │   ├── bootstrap.canton       connect, upload DARs, ping
+│   │   ├── participants.json      participants for Daml Script (host, port)
+│   │   ├── ui.json                the same five, as JSON Ledger API URLs for the UI
+│   │   ├── up.ps1                 start / -Down / -Heap
+│   │   └── proofs.ps1             the six proofs and the coupon, one line each
+│   └── devnet/
+│       ├── participants.example.json   same shape plus access_token, user_id per participant
+│       └── ui.example.json        same shape plus token; the real files are git-ignored
 │
 └── docs/
     ├── modules.md                 this file
     ├── architecture.md
     ├── explainer.html             the story for a beginner, standalone page
-    ├── benchmark.md               proof 5 results (interpreter done; participant pending)
-    └── demo-script.md             shot list for the recording
+    ├── Indivisia Logo.png         the logo
+    ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
+    └── demo-script.md             shot list, captions and timings for the recording
 ```
 
 ## `daml/indivisa/` — the model
 
 | Module | Contains | Touches V2 |
 |---|---|---|
-| `Types.daml` | Vocabulary, no templates. `PaymentLeg` today; `Isin`, `RunId`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy` as Phase 2 adds them. | no |
+| `Types.daml` | Vocabulary, no templates: `Isin`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy` (LargestRemainder, RoundHalfUpResidualToIssuer), `PaymentLeg`. | no |
 | `Utils.daml` | Our vocabulary in V2 terms: `settlementInfo`, `holderAccount`, `transferLegOf`. Used by the ledger itself (`Run_Settle` derives the transfer legs from these), so anything a client builds must agree with them. | **yes** |
 | `Model/Payment.daml` | `PaymentProposal` (agent proposes; holder `Accept`s once, or `Decline`s; agent may `Withdraw`) and `PaymentAgreement`. Its one choice, `CreateReceiptAllocation`, lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation` plus admin and instrument checks. | **yes** |
 | `Model/Distribution.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run; both link the `EntitlementSchedule` they pay. `SettlementRejected`, the agent's own record of a refused batch (a refused transaction leaves nothing behind). `runFromSchedule` builds a run leg for leg from a schedule. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
@@ -90,8 +96,7 @@ Indivisa/
 | `Model/Entitlement.daml` | `entitlements`: quantity x amountPerUnit under a `RoundingPolicy`; largest-remainder by default so the legs sum to the announced total exactly; zero entitlements dropped. `EntitlementSchedule` records exact and paid amounts per holder, the policy, and ensures the total. | no |
 
 **Token Standard V2 is touched by `Indivisa.Utils` and `Indivisa.Model.*`, and
-nothing else.** `Types` and the future `Register`, `Event` and `Entitlement`
-are plain Daml. If V2 changes, `Utils`, `Model/Payment` and
+nothing else.** `Types`, `Register`, `Event` and `Entitlement` are plain Daml. If V2 changes, `Utils`, `Model/Payment` and
 `Model/Distribution` change.
 
 Rule for what lives in the model: only what the ledger executes or what the
@@ -123,7 +128,7 @@ example: they are the paying agent's client logic, so they sit in
 | `panes/Holder.tsx` | **One component rendered three times** with a different party. Not three files. |
 | `components/*` | `Money` (tabular figures), `LegTable`, `StatusPill`. |
 | `config.ts` | Loads the seat and the party-to-participant map; display names from party ids. |
-| `vite.config.ts` | Dev proxy per participant; serves the seat and the map at `/demo/*`. |
+| `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer token injected server-side; serves the seat and the party map (stripped to `party_participants`) at `/demo/*`. |
 
 ## Not built, deliberately
 
@@ -132,4 +137,4 @@ example: they are the paying agent's client logic, so they sit in
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-Roughly 1,000 lines of Daml in the model and 1,300 in scripts; about 700 of TypeScript.
+About 600 lines of Daml in the model and 1,700 in scripts; 850 of TypeScript; 500 of PowerShell, Canton config and CSS (18 Sep).

@@ -1,7 +1,7 @@
 # Architecture
 
 What each part holds, what it must never hold, and how a coupon actually travels
-from an announcement to five hundred private payments.
+from an announcement to hundreds of private payments.
 
 Read `CLAUDE.md` first for the decisions this document assumes, and
 `modules.md` for the full file inventory.
@@ -33,13 +33,18 @@ Three consequences:
   PaymentAgreement per holder            (V2 — signed once by holder and
           │                               paying agent, at onboarding)
           ▼
-  Coupon announcement                    (Daml — plain template)
-          │
+  CorporateAction                        (Daml — issuer signs, agent observes:
+          │                               kind, amount per unit, record and
+          │                               payment dates)
           ▼
-  Read register at record date           (Daml — plain template)
-          │
+  RegisterSnapshot at the record date    (Daml — Instrument_Snapshot verifies
+          │                               every Position contract, aggregates)
           ▼
-  Entitlement per holder                 rate x position x period
+  EntitlementSchedule                    (Daml — CorporateAction_Entitle derives
+          │                               it on-ledger: quantity x amount per
+          │                               unit, rounding policy, total ensured)
+          ▼
+  DistributionRun                        one PaymentLeg per schedule entry
           │
           ├─▶ Send allocation(s)          (V2 — paying agent authorises,
           │                               committed = True; one allocation
@@ -52,12 +57,15 @@ Three consequences:
   AllocationFactory_Allocate             asynchronous, one command each
           │
           ▼
-  SettlementFactory_SettleBatch          ← ONE transaction, atomic
-          │
+  Run_Settle                             ← ONE transaction, atomic:
+          │                               SettlementFactory_SettleBatch, then
+          │                               a DistributionReceipt for the agent
    ┌──────┼──────┐
    ▼      ▼      ▼
  Holder Holder  Holder
    A      B       C
+
+  (refused?  nothing moves; the agent records a SettlementRejected)
 ```
 
 **The allocation phase is asynchronous and per-allocation. Only the final
@@ -95,10 +103,10 @@ removed from the run. The demo's deliberate-failure path can use exactly this.
 
 | Role | Party | Sees |
 |---|---|---|
-| Paying agent | executor of the batch | the entire distribution |
-| Holder | receiver | its own leg only |
+| Paying agent | executor of the batch; in the demo also the registrar that keeps the register (`Entitle` insists the snapshot is the agent's own) | the entire distribution |
+| Holder | receiver | its own position and its own leg only |
 | Cash registry | administrator of the cash instrument | legs in its instrument |
-| Issuer | funds the paying agent | its own funding leg |
+| Issuer | signs the `CorporateAction`; funds the paying agent off-batch (the funding leg is not modelled; see `TASKS.md`, open decisions) | the announcement, the instrument, and the entitlement schedule: `Entitle` runs inside the issuer's own contract, so its consequences are in the issuer's view. An issuer knows its register through its registrar anyway; the privacy claim is holder to holder |
 
 The paying agent as executor is the whole design. CIP-112's own worked example
 gives the executor sight of every leg while each participant sees only its own —
@@ -112,15 +120,18 @@ which is exactly a paying agent's operational view of a coupon run.
 
 | Module | Holds | Status |
 |---|---|---|
-| `Indivisa.Types` | Vocabulary only. No templates. | `PaymentLeg` built; grows with the model |
+| `Indivisa.Types` | Vocabulary only. No templates. `Isin`, `EventKind`, `RoundingPolicy`, `PaymentLeg`. | **built** |
 | `Indivisa.Model.Register` | Instrument, positions, record-date snapshot verified on-ledger. Plain Daml, no V2. | **built** |
 | `Indivisa.Model.Event` | The corporate action; `Entitle` derives the schedule from the snapshot on-ledger. | **built** |
 | `Indivisa.Model.Entitlement` | quantity x amount per unit, rounding policy, exact and paid per holder, total ensured. | **built** |
 | `Indivisa.Utils` | Our vocabulary in V2 terms; `Run_Settle` derives its transfer legs from it. | **built** |
 | `Indivisa.Model.Payment` | The once-only consent: `PaymentProposal`, `PaymentAgreement` with `CreateReceiptAllocation`. Touches V2. | **built** |
-| `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction) and `DistributionReceipt`. Touches V2. | **built** |
+| `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction), `DistributionReceipt`, `SettlementRejected` (the agent's record of a refusal, since a refused transaction leaves nothing behind), `runFromSchedule`. Touches V2. | **built** |
 
-Everything else is off-ledger.
+Package `indivisa`, version 0.3.0 on LocalNet; every change to a deployed
+template is either a version bump that passes `dpm upgrade-check` or a new
+package lineage (`CLAUDE.md`, "Naming is permanent"). Everything else is
+off-ledger.
 
 **Rounding is not a detail.** Coupon arithmetic produces fractions of the
 smallest unit and the residual has to go somewhere. Decide the policy once, in
@@ -130,34 +141,41 @@ settle.
 
 ### Off-ledger — deliberately thin
 
-**No Java is required.** The JSON Ledger API v2 lets the consoles read the
-ledger directly, which removes the REST tier entirely.
+**No Java is required, and none was built.** The JSON Ledger API v2 lets the
+panes read the ledger directly, which removes the REST tier entirely.
 
-One Java component is worth building **if there is time**, and is first to be
-cut: a paying-agent daemon that watches for payment dates and fires the run
-without a human. It is the honest production component and it is invisible in a
-sixty-second video. Say on the slide: *in production this is a scheduled agent;
-for the demo it is a button.*
+The paying agent's client, the sequence of commands before the one
+transaction (fund, propose, create the run, allocate the send, create N
+receipt allocations), is Daml Script: `Indivisa.Test.Agent` and
+`Indivisa.Test.Demo`, driven from a shell by `infra/demo.ps1`. It is the
+reference for whatever replaces it in production.
 
-### UI — four panes
+One Java component would be worth building **if there is time**, and is first
+to be cut: a paying-agent daemon that watches for payment dates and fires the
+run without a human. It is the honest production component and it is invisible
+in a sixty-second video. Say on the slide: *in production this is a scheduled
+agent; for the demo it is a button.*
 
-Low priority in sequence, high value in the demo. One day, late.
+### UI — four panes (built)
 
 | Pane | Shows |
 |---|---|
-| **Paying agent** | instrument, holder count, total due, one button, then the settlement result and its update ID |
-| **Holder A** | my position, my payment, my transaction |
+| **Paying agent** | instrument, event, holder count, total due, allocations ready, one button; then SETTLED with the update id and the submit-to-commit time, or SETTLEMENT REJECTED with the ledger's reason and the on-ledger record |
+| **Holder A** | my position, my agreement, my allocation, my cash; then six counts of what this node holds about anyone else, all zero |
 | **Holder B** | the same, for B |
 | **Holder C** | the same, for C |
 
 No forms, no routing, no state library, no auth flows. Lists and numbers.
+`Holder` is one component rendered three times.
 
 **The impressive part is not the styling.** It is that Holder B's pane is
 conspicuously empty where Holder A's has data. That lands in a plain table.
 
-Four simultaneous ledger connections with four party tokens is the plumbing
-detail that always takes longer than expected. Solve it the day the UI starts,
-not the day before recording.
+The plumbing: four ledger connections, one per party, each to the participant
+that hosts it, through the dev server's proxy because the JSON Ledger API
+sets no CORS headers. Participant URLs and bearer tokens live in
+`infra/<network>/ui.json`; the proxy injects the token, so the browser never
+holds one. In production nginx does the same.
 
 ---
 
@@ -176,18 +194,18 @@ three holders, each seeing only its own payment.
 
 **Run two — deliberate failure.** Label the screen unambiguously as an atomicity
 demonstration before clicking, so nobody thinks the system broke. One leg is
-unavailable — an unsigned holder, or an insufficient allocation. Result:
+unavailable: one holder's receipt allocation is withheld (`demo.ps1 prepare
+-Withhold 1`). Result, as the pane renders it:
 
 ```
-SETTLEMENT REJECTED
-500 payments requested
-0 payments executed
+SETTLEMENT REJECTED · 250 payments requested · 0 executed
 NO PARTIAL SETTLEMENT
 ```
 
-Fix the leg, retry, 500/500.
+Fix the leg (`prepare` again, nothing withheld), retry, 250/250.
 
-Success first, failure second. A failure shown cold reads as a bug.
+Success first, failure second. A failure shown cold reads as a bug. The shot
+list is `demo-script.md`.
 
 ---
 
@@ -217,27 +235,38 @@ Canton participant. Its Holding is signed by owner and admin — the same hard
 case as Canton Coin — so nothing proven against it is easier than the real
 thing.
 
-## Open questions
+**How many legs fit in one transaction?** Measured, 17–18 September, on
+LocalNet (`benchmark.md`). One committed send allocation carries every leg,
+so the batch is N+1 allocations. 1,000 legs settle in one transaction:
+1.67 MB, 333 s submit to commit; 250 legs in 15–28 s. Size is linear at
+1.67 KB per allocation and a sixth of the sequencer's 10 MB cap at 1,000;
+latency grows about N^1.7. The ceiling is a latency wall, not a size cap, and
+the product answer is a few hundred holders per atomic batch on that
+hardware, thousands as back-to-back batches. CIP-0120's 100 bytes per view
+was an arithmetic assumption; the measured figure is roughly seventeen
+times that per allocation.
 
-**How many legs fit in one transaction?** CIP-0120 works a one-leg settlement as
-three views — Root, Debit, Credit. Root + 2 per leg puts 500 legs near 100 KB on
-CIP-120's assumed 100 bytes per view, but that figure is an arithmetic
-assumption, not a measurement. With the receipt side counted, the batch
-settles N receipt allocations plus the send allocation(s): N+1 sub-views plus
-root if one send allocation carries every leg, 2N plus root if not. Proof 5
-measures both shapes.
+**What does a failed batch actually return?** `missing authorizations` from
+the standard's own validation, naming the party, leg, side, amount and
+instrument; on a participant it arrives wrapped as `DAML_FAILURE` with an
+`UNHANDLED_EXCEPTION/DA.Exception.GeneralError`. Proof 4 keeps it as a
+regression test, and `SettlementRejected` keeps the text on-ledger.
+
+## Open questions
 
 **Which V2 cash instrument for the DevNet evidence run?** `TestTokenV2` again,
 or Canton Coin. If Canton Coin: whether Amulet's V2 implementation accepts a
 receipt allocation created through a third-party agreement the way
 `TestTokenV2` does, or only through its own `TransferPreapproval`, has not been
-checked.
+checked. The handover assumes `TestTokenV2`.
 
-**Does the cash registry become a bottleneck?** It sees every leg in its
-instrument and must confirm. At 500 legs that is a real question, and it belongs
-in the proof 5 measurements rather than in a guess here.
+**Where does the time go above 250 legs?** The sequencer log shows about 25 s
+of visible confirmation traffic at every size, then silence from every node
+until the commit. Whether the cash registry, which confirms every leg in its
+instrument, is the node doing the work is unattributed at INFO level; a DEBUG
+run at 500 would say.
 
-**What does a failed batch actually return?** Empirical, and worth a permanent
-regression test — error shapes change between Canton releases. The expected
-shape for a missing receipt allocation is `missing authorizations` from
-`fetchAndValidateAllocations`.
+**Does the shape hold on DevNet?** Five nodes in one JVM on one machine is
+not a network. Separate machines add hops and remove contention; more
+validators hosting holders multiply envelopes. The DevNet run should
+reproduce 250 and, if traffic allows, 500.

@@ -17,3 +17,7 @@ infra/localnet/participants-with-parties.json
 infra/localnet/demo/
 ui/node_modules/
 ui/dist/
+infra/devnet/participants.json
+infra/devnet/ui.json
+infra/devnet/participants-with-parties.json
+infra/devnet/demo/

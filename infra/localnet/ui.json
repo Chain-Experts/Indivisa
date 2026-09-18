@@ -1,0 +1,9 @@
+{
+  "participants": {
+    "registry": { "jsonApi": "http://localhost:5013", "token": "" },
+    "agent":    { "jsonApi": "http://localhost:5023", "token": "" },
+    "alice":    { "jsonApi": "http://localhost:5033", "token": "" },
+    "bob":      { "jsonApi": "http://localhost:5043", "token": "" },
+    "charlie":  { "jsonApi": "http://localhost:5053", "token": "" }
+  }
+}

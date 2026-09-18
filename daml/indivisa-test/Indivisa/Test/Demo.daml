@@ -82,11 +82,30 @@ institutions =
   , "Ember-Municipal-Fund", "Linden-Savings-Bank" ]
 
 -- | Holder i's name as a party hint (no spaces). Every fourth holder is an
--- institution. Deterministic, so a seat is reproducible.
+-- institution. Deterministic, so a seat is reproducible, and distinct for
+-- every i below 1,600: the surname index shifts by 11 per pass over the
+-- first names (11 and 40 are coprime), and an institution past the thirty
+-- names gets a fund number. The first version paired both name lists by
+-- the same index and produced seven Arjun Tanakas in 250 holders.
 holderName : Int -> Text
 holderName i
-  | i % 4 == 0 = institutions !! ((i / 4) % length institutions)
-  | otherwise  = firstNames !! (i % length firstNames) <> "-" <> surnames !! ((i * 7 + 3) % length surnames)
+  | i % 4 == 0 =
+      let k = i / 4
+      in institutions !! (k % length institutions) <> fundNumber (k / length institutions)
+  | otherwise  =
+      let pass = i / length firstNames
+      in firstNames !! (i % length firstNames) <> "-" <> surnames !! ((i * 7 + 3 + pass * 11) % length surnames)
+
+-- | "", "-II", "-III", ... for the second, third, ... fund of the same name.
+fundNumber : Int -> Text
+fundNumber 0 = ""
+fundNumber n = "-" <> ["II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"] !! ((n - 1) % 9)
+
+-- | Names are distinct up to the largest seat we would ever record.
+demo_namesUnique : Script ()
+demo_namesUnique = do
+  let names = map holderName [0 .. 999]
+  Set.size (Set.fromList names) === length names
 
 -- | Position sizes in units of 1,000 face value. Heavy-tailed, as bond
 -- registers are: most holders small, a few large, institutions ten times

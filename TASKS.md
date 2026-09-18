@@ -1,16 +1,16 @@
 # Tasks
 
-**17 September 2026. Submission 9 October. 22 days.**
+**18 September 2026. Submission 9 October. 21 days.**
 
 **Proofs 1, 3 and 4 run in Daml Script; proofs 2 and 5 run on LocalNet.** DevNet
 is used once, at the end, only to produce a real update id as evidence.
 Developing against DevNet would cost uptime we do not control, traffic we do
 not need to spend, and the multi-participant setup that proof 2 requires.
 
-The order matters more than the list. Proofs 1–4 gate everything. **Proof 5 can
-still kill the idea**; proof 3 was answered by reading the released code on 16
-September (see `CLAUDE.md`) and is now a confirmation, not a discovery. Reach
-both in week one anyway.
+The order matters more than the list. Proofs 1–4 gated everything and passed
+on 17 September; proof 5, the one that could have killed the idea, was measured
+to 1,000 legs on LocalNet on 17–18 September (a latency wall, not a size cap).
+Phases 2 to 4 were built on 18 September. Phase 5 is what is left.
 
 Done on 16 September: dpm-sdk 3.5.10 confirmed, `sdk-version` corrected, two
 missing imports fixed, `dpm build --all` green, `dpm test` gives proof 1 and 4
@@ -72,9 +72,9 @@ topology from a config file, in one JVM, in memory.
       the **same script** runs on the IDE ledger and on LocalNet.
 - [x] Proofs 1, 2, 3, 3b, 4, 4b all pass on LocalNet (17 Sep, 40 to 55 s
       each including JVM start).
-- [ ] Party tokens / JSON API auth for the UI: LocalNet has no auth, so this
-      is a Phase 4 item, not a blocker.
-- [ ] Transaction size and view count per N: see proof 5.
+- [x] Party tokens / JSON API auth for the UI: done in Phase 4 (18 Sep), per
+      network in `infra/<network>/ui.json`, injected by the dev-server proxy.
+- [x] Transaction size per N: proof 5, `docs/benchmark.md` section 2.
 
 Things the real network taught that the IDE ledger could not:
 - Parties on different participants cannot co-sign one command. Funding now
@@ -177,7 +177,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 - [ ] Still to add: an expired or insufficient **send** allocation as the bad
       leg, once settlement deadlines are in play.
 
-### Proof 5 — where is the ceiling? **KILL SWITCH** — script form done, participant form pending
+### Proof 5 — where is the ceiling? **MEASURED**: a latency wall, not a size cap
 
 Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
 - [x] N = 3, 10, 50 under `dpm test -p scale`; 250, 500, 1000, 2000 through
@@ -208,14 +208,16 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 - [ ] Two shapes per N: **one** send allocation carrying N `transferLegSides`,
       versus N send allocations. Expected view count is N receipt allocations
       plus send allocation(s) plus root; measure, do not assume.
-- [ ] Count the pre-settlement cost too: N receipt allocations are N separate
-      commands before the batch. Report it honestly; it is the "asynchronous
-      allocation phase" in `docs/architecture.md`.
-- [ ] Note whether the **cash registry** becomes the bottleneck — it confirms
-      every leg in its instrument.
-- [ ] Note whether the limit is a hard cap or a latency wall. They imply
-      different product answers.
-- [ ] Fill in section 2 of `docs/benchmark.md`.
+- [x] Pre-settlement cost counted (`docs/benchmark.md`, "Onboarding cost"):
+      parties ~5 s each, acceptances ~1 s each, receipt allocations batched
+      fifty per command; the day for 500 existing holders is ~7 minutes, of
+      which 104 s is the settle.
+- [ ] Whether the **cash registry** is the bottleneck: it confirms every leg
+      in its instrument, and the silent phase is unattributed at INFO level.
+      Needs the DEBUG run above.
+- [x] Hard cap or latency wall: **latency wall** (size at 1,000 legs is a
+      sixth of the sequencer cap; latency grows ~N^1.7).
+- [x] Section 2 of `docs/benchmark.md` filled in (18 Sep).
 
 > LocalNet is the right place for this: push to failure without spending real
 > traffic, and control the configuration while you do.
@@ -223,7 +225,7 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 > Nobody has published how many legs fit in a CIP-112 batch. Post the benchmark
 > to the Canton forum whatever happens to the hackathon.
 
-**Gate: do not start Phase 2 until proofs 1–4 pass.**
+**Gate: do not start Phase 2 until proofs 1–4 pass.** Passed 17 September.
 
 ---
 
@@ -280,13 +282,19 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
       settles. The attempt is idempotent: it finds the run and the
       allocations that already exist.
 - [x] `demo_smoke` (12 holders, rejected then settled) under `dpm test`.
-- [x] `infra/localnet/demo.ps1 seat | attempt` drives it from a shell; the
+- [x] `infra/demo.ps1 seat | prepare | attempt` drives it from a shell; the
       participant map is regenerated before each command.
 - [x] LocalNet carries the full demo: 50-holder seat (427 s, party creation),
       attempt with one holder withheld **rejected** (reason names the holder,
       `SettlementRejected` written), attempt without **settled 50/50**,
       $252,700.00, 1.9 s (18 Sep).
-- [ ] The same at the recording size, 250 (seat ~20 min).
+- [x] The same at the recording size, 250 (18 Sep): seat 1,240 s (party
+      creation), prepared with one withheld, pressed in the browser:
+      **rejected**, prepared again, pressed: **settled 250/250**,
+      $1,197,240.63, 1.6 s submit to commit over the JSON Ledger API.
+      Found on the way: the unpaged `/v2/state/active-contracts` refuses
+      more than 200 elements; the UI now pages. And the name generator
+      repeated names (seven Arjun Tanakas); fixed, with a uniqueness test.
 
 ---
 
@@ -308,8 +316,11 @@ Four panes. Lists and numbers. No forms, no routing, no state library.
 - [x] Verified live in Chrome on LocalNet (18 Sep): 8-holder seat, prepared
       with one withheld -> pressed -> rejected naming the holder; prepared
       again -> pressed -> settled 8/8, $14,371.88, holders paid.
-- [ ] Party tokens for DevNet: `client.ts` has no auth header yet; add a
-      bearer token per participant when the validator requires one.
+- [x] Tokens for DevNet (18 Sep): participant URLs and bearer tokens come from
+      `infra/<network>/ui.json`; the dev server injects the `Authorization`
+      header in its proxy and strips the served party map to
+      `party_participants`, so no token reaches the browser. `client.ts`
+      itself is unchanged. `INDIVISA_NETWORK` picks the network.
 
 > Budgeted at one to two days because it is AI-assisted and the surface is
 > small. If Phase 1 or 2 slips, this phase absorbs it — but do not cut it to
@@ -320,12 +331,28 @@ Four panes. Lists and numbers. No forms, no routing, no state library.
 
 ## Phase 5 — DevNet, recording and pitch (days 17–20)
 
-- [ ] **One DevNet run.** Deploy, execute a real distribution, capture the update
-      id and ledger receipt. This is the evidence BitSafe's Season 2 postmortem
-      names as a marker of the credible builds — everything else was LocalNet.
-      Confirm first (Phase 0 NODERS question) which DevNet carries V2 and what
-      protocol version it demands; the June V2 DevNet needed PV 35 and
-      `alpha-version-support`.
+Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
+
+- [x] Scripts and UI take a network: `infra/<network>/participants.json`
+      (runner: host, port, `access_token`, `user_id`) and `ui.json` (JSON
+      API URL, token). `demo.ps1 -Network devnet`, `INDIVISA_NETWORK=devnet`.
+      Templates in `infra/devnet/*.example.json`; the real files are
+      git-ignored.
+- [x] The five participant names are the contract between scripts and
+      config; on DevNet they may all point at one validator. No Daml change.
+- [x] Regression on LocalNet after the Phase 3/4 refactors:
+      `infra/localnet/proofs.ps1` runs the six proofs and the coupon chain.
+      All seven pass (18 Sep, 28 to 56 s each, while a 250-holder seat was
+      running on the same nodes).
+- [x] Handover checklist in `infra/README.md`: eight steps, what to send
+      back (seat file, both attempt files, the update id).
+- [x] `docs/demo-script.md`: shot list, captions, what each caption may claim.
+- [ ] **One DevNet run** (DevOps). Deploy, execute a real distribution, capture
+      the update id and ledger receipt. This is the evidence BitSafe's Season 2
+      postmortem names as a marker of the credible builds — everything else
+      was LocalNet. Confirm first (Phase 0 NODERS question) which DevNet
+      carries V2 and what protocol version it demands; the June V2 DevNet
+      needed PV 35 and `alpha-version-support`.
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
 - [ ] Deck: the problem in Canton's own numbers, what V2 changed in June, the
@@ -358,8 +385,10 @@ You will need it.
       or Canton Coin. If Canton Coin: check whether Amulet's V2 implementation
       accepts receipt allocations created through a third-party agreement the
       way `TestTokenV2` does, or only through its own `TransferPreapproval`.
-- [ ] One send allocation with N legs, or N send allocations. Proof 5 decides.
-- [ ] What N the headline claims. Set by proof 5, not by ambition.
+- [ ] One send allocation with N legs, or N send allocations. One works to
+      2,000 legs; the comparison is optional now.
+- [x] What N the headline claims: **1,000 legs in one transaction, measured**;
+      a few hundred per batch is the comfortable size (18 Sep).
 - [ ] Whether the issuer-funds-paying-agent leg rides the same batch or precedes
       it.
 - [x] LF target: **2.1**, forced by the V2 DARs' bundled stdlib (17 Sep).

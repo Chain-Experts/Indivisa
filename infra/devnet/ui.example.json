@@ -1,0 +1,9 @@
+{
+  "participants": {
+    "registry": { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
+    "agent":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
+    "alice":    { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" },
+    "bob":      { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" },
+    "charlie":  { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" }
+  }
+}

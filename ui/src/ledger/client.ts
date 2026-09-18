@@ -54,6 +54,9 @@ type IdentifierFilter =
   | { TemplateFilter: { value: { templateId: string; includeCreatedEventBlob: boolean } } }
   | { InterfaceFilter: { value: { interfaceId: string; includeInterfaceView: boolean; includeCreatedEventBlob: boolean } } };
 
+// Under the node default of 200 list elements; the server clamps larger values.
+const PAGE_SIZE = 200;
+
 export class LedgerError extends Error {
   constructor(public status: number, public body: string) {
     super(`${status}: ${body}`);
@@ -80,16 +83,31 @@ export class Ledger {
     return (await r.json()).offset as number;
   }
 
+  // The unpaged /v2/state/active-contracts refuses more than the node's
+  // http-list-max-elements-limit (200 by default; hit with 251 allocations
+  // on 18 Sep), so this walks /v2/state/active-contracts-page instead.
+  // The page token carries the offset the first page was taken at; sending
+  // that offset back explicitly makes the token INVALID_ACS_PAGE_TOKEN, so
+  // every page request is the first request plus the token and nothing else.
   private async activeContracts(filters: IdentifierFilter[], verbose = true): Promise<ActiveContract[]> {
-    const activeAtOffset = await this.ledgerEnd();
-    const entries = await this.post<any[]>("/v2/state/active-contracts", {
-      eventFormat: {
-        filtersByParty: { [this.party]: { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) } },
-        verbose,
-      },
-      activeAtOffset,
-    });
-    return entries.map((e) => e.contractEntry?.JsActiveContract).filter(Boolean) as ActiveContract[];
+    const eventFormat = {
+      filtersByParty: { [this.party]: { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) } },
+      verbose,
+    };
+    const out: ActiveContract[] = [];
+    let pageToken: string | undefined;
+    for (;;) {
+      const page = await this.post<{ activeContracts: any[]; activeAtOffset: number; nextPageToken?: string }>(
+        "/v2/state/active-contracts-page",
+        { eventFormat, pageToken, maxPageSize: PAGE_SIZE },
+      );
+      for (const e of page.activeContracts ?? []) {
+        const c = e.contractEntry?.JsActiveContract;
+        if (c) out.push(c);
+      }
+      if (!page.nextPageToken) return out;
+      pageToken = page.nextPageToken;
+    }
   }
 
   /** Active contracts of one template, as this party sees them. */

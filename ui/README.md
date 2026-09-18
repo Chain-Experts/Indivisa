@@ -12,14 +12,14 @@ update id the ledger returns. There is no application backend.
 
 ## Run it
 
-LocalNet up, the model vetted, a demo seated and prepared (see
+A network up with the model vetted, a demo seated and prepared (see
 `infra/README.md`):
 
 ```
-pwsh infra/localnet/demo.ps1 seat    -Holders 250 -Tag sep18
-pwsh infra/localnet/demo.ps1 prepare -Tag sep18 -Withhold 1   # arm the failure
+pwsh infra/demo.ps1 seat    -Holders 250 -Tag sep18
+pwsh infra/demo.ps1 prepare -Tag sep18 -Withhold 1   # arm the failure
 cd ui && npm install
-INDIVISA_SEAT=../infra/localnet/demo/seat-sep18.json npm run dev     # PowerShell: $env:INDIVISA_SEAT="..."; npm run dev
+INDIVISA_TAG=sep18 npm run dev                       # PowerShell: $env:INDIVISA_TAG="sep18"; npm run dev
 ```
 
 Open http://localhost:5173. Press the button: the ledger refuses, the pane
@@ -27,11 +27,23 @@ says so, and a `SettlementRejected` record is written. Then
 `demo.ps1 prepare -Tag sep18` (nothing withheld) and press again: settled,
 every holder paid in one transaction, update id on screen.
 
+Environment variables the dev server reads:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `INDIVISA_NETWORK` | `localnet` | which `infra/<network>/` to read `ui.json` and the party map from |
+| `INDIVISA_TAG` | `demo` | which seat, `infra/<network>/demo/seat-<tag>.json` |
+| `INDIVISA_SEAT` | | a seat file path, overriding the tag |
+
 ## How it is wired
 
 - `vite.config.ts` proxies `/api/<participant>/` to each participant's JSON
-  Ledger API (the API sets no CORS headers) and serves the seat file and the
-  party-to-participant map at `/demo/*`. In production nginx does the proxy.
+  Ledger API as listed in `infra/<network>/ui.json` (the API sets no CORS
+  headers), adding that participant's bearer token when the file has one,
+  so tokens never reach the browser. It serves the seat file and the
+  party-to-participant map at `/demo/*`; the map is stripped to
+  `party_participants` first because the runner's file also carries tokens.
+  In production nginx does the proxy.
 - `src/ledger/client.ts` — the JSON Ledger API v2 calls used: `ledger-end`,
   `active-contracts` (templates by `#package-name:Module:Template`, interfaces
   with views), `submit-and-wait`, `update-by-offset`. Shapes verified against
@@ -53,4 +65,7 @@ the pane is the one transaction.
 The holder panes list six counts that are always zero: other holders'
 positions, cash, allocations, the schedule, the run, the rejection records.
 On LocalNet each holder is on its own participant, so those zeros are not a
-filter; the data never reached the node.
+filter; the data never reached the node. On a DevNet with one validator
+hosting every party the counts stay zero too, but then they are a
+visibility filter inside one node rather than data that never arrived; say
+so if that is the topology shown.

@@ -2,7 +2,7 @@
 
 **Corporate actions, settled in one atomic batch, without exposing the register.**
 
-A bond pays its coupon to five hundred holders. The paying agent fires one
+A bond pays its coupon to hundreds of holders. The paying agent fires one
 transaction. Every holder is paid at the same instant or nobody is — and no
 holder sees another's payment.
 
@@ -38,10 +38,13 @@ turns that into a single atomic settlement:
 Holder signs one payment agreement      ← once, at onboarding
      │
      ▼
-Coupon event
+Coupon announced by the issuer
      │
      ▼
-Entitlements calculated from the register
+Register snapshot at the record date
+     │
+     ▼
+Entitlement schedule derived on-ledger  ← quantity x rate, rounded, sums exactly
      │
      ▼
 Paying agent allocates its cash, and
@@ -119,8 +122,8 @@ the prebuilt DARs in Splice 0.8.1. Season 2's final was in mid-June; no Season
 
 ## Status
 
-**Experiment, not product.** We are establishing whether CIP-112 has created a
-usable corporate-actions primitive before building anything on top of it.
+The experiment came first: five proofs, in order, before any product code.
+All five are in.
 
 | Proof | Question | Status |
 |---|---|---|
@@ -130,27 +133,51 @@ usable corporate-actions primitive before building anything on top of it.
 | 4 | Does one bad leg settle **zero**, not N−1? | **passes** (rejection recorded) |
 | 5 | How many legs fit in one transaction? | **1,000 legs settle in one transaction on LocalNet** (1.67 MB, 333 s); size is linear and far from the 10 MB cap, latency is superlinear — a latency wall, not a hard cap. `docs/benchmark.md` |
 
-Proof 5 is the one that can still kill the idea. Proof 3 was answered on 16
-September by reading the V2 settlement logic as shipped in Splice 0.8.1: the
-standard requires receiver-side allocations, and its reference app shows the
-standing-agreement pattern that collects that authority once. See `TASKS.md`.
+Proof 3 was answered on 16 September by reading the V2 settlement logic as
+shipped in Splice 0.8.1: the standard requires receiver-side allocations, and
+its reference app shows the standing-agreement pattern that collects that
+authority once. Nobody had published how many legs fit in a CIP-112 batch;
+`docs/benchmark.md` has the method and the numbers, and they go to the Canton
+forum as well.
 
-Nobody has published how many legs fit in a CIP-112 batch. Whatever the answer
-is, the benchmark goes in this repo and to the Canton forum.
+On top of the proofs, built and running on LocalNet (18 Sep):
+
+- **The model** (`daml/indivisa`, package `indivisa`): register (`Instrument`,
+  `Position`, record-date `RegisterSnapshot`), `CorporateAction`, on-ledger
+  `EntitlementSchedule` with largest-remainder rounding, `PaymentAgreement`,
+  `DistributionRun.Run_Settle`, `DistributionReceipt`, `SettlementRejected`.
+- **The demo driver** (`Indivisa.Test.Demo`, `infra/demo.ps1`): seats a
+  realistic holder base, arms a deliberate failure, settles.
+- **The four panes** (`ui/`): the paying agent's whole distribution and one
+  button; three holders each seeing only their own line, read live from
+  their own participants over the JSON Ledger API.
+
+Still to come: the DevNet evidence run (configuration only; handover in
+`infra/README.md`), the recording (`docs/demo-script.md`), the deck.
 
 ---
 
-## Build
+## Build and run
 
 ```bash
 dpm build --all          # model package indivisa-<version> (see daml/indivisa/daml.yaml), scripts indivisa-test
 cd daml/indivisa-test
-dpm test
+dpm test                 # the proofs, the model tests and a 12-holder demo, on the IDE ledger
 ```
 
 Daml SDK 3.5.x, `dpm` rather than the `daml` assistant, LF 2.1. The Token
 Standard V2 DARs are prebuilt in `canton-network/splice` at tag `0.8.1`, path
 `daml/dars/` and vendored in this repo under the same path; `CLAUDE.md` lists them.
+
+On real participants (`infra/README.md` has the detail):
+
+```
+pwsh infra/localnet/up.ps1 -Heap 12g              # five participants in one JVM, no Docker
+pwsh infra/localnet/proofs.ps1                     # the proofs across participants
+pwsh infra/demo.ps1 seat    -Holders 250 -Tag t1   # a holder base, onboarded, with a schedule
+pwsh infra/demo.ps1 prepare -Tag t1 -Withhold 1    # allocations, one holder deliberately not ready
+cd ui && npm install && INDIVISA_TAG=t1 npm run dev   # http://localhost:5173, press the button
+```
 
 ---
 
@@ -160,10 +187,14 @@ Worth saying before anyone else says it.
 
 - **We do not solve corporate-action announcement data.** Chainlink, with DTCC,
   Swift and Euroclear, is attacking that layer. Indivisa is the payment layer.
-- **The cash leg is simulated.** No paying agent settles on Canton today. Every
-  demo component is labelled real, simulated or planned.
-- **Scale is unproven** until proof 5 says otherwise. "500 holders" is a target,
-  not a measurement.
+- **The cash is simulated.** It is `TestTokenV2`, the reference Token Standard
+  V2 asset, with our own registry party; no paying agent settles on Canton
+  today, and the holders and their positions are generated. Every demo
+  component is labelled real, simulated or planned.
+- **Scale is a latency wall, not a size cap.** 1,000 legs settle in one
+  transaction on LocalNet, in 333 s; 250 in 15 to 28 s. The comfortable size
+  for one atomic batch on that hardware is a few hundred holders; thousands
+  are back-to-back batches. Measured on one machine; DevNet will differ.
 - **Holders are not zero-touch; they are one-touch.** The standard requires the
   receiver's authority on every leg. Indivisa collects it once, in a standing
   agreement, and never again. A holder who has not signed cannot be paid — the
@@ -177,9 +208,14 @@ Worth saying before anyone else says it.
 | | |
 |---|---|
 | `CLAUDE.md` | Working context, decisions, corrections already made |
-| `docs/modules.md` | Every file that will exist, and what is in it |
-| `docs/architecture.md` | Components, settlement flow, boundaries, open questions |
-| `TASKS.md` | The plan to 9 October, proofs first |
+| `TASKS.md` | The plan to 9 October, proofs first, with results as they came in |
+| `docs/architecture.md` | Components, settlement flow, boundaries, settled and open questions |
+| `docs/modules.md` | Every file, and what is in it |
+| `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
+| `docs/demo-script.md` | The recording: shot list and what each caption may claim |
+| `docs/explainer.html` | The story for a beginner, one standalone page |
+| `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
+| `ui/README.md` | The four panes |
 
 ---
 

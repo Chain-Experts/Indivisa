@@ -36,7 +36,7 @@ export function App() {
         ))}
       </main>
       <footer className="foot">
-        seat <code>{config.seat.tag}</code> · run <code>{config.seat.runId}</code> · {config.seat.holders.length} holders on three participants · LocalNet, protocol version 35
+        seat <code>{config.seat.tag}</code> · run <code>{config.seat.runId}</code> · {config.seat.holders.length} holders · network <code>{config.network}</code>
       </footer>
     </div>
   );
