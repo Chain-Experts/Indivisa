@@ -51,9 +51,16 @@ No LocalNet needed for this phase. Everything here is a download and a build.
 - [ ] Read `OpenZeppelin/canton-specs` → `experiments/cip112-settlement` and
       `docs/reference-architectures/dex.md`. **Reference only** — DAR import is
       gated and nothing there is dependable.
-- [ ] Ask NODERS: S3 sponsor challenges and tracks, AI-disclosure policy,
-      whether regular DevNet now carries V2 or the June "Token Standard V2
-      DevNet" (protocol version 35) is still the target.
+- [ ] Ask NODERS:
+      1. S3 sponsor challenges and tracks; AI-disclosure policy.
+      2. Whether regular DevNet now carries Token Standard V2, or the June
+         "Token Standard V2 DevNet" is still the target.
+      3. **Which protocol version DevNet runs today** (the June V2 DevNet was
+         PV 35 with `alpha-version-support`; LocalNet runs PV 35).
+      4. **Does the 0.8.x validator wallet UI display Token Standard V2
+         holdings of a registry other than Amulet?** Decides whether a
+         holder can log into the wallet and watch `TestTokenV2` cash land
+         (display only; no wallet-side transfers needed).
 
 ### Phase 0b — LocalNet, five participants · **DONE 17 Sep, no Docker**
 
@@ -353,9 +360,12 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 - [ ] **One DevNet run** (DevOps). Deploy, execute a real distribution, capture
       the update id and ledger receipt. This is the evidence BitSafe's Season 2
       postmortem names as a marker of the credible builds — everything else
-      was LocalNet. Confirm first (Phase 0 NODERS question) which DevNet
-      carries V2 and what protocol version it demands; the June V2 DevNet
-      needed PV 35 and `alpha-version-support`.
+      was LocalNet. Confirm first (Phase 0 NODERS questions 2 and 3) which
+      DevNet carries V2 and what protocol version it demands.
+      **18 Sep: DevOps asked to install Splice 0.8.1 on DevNet**, the release
+      the DARs were built against. If DevNet has moved on (0.8.3 was tagged
+      18 Sep), install what DevNet mandates instead; the V2 DARs are
+      byte-identical through 0.8.3, so nothing on our side changes.
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
 - [ ] Deck: the problem in Canton's own numbers, what V2 changed in June, the
