@@ -91,7 +91,7 @@ The same for `proof2With`, `proof3With`, `proof3bWith`, `proof4With`,
 `proof4bWith`, `Indivisa.Test.Coupon:couponWith`.
 
 For the benchmark, `pwsh infra/settle.ps1 -Holders 500`: the script prepares
-N legs on the reused `Holder-*` parties (`Indivisa.Test.Scale:scaleAllocateOnlyWith`),
+N legs on the reused `Holder-*` parties (`Indivisa.Test.Scale:scalePrepare`),
 then a Node client settles over the JSON Ledger API and prints submit to
 commit. Do not time the settle from inside a script: the Daml Script runner
 takes minutes to digest a large transaction tree after the ledger has
@@ -116,8 +116,9 @@ Things learned on 17 September that a fresh reader will hit:
   and writes that map; `demo.ps1` runs it before every command. This matters
   for DevNet too: the seat's parties exist before the attempt does.
 - One JVM for five nodes wants heap. At 4 GB it sat at 3.9 GB after a few
-  hundred parties and thousands of contracts and settle times inflated;
-  `up.ps1 -Heap 12g`.
+  hundred parties and thousands of contracts; `up.ps1 -Heap 12g`. (The
+  slow settles first blamed on the heap were the script runner, not the
+  ledger; see `docs/benchmark.md`.)
 - The sequencer's `maxRequestPayloadBytes` is 10 MB by default. That is the
   hard ceiling candidate for one batch.
 
