@@ -28,7 +28,7 @@ couponWith : Topology -> Script ()
 couponWith topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 1000.0
-  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
 
   -- The register. The paying agent is the registrar.
   let isin = "XS0000000001"
@@ -85,9 +85,9 @@ couponWith topology = do
   runTotal run === schedule.total
   run.instrument === cash.instrument
   runCid <- submit cast.payingAgent $ createCmd run
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
-  (receiptCid, _) <- settle cast cash runCid (sendCid :: receiptCids)
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
+  (receiptCid, _) <- settle cast.payingAgent cash runCid (sendCid :: receiptCids)
 
   -- Everyone holds exactly their scheduled amount; the agent is down the
   -- total; the receipt points back at the schedule.

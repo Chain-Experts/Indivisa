@@ -14,3 +14,4 @@ build/
 # LocalNet runtime output
 infra/localnet/log/
 infra/localnet/participants-with-parties.json
+infra/localnet/demo/

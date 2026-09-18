@@ -36,8 +36,8 @@ if (-not $CantonJar) {
   $CantonJar = $candidates[0].FullName
 }
 
-if (-not (Test-Path (Join-Path $root "daml\indivisa\.daml\dist\indivisa-0.2.0.dar"))) {
-  throw "Build first: dpm build --all (the bootstrap uploads daml/indivisa/.daml/dist/indivisa-0.2.0.dar)."
+if (-not (Test-Path (Join-Path $root "daml\indivisa\.daml\dist\indivisa-0.3.0.dar"))) {
+  throw "Build first: dpm build --all (the bootstrap uploads daml/indivisa/.daml/dist/indivisa-0.3.0.dar)."
 }
 
 New-Item -ItemType Directory -Force $logDir | Out-Null

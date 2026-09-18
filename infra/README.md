@@ -90,6 +90,38 @@ Things learned on 17 September that a fresh reader will hit:
 - The sequencer's `maxRequestPayloadBytes` is 10 MB by default. That is the
   hard ceiling candidate for one batch.
 
+### The demo
+
+```
+pwsh infra/localnet/demo.ps1 seat    -Holders 250 -Tag sep18   # once: parties, register, onboarding, schedule
+pwsh infra/localnet/demo.ps1 attempt -Tag sep18 -Withhold 1    # rejected: one holder not ready, 0 of 250 executed
+pwsh infra/localnet/demo.ps1 attempt -Tag sep18                # settled: 250/250
+```
+
+The seat writes `infra/localnet/demo/seat-<tag>.json` with every party and
+contract id the run and the four panes need. Each attempt writes its outcome
+next to it. Party names are `<Name>-<tag>`, e.g. `Meridian-Paying-Agent-sep18`,
+`Pine-Pension-Fund-sep18`, `Maya-Lindqvist-sep18`; pick a new tag to seat
+again on the same ledger. Names and position sizes are synthetic.
+
+Seating cost is party creation (~5 s each), so 250 holders takes about 20
+minutes; the attempts take seconds to tens of seconds.
+
+### Updating the model on a running LocalNet
+
+Bump `version` in `daml/indivisa/daml.yaml`, `dpm build --all`, check the
+upgrade, upload to every participant over the JSON Ledger API:
+
+```
+dpm upgrade-check --both <previous>.dar daml/indivisa/.daml/dist/indivisa-<new>.dar
+curl -X POST http://localhost:5013/v2/packages -H "Content-Type: application/octet-stream" \
+  --data-binary @daml/indivisa/.daml/dist/indivisa-<new>.dar      # and 5023, 5033, 5043, 5053
+```
+
+Canton refuses a second package with the same name and version
+(`KNOWN_PACKAGE_VERSION`); a change the upgrade check rejects needs a new
+package name, not a version (see `CLAUDE.md`).
+
 For a demo that must survive a restart, switch the participants' storage to
 Postgres in `localnet.conf`; nothing else changes.
 

@@ -66,11 +66,11 @@ runReceiptAllocationSpec run holder =
 -- ---------------------------------------------------------------------------
 
 -- | The paying agent funds every leg of the run with one committed allocation.
-allocateSend : Cast -> Cash -> DistributionRun -> Script (ContractId V2.Allocation)
-allocateSend cast cash run = do
+allocateSend : Party -> Cash -> DistributionRun -> Script (ContractId V2.Allocation)
+allocateSend agent cash run = do
   now <- requestedAt
-  inputHoldingCids <- unlockedHoldingCids cash cast.payingAgent
-  result <- submit (actAs cast.payingAgent <> disclose cash.rules) $
+  inputHoldingCids <- unlockedHoldingCids cash agent
+  result <- submit (actAs agent <> disclose cash.rules) $
     exerciseCmd (toInterfaceContractId @V2.AllocationFactory cash.rulesCid)
       V2.AllocationFactory_Allocate with
         settlement = runSettlementInfo run
@@ -78,17 +78,17 @@ allocateSend cast cash run = do
         requestedAt = now
         inputHoldingCids
         extraArgs = cash.extraArgs
-        actors = [cast.payingAgent]
+        actors = [agent]
   case result.output of
     V2.AllocationInstructionResult_Completed cid -> pure cid
     _ -> fail "send allocation did not complete"
 
 -- | The paying agent creates a holder's receipt allocation under the
 -- agreement. Note who submits: the paying agent, alone.
-allocateReceipt : Cast -> Cash -> DistributionRun -> (Party, ContractId PaymentAgreement) -> Script (ContractId V2.Allocation)
-allocateReceipt cast cash run (holder, agreementCid) = do
+allocateReceipt : Party -> Cash -> DistributionRun -> (Party, ContractId PaymentAgreement) -> Script (ContractId V2.Allocation)
+allocateReceipt agent cash run (holder, agreementCid) = do
   now <- requestedAt
-  submit (actAs cast.payingAgent <> disclose cash.rules) $
+  submit (actAs agent <> disclose cash.rules) $
     exerciseCmd agreementCid CreateReceiptAllocation with
       factoryCid = toInterfaceContractId cash.rulesCid
       choiceArg = V2.AllocationFactory_Allocate with
@@ -109,11 +109,11 @@ allocateReceipt cast cash run (holder, agreementCid) = do
 -- Batching does not change what settles: the batch of allocations and the
 -- settlement are still separate transactions, and only the settlement is
 -- atomic.
-allocateReceipts : Cast -> Cash -> DistributionRun -> [(Party, ContractId PaymentAgreement)] -> Script [ContractId V2.Allocation]
-allocateReceipts cast cash run agreements = do
+allocateReceipts : Party -> Cash -> DistributionRun -> [(Party, ContractId PaymentAgreement)] -> Script [ContractId V2.Allocation]
+allocateReceipts agent cash run agreements = do
   now <- requestedAt
   fmap concat $ forA (chunksOf batchSize agreements) $ \batch ->
-    submit (actAs cast.payingAgent <> disclose cash.rules) $
+    submit (actAs agent <> disclose cash.rules) $
       forA batch $ \(holder, agreementCid) ->
         exerciseCmd agreementCid CreateReceiptAllocation with
           factoryCid = toInterfaceContractId cash.rulesCid
@@ -136,20 +136,20 @@ batchSize = 50
 -- ---------------------------------------------------------------------------
 
 trySettle
-  : Cast -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
+  : Party -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
   -> Script (Either SubmitError (ContractId DistributionReceipt, V2.SettlementFactory_SettleBatchResult))
-trySettle cast cash runCid allocationCids =
-  trySubmit (actAs cast.payingAgent <> disclose cash.rules) $
+trySettle agent cash runCid allocationCids =
+  trySubmit (actAs agent <> disclose cash.rules) $
     exerciseCmd runCid Run_Settle with
       factoryCid = toInterfaceContractId cash.rulesCid
       allocationCids
       extraArgs = cash.extraArgs
 
 settle
-  : Cast -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
+  : Party -> Cash -> ContractId DistributionRun -> [ContractId V2.Allocation]
   -> Script (ContractId DistributionReceipt, V2.SettlementFactory_SettleBatchResult)
-settle cast cash runCid allocationCids = do
-  r <- trySettle cast cash runCid allocationCids
+settle agent cash runCid allocationCids = do
+  r <- trySettle agent cash runCid allocationCids
   case r of
     Right ok -> pure ok
     Left err -> fail ("settlement failed: " <> errorText err)

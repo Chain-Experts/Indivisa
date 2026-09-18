@@ -261,16 +261,29 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 3 — Driver and data (days 13–15)
+## Phase 3 — Driver and data (days 13–15) · **built 18 Sep**
 
-- [ ] `Test.Demo` — create the instrument, seat N holders, **sign N payment
-      agreements** (the onboarding step, shown once in the recording so the
-      "holders authorise once" claim is visible), announce the coupon.
-- [ ] Realistic holder names and position sizes. **No Alice, Bob and Charlie in
-      the recording.**
-- [ ] The deliberate-failure path, armed on demand.
-- [ ] Confirm the four-participant LocalNet carries the full demo, not just the
-      three-leg proof.
+- [x] `Test.Demo.demo_seat` — parties, cash, the instrument ("Northwind Rail
+      4.375% 2031"), positions, **N payment agreements** (the onboarding step,
+      shown once), the announcement (21.875 per unit so the rounding is
+      visible), the record-date snapshot and the on-ledger schedule. Emits a
+      `DemoSeat` JSON that the attempts and the UI read.
+- [x] Realistic holder names (40 first names x 40 surnames, 30 institutions,
+      every fourth holder an institution) and heavy-tailed position sizes,
+      deterministic in the holder index. **No Alice, Bob and Charlie.**
+      Synthetic, and labelled as such.
+- [x] The deliberate-failure path, armed on demand: `demo_attempt` with
+      `withhold = 1` leaves the last holder without a receipt allocation; the
+      batch is refused, nothing moves, and the agent writes a
+      `SettlementRejected` record (model 0.3.0) so the pane has something to
+      show. `withhold = 0` then creates only the missing allocation and
+      settles. The attempt is idempotent: it finds the run and the
+      allocations that already exist.
+- [x] `demo_smoke` (12 holders, rejected then settled) under `dpm test`.
+- [x] `infra/localnet/demo.ps1 seat | attempt` drives it from a shell; the
+      participant map is regenerated before each command.
+- [ ] Confirm LocalNet carries the full demo at the recording size (250):
+      50-holder seat and both attempts on 18 Sep, 250 next.
 
 ---
 

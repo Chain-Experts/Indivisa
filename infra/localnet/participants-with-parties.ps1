@@ -1,7 +1,7 @@
-# Write a Daml Script participant config that also maps every existing party
+# Write a Daml Script participant config that also maps every existing local party
 # to the participant hosting it.
 #
-#   pwsh infra/localnet/participants-with-parties.ps1 [-Out path] [-Prefix Holder-]
+#   pwsh infra/localnet/participants-with-parties.ps1 [-Out path] [-Prefix Holder-]   (default: all local parties)
 #
 # Why: the script runner routes a submission to the participant that
 # allocated the party in the same run; a party from an earlier run falls
@@ -12,7 +12,7 @@
 
 param(
   [string] $Out = (Join-Path $PSScriptRoot "participants-with-parties.json"),
-  [string] $Prefix = "Holder-"
+  [string] $Prefix = ""
 )
 
 $ErrorActionPreference = "Stop"

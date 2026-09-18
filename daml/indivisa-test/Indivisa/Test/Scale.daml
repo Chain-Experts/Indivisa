@@ -95,15 +95,15 @@ scaleAllocateOnlyWith args = do
   fund cash cast.payingAgent (total + 1000.0)
 
   -- Onboarding: N proposals, N acceptances. Shown once in the demo.
-  agreements <- onboardAll cast cash holders
+  agreements <- onboardAll cast.payingAgent cash holders
 
   -- The run.
   (runCid, run) <- createRun cast cash ("SCALE-" <> show n) legs
   runTotal run === total
 
   -- Allocation phase: 1 + N commands.
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
   lockedBalance cash cast.payingAgent >>= (=== total)
   pure Prepared with
     cast
@@ -124,7 +124,7 @@ scaleWith args = do
   -- time, so the two stamps bracket submission-to-commit of the one
   -- SettleBatch; on the IDE ledger time is static and the difference is 0.
   t0 <- getTime
-  (receiptCid, result) <- settle cast cash runCid allocationCids
+  (receiptCid, result) <- settle cast.payingAgent cash runCid allocationCids
   t1 <- getTime
   debug ("settle wall time: " <> show (convertRelTimeToMicroseconds (subTime t1 t0) / 1000) <> " ms for " <> show n <> " legs")
   Some receipt <- queryContractId cast.payingAgent receiptCid

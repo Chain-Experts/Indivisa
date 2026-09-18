@@ -45,14 +45,14 @@ proof1With : Topology -> Script ()
 proof1With topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
-  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
 
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
   runTotal run === 3000.0
 
   -- Allocation phase: asynchronous, one command per allocation.
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
 
   -- The agent's 3,000 is now locked, not spent.
   awaitBalance cash cast.payingAgent 7000.0
@@ -60,7 +60,7 @@ proof1With topology = do
   forA_ [cast.alice, cast.bob, cast.charlie] $ \h -> awaitBalance cash h 0.0
 
   -- Settlement phase: one transaction.
-  (receiptCid, result) <- settle cast cash runCid (sendCid :: receiptCids)
+  (receiptCid, result) <- settle cast.payingAgent cash runCid (sendCid :: receiptCids)
   length result.allocationSettleResults === 4
 
   awaitBalance cash cast.alice 500.0
@@ -90,20 +90,20 @@ proof3With : Topology -> Script ()
 proof3With topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
-  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
 
   -- Coupon 1.
   (run1Cid, run1) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
-  send1 <- allocateSend cast cash run1
-  receipts1 <- forA agreements (allocateReceipt cast cash run1)
-  _ <- settle cast cash run1Cid (send1 :: receipts1)
+  send1 <- allocateSend cast.payingAgent cash run1
+  receipts1 <- forA agreements (allocateReceipt cast.payingAgent cash run1)
+  _ <- settle cast.payingAgent cash run1Cid (send1 :: receipts1)
   awaitBalance cash cast.alice 500.0
 
   -- Coupon 2. Same agreements, no new holder action. This is the product claim.
   (run2Cid, run2) <- createRun cast cash "ACME-2031-COUPON-02" (threeLegs cast)
-  send2 <- allocateSend cast cash run2
-  receipts2 <- forA agreements (allocateReceipt cast cash run2)
-  _ <- settle cast cash run2Cid (send2 :: receipts2)
+  send2 <- allocateSend cast.payingAgent cash run2
+  receipts2 <- forA agreements (allocateReceipt cast.payingAgent cash run2)
+  _ <- settle cast.payingAgent cash run2Cid (send2 :: receipts2)
   awaitBalance cash cast.alice 1000.0
   awaitBalance cash cast.bob 2000.0
   awaitBalance cash cast.charlie 3000.0
@@ -120,7 +120,7 @@ proof3bWith topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   fund cash cast.alice 500.0
-  aliceAgreement <- onboard cast cash cast.alice
+  aliceAgreement <- onboard cast.payingAgent cash cast.alice
   (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
   now <- requestedAt
   aliceHoldings <- unlockedHoldingCids cash cast.alice
@@ -168,13 +168,13 @@ proof4With topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
   -- Charlie is not onboarded.
-  agreements <- onboardAll cast cash [cast.alice, cast.bob]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob]
 
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
 
-  r <- trySettle cast cash runCid (sendCid :: receiptCids)
+  r <- trySettle cast.payingAgent cash runCid (sendCid :: receiptCids)
   case r of
     Right _ -> fail "settled with a receipt allocation missing"
     Left err -> do
@@ -194,9 +194,9 @@ proof4With topology = do
   receipts === []
 
   -- Fix the leg: onboard Charlie, create the missing receipt, retry.
-  charlieAgreement <- onboard cast cash cast.charlie
-  charlieReceipt <- allocateReceipt cast cash run (cast.charlie, charlieAgreement)
-  _ <- settle cast cash runCid (sendCid :: charlieReceipt :: receiptCids)
+  charlieAgreement <- onboard cast.payingAgent cash cast.charlie
+  charlieReceipt <- allocateReceipt cast.payingAgent cash run (cast.charlie, charlieAgreement)
+  _ <- settle cast.payingAgent cash runCid (sendCid :: charlieReceipt :: receiptCids)
   awaitBalance cash cast.alice 500.0
   awaitBalance cash cast.bob 1000.0
   awaitBalance cash cast.charlie 1500.0
@@ -211,15 +211,15 @@ proof4bWith : Topology -> Script ()
 proof4bWith topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
-  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
   (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
 
   -- A second run over four legs tries to settle with the three-leg allocations.
   let bonusLeg = PaymentLeg with legId = "leg-4"; recipient = cast.alice; amount = 1.0
   (wrongRunCid, _) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast ++ [bonusLeg])
-  r <- trySettle cast cash wrongRunCid (sendCid :: receiptCids)
+  r <- trySettle cast.payingAgent cash wrongRunCid (sendCid :: receiptCids)
   case r of
     Right _ -> fail "settled a leg nobody allocated for"
     Left err -> do
@@ -240,10 +240,10 @@ proof2With : Topology -> Script ()
 proof2With topology = do
   (cast, cash) <- setupOn topology
   fund cash cast.payingAgent 10000.0
-  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
   (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
-  sendCid <- allocateSend cast cash run
-  receiptCids <- allocateReceipts cast cash run agreements
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
 
   -- Before settlement: the paying agent sees every allocation of the run.
   agentAllocs <- queryInterface @V2.Allocation cast.payingAgent
@@ -266,7 +266,7 @@ proof2With topology = do
       runs === []
 
   -- After settlement: each holder's holdings are its own and only its own.
-  _ <- settle cast cash runCid (sendCid :: receiptCids)
+  _ <- settle cast.payingAgent cash runCid (sendCid :: receiptCids)
   forA_ [(cast.alice, 500.0), (cast.bob, 1000.0), (cast.charlie, 1500.0)] $
     \(holder, expected) -> do
       everything <- queryInterface @V2.Holding holder

@@ -29,7 +29,7 @@ val dars = Seq(
   "daml/dars/splice-api-token-transfer-events-v2-1.0.0.dar",
   "daml/dars/splice-token-standard-utils-2.0.0.dar",
   "daml/dars/splice-test-token-v2-1.0.1.dar",
-  "daml/indivisa/.daml/dist/indivisa-0.2.0.dar"
+  "daml/indivisa/.daml/dist/indivisa-0.3.0.dar"
 )
 participants.local.foreach { p =>
   dars.foreach(d => p.dars.upload(d))

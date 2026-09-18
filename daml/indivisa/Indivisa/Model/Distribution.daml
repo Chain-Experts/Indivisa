@@ -121,3 +121,18 @@ runFromSchedule cashRegistry scheduleCid s =
       | (i, e) <- zip [1..length s.entries] s.entries
       ]
     schedule = Some scheduleCid
+
+-- | The paying agent's record of a settlement the ledger refused. A refused
+-- transaction leaves nothing behind, so the agent writes this itself after
+-- catching the failure: what it tried, when, and what the ledger said. It is
+-- what the paying agent's pane shows between "rejected" and "retried", and
+-- it is the audit line a real paying agent would want. Added in 0.3.0.
+template SettlementRejected
+  with
+    payingAgent   : Party
+    runId         : Text
+    attemptedAt   : Time
+    legsRequested : Int
+    reason        : Text
+  where
+    signatory payingAgent
