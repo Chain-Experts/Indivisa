@@ -1,0 +1,118 @@
+-- | The register: what is owned, by whom, and the frozen copy of it that a
+-- distribution is calculated from.
+--
+-- The bond is NOT tokenized. Nothing here is a Token Standard asset; nothing
+-- here is transferable through a wallet. These templates are the registrar's
+-- record of positions, the way a register already exists today, so that
+-- Indivisa works against registers the industry already keeps. If the
+-- instrument is Canton-native later, this module is replaced by a reader over
+-- that instrument's holdings and nothing downstream changes.
+--
+-- Privacy: each Position is visible to the registrar and to its holder only.
+-- The snapshot, which lists everyone, is visible to the registrar alone.
+module Indivisa.Model.Register where
+
+import DA.Foldable (forA_)
+import DA.List (sortOn)
+import DA.Map qualified as Map
+
+import Indivisa.Types
+
+-- | Master data for one instrument, kept by the registrar. The paying agent
+-- is the registrar in the demo; they are often the same bank.
+template Instrument
+  with
+    registrar    : Party
+    issuer       : Party
+    isin         : Isin
+    name         : Text
+    currency     : Text
+      -- ^ The cash the instrument pays in, by the cash registry's instrument
+      -- id (e.g. "USD"). Mapped to a V2 InstrumentId in Indivisa.Utils.
+    denomination : Decimal
+      -- ^ Face value per unit of quantity, e.g. 1000.0.
+    couponRate   : Decimal
+      -- ^ Annual rate as a fraction, e.g. 0.04. Informational here; the rate
+      -- actually paid is on the CorporateAction.
+    maturity     : Date
+  where
+    signatory registrar
+    observer issuer
+
+    ensure denomination > 0.0 && couponRate >= 0.0
+
+    -- | Freeze the register as of a record date. The registrar supplies the
+    -- position contracts; the choice verifies each belongs to this
+    -- instrument and this registrar, aggregates per holder, and records the
+    -- result. The registrar can omit a position; it cannot invent one.
+    nonconsuming choice Instrument_Snapshot : ContractId RegisterSnapshot
+      with
+        recordDate   : Date
+        positionCids : [ContractId Position]
+      controller registrar
+      do
+        positions <- forA positionCids fetch
+        forA_ positions $ \p -> do
+          assertMsg "position is for another instrument" (p.isin == isin)
+          assertMsg "position is kept by another registrar" (p.registrar == registrar)
+        create RegisterSnapshot with
+          registrar
+          isin
+          recordDate
+          positions = aggregate positions
+
+-- | A holder's position in an instrument. A holder may have several; its
+-- total is their sum. Visible to the holder, so the holder pane can show
+-- "my position" without seeing anyone else's.
+template Position
+  with
+    registrar : Party
+    holder    : Party
+    isin      : Isin
+    quantity  : Decimal
+  where
+    signatory registrar
+    observer holder
+
+    ensure quantity > 0.0
+
+    -- | Record a transfer of part or all of this position to another holder.
+    -- The registrar records; it is what a registrar does on instruction.
+    choice Position_Transfer : (Optional (ContractId Position), ContractId Position)
+      with
+        to       : Party
+        amount   : Decimal
+      controller registrar
+      do
+        assertMsg "transfer amount must be positive" (amount > 0.0)
+        assertMsg "transfer exceeds the position" (amount <= quantity)
+        remainder <-
+          if amount < quantity
+            then Some <$> create this with quantity = quantity - amount
+            else pure None
+        received <- create this with holder = to; quantity = amount
+        pure (remainder, received)
+
+-- | The register as of a record date: one entry per holder, quantities
+-- summed, sorted by holder so two snapshots of the same state are equal.
+-- Whatever changes after this contract exists does not change it; that is
+-- the point of a record date.
+template RegisterSnapshot
+  with
+    registrar  : Party
+    isin       : Isin
+    recordDate : Date
+    positions  : [(Party, Decimal)]
+  where
+    signatory registrar
+
+    ensure all (\(_, q) -> q > 0.0) positions
+
+-- | Sum positions per holder, sorted by holder.
+aggregate : [Position] -> [(Party, Decimal)]
+aggregate ps =
+  sortOn fst $ Map.toList $ Map.fromListWithR (+) [ (p.holder, p.quantity) | p <- ps ]
+
+-- | Total quantity in a snapshot.
+snapshotQuantity : RegisterSnapshot -> Decimal
+snapshotQuantity s = sum (map snd s.positions)

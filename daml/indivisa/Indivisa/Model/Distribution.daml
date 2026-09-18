@@ -14,6 +14,7 @@ import Splice.Api.Token.AllocationV2 qualified as V2
 
 import Indivisa.Types
 import Indivisa.Utils
+import Indivisa.Model.Entitlement (EntitlementSchedule)
 
 -- | The paying agent is the sole signatory and there are NO holder observers.
 -- The earlier scaffold made recipients observers and the visibility proof
@@ -27,6 +28,10 @@ template DistributionRun
     instrument   : V2.InstrumentId
     agentAccount : V2.Account
     legs         : [PaymentLeg]
+    schedule     : Optional (ContractId EntitlementSchedule)
+      -- ^ The schedule this run pays, when there is one. The proofs run
+      -- without; the product always has one. Last field: added in 0.2.0,
+      -- and Smart Contract Upgrade requires new fields at the end.
   where
     signatory payingAgent
 
@@ -66,6 +71,7 @@ template DistributionRun
           payingAgent
           runId
           instrument
+          schedule
           legsSettled = length legs
           total = runTotal this
         pure (receipt, result)
@@ -78,6 +84,8 @@ template DistributionReceipt
     instrument  : V2.InstrumentId
     legsSettled : Int
     total       : Decimal
+    schedule    : Optional (ContractId EntitlementSchedule)
+      -- ^ Added in 0.2.0; upgrades append.
   where
     signatory payingAgent
 
@@ -92,3 +100,24 @@ runSettlementInfo run = settlementInfo run.payingAgent run.runId
 
 runTransferLegs : DistributionRun -> [V2.TransferLeg]
 runTransferLegs run = map (transferLegOf run.instrument run.agentAccount) run.legs
+
+-- | A run from a schedule: one leg per entry, in schedule order, paid in the
+-- schedule's currency at the given cash registry. The run's total is the
+-- schedule's total by construction, so what the paying agent funds is what
+-- the token will check every leg against.
+runFromSchedule : Party -> ContractId EntitlementSchedule -> EntitlementSchedule -> DistributionRun
+runFromSchedule cashRegistry scheduleCid s =
+  let runId = s.isin <> "/" <> show s.kind <> "/" <> show s.paymentDate
+  in DistributionRun with
+    payingAgent = s.payingAgent
+    runId
+    instrument = V2.InstrumentId with admin = cashRegistry; id = s.currency
+    agentAccount = holderAccount s.payingAgent
+    legs =
+      [ PaymentLeg with
+          legId = runId <> "#" <> show i
+          recipient = e.holder
+          amount = e.amount
+      | (i, e) <- zip [1..length s.entries] s.entries
+      ]
+    schedule = Some scheduleCid

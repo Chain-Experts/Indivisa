@@ -113,9 +113,9 @@ which is exactly a paying agent's operational view of a coupon run.
 | Module | Holds | Status |
 |---|---|---|
 | `Indivisa.Types` | Vocabulary only. No templates. | `PaymentLeg` built; grows with the model |
-| `Indivisa.Model.Register` | Instrument, positions, record-date snapshot. Plain Daml, no V2. | after the proofs |
-| `Indivisa.Model.Event` | Coupon announcement, rate, dates, status. | after the proofs |
-| `Indivisa.Model.Entitlement` | rate x position x period, rounding policy, the audit record of how each figure was derived. | after the proofs |
+| `Indivisa.Model.Register` | Instrument, positions, record-date snapshot verified on-ledger. Plain Daml, no V2. | **built** |
+| `Indivisa.Model.Event` | The corporate action; `Entitle` derives the schedule from the snapshot on-ledger. | **built** |
+| `Indivisa.Model.Entitlement` | quantity x amount per unit, rounding policy, exact and paid per holder, total ensured. | **built** |
 | `Indivisa.Utils` | Our vocabulary in V2 terms; `Run_Settle` derives its transfer legs from it. | **built** |
 | `Indivisa.Model.Payment` | The once-only consent: `PaymentProposal`, `PaymentAgreement` with `CreateReceiptAllocation`. Touches V2. | **built** |
 | `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction) and `DistributionReceipt`. Touches V2. | **built** |

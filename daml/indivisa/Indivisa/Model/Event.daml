@@ -1,0 +1,66 @@
+-- | The corporate action: what the issuer announced, and the moment the
+-- paying agent turns a frozen register into a schedule. Plain Daml, no V2.
+--
+-- Deliberately absent: any attempt to source announcement data. Chainlink,
+-- with DTCC, Swift and Euroclear, is attacking that layer. Here the issuer
+-- announces by creating a contract; how it learned the terms is not our
+-- problem.
+module Indivisa.Model.Event where
+
+import Indivisa.Types
+import Indivisa.Model.Register
+import Indivisa.Model.Entitlement
+
+-- | An announced event on one instrument. The issuer signs; the paying agent
+-- sees it and acts on it.
+template CorporateAction
+  with
+    issuer        : Party
+    payingAgent   : Party
+    isin          : Isin
+    kind          : EventKind
+    currency      : Text
+      -- ^ Cash instrument id the event pays in, e.g. "USD". Must match the
+      -- instrument's.
+    amountPerUnit : Decimal
+      -- ^ Cash per unit of quantity for this event. For a 1,000 denomination
+      -- paying 2% this period, 20.00. Exact in the currency; rounding of the
+      -- per-holder products is the schedule's job.
+    recordDate    : Date
+    paymentDate   : Date
+  where
+    signatory issuer
+    observer payingAgent
+
+    ensure amountPerUnit > 0.0 && recordDate <= paymentDate
+
+    -- | Fix the record date: attach the register snapshot taken on it and
+    -- derive the entitlement schedule from it, on-ledger, so the schedule is
+    -- verifiably the product of this announcement and that snapshot.
+    -- Consuming: an event is entitled once.
+    choice CorporateAction_Entitle : ContractId EntitlementSchedule
+      with
+        snapshotCid : ContractId RegisterSnapshot
+        policy      : RoundingPolicy
+      controller payingAgent
+      do
+        snapshot <- fetch snapshotCid
+        assertMsg "snapshot is for another instrument" (snapshot.isin == isin)
+        assertMsg "snapshot is for another record date" (snapshot.recordDate == recordDate)
+        assertMsg "snapshot is kept by another registrar" (snapshot.registrar == payingAgent)
+        let (entries, total) = entitlements policy amountPerUnit snapshot.positions
+        create EntitlementSchedule with
+          payingAgent
+          isin
+          kind
+          recordDate
+          paymentDate
+          currency
+          amountPerUnit
+          policy
+          entries
+          total
+
+    choice CorporateAction_Cancel : ()
+      controller issuer
+      do pure ()

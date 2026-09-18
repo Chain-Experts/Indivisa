@@ -12,7 +12,7 @@ can host parties and accept DAR uploads, connected to a synchronizer.
 | Need | Value |
 |---|---|
 | Canton | 3.5.x participant (LocalNet uses 3.5.17). LF 2.1 packages. |
-| Packages to upload | the ten DARs in `daml/dars/` (Token Standard V2 from Splice 0.8.1, plus `splice-test-token-v2`, the reference cash) and `daml/indivisa/.daml/dist/indivisa-0.1.0.dar` |
+| Packages to upload | the ten DARs in `daml/dars/` (Token Standard V2 from Splice 0.8.1, plus `splice-test-token-v2`, the reference cash) and `daml/indivisa/.daml/dist/indivisa-<version>.dar` |
 | Parties | one cash registry, one paying agent, N holders. Privacy needs holders on participants **other than** the agent's; ideally each custodian on its own node. |
 | Ledger API | gRPC, one per participant, for Daml Script. JSON Ledger API for the UI. |
 | Auth | none on LocalNet. On DevNet whatever the validator enforces; Daml Script takes `--access-token-file`. |
@@ -103,7 +103,7 @@ evidence. Everything below is config; no code changes are expected.
    Standard V2 today: regular DevNet, or the June "Token Standard V2 DevNet"
    (single SV, protocol version 35, `alpha-version-support`). LocalNet runs
    PV 35 already.
-2. **Upload the DARs** from `daml/dars/` and `indivisa-0.1.0.dar` through the
+2. **Upload the DARs** from `daml/dars/` and the current `indivisa-<version>.dar` through the
    participant's admin API, exactly as `bootstrap.canton` does locally.
 3. **Parties.** For evidence, one validator hosting all parties is acceptable
    and simplest. For the privacy claim on DevNet, a second validator for the

@@ -1,0 +1,147 @@
+-- | The register: positions, transfers before and after the record date, and
+-- the snapshot freezing correctly and honestly.
+module Indivisa.Test.Register where
+
+import DA.Assert ((===))
+import DA.Date (date, Month(..))
+import DA.List (sortOn)
+
+import Daml.Script
+
+import Indivisa.Model.Register
+
+data RegisterCast = RegisterCast
+  with
+    registrar : Party
+    issuer    : Party
+    alice     : Party
+    bob       : Party
+    charlie   : Party
+
+setupRegister : Script (RegisterCast, ContractId Instrument)
+setupRegister = do
+  registrar <- allocateParty "Registrar"
+  issuer    <- allocateParty "Issuer"
+  alice     <- allocateParty "Alice"
+  bob       <- allocateParty "Bob"
+  charlie   <- allocateParty "Charlie"
+  instrumentCid <- submit registrar $ createCmd Instrument with
+    registrar
+    issuer
+    isin = "XS0000000001"
+    name = "Northwind Rail 4% 2031"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.04
+    maturity = date 2031 Dec 1
+  pure (RegisterCast with .., instrumentCid)
+
+position : RegisterCast -> Party -> Decimal -> Script (ContractId Position)
+position c holder quantity =
+  submit c.registrar $ createCmd Position with
+    registrar = c.registrar
+    holder
+    isin = "XS0000000001"
+    quantity
+
+-- | Positions aggregate per holder, transfers move quantity, and each holder
+-- sees only its own positions.
+register_positionsAndTransfers : Script ()
+register_positionsAndTransfers = do
+  (c, _) <- setupRegister
+  a <- position c c.alice 100.0
+  b <- position c c.bob 50.0
+  c1 <- position c c.charlie 30.0
+  c2 <- position c c.charlie 20.0
+
+  -- Alice sends 20 to Bob: Alice keeps 80, Bob gains a second position of 20.
+  (Some aRest, bMore) <- submit c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = 20.0
+  Some aRestP <- queryContractId c.registrar aRest
+  aRestP.quantity === 80.0
+  Some bMoreP <- queryContractId c.registrar bMore
+  bMoreP.holder === c.bob
+  bMoreP.quantity === 20.0
+
+  -- Sending the whole position leaves no remainder.
+  (None, _) <- submit c.registrar $ exerciseCmd c2 Position_Transfer with to = c.alice; amount = 20.0
+
+  -- Over-transfer is refused.
+  submitMustFail c.registrar $ exerciseCmd c1 Position_Transfer with to = c.alice; amount = 31.0
+
+  -- Each holder sees its own positions and nothing else.
+  aliceSees <- query @Position c.alice
+  sortOn snd (map (\(_, p) -> (p.holder, p.quantity)) aliceSees) === [(c.alice, 20.0), (c.alice, 80.0)]
+  bobSees <- query @Position c.bob
+  sortOn snd (map (\(_, p) -> (p.holder, p.quantity)) bobSees) === [(c.bob, 20.0), (c.bob, 50.0)]
+  all (\(_, p) -> p.holder == c.charlie) <$> query @Position c.charlie >>= assertMsg "Charlie sees only Charlie"
+
+-- | The snapshot aggregates per holder, is sorted, and does not move when
+-- the register moves afterwards. A second snapshot does.
+register_snapshotFreezes : Script ()
+register_snapshotFreezes = do
+  (c, instrumentCid) <- setupRegister
+  a <- position c c.alice 100.0
+  b <- position c c.bob 50.0
+  c1 <- position c c.charlie 30.0
+  c2 <- position c c.charlie 20.0
+  let recordDate = date 2027 Nov 15
+
+  snap1 <- submit c.registrar $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a, b, c1, c2]
+  Some s1 <- queryContractId c.registrar snap1
+  s1.positions === sortOn fst [(c.alice, 100.0), (c.bob, 50.0), (c.charlie, 50.0)]
+  snapshotQuantity s1 === 200.0
+
+  -- The register moves after the record date.
+  (Some aRest, bMore) <- submit c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = 40.0
+
+  -- The snapshot did not.
+  Some s1Again <- queryContractId c.registrar snap1
+  s1Again === s1
+
+  -- A new snapshot reflects the move.
+  snap2 <- submit c.registrar $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate = date 2028 May 15
+    positionCids = [aRest, b, bMore, c1, c2]
+  Some s2 <- queryContractId c.registrar snap2
+  s2.positions === sortOn fst [(c.alice, 60.0), (c.bob, 90.0), (c.charlie, 50.0)]
+  snapshotQuantity s2 === 200.0
+
+  -- Holders cannot see the snapshot at all.
+  query @RegisterSnapshot c.alice >>= (=== [])
+
+-- | The snapshot is verified against real positions: another instrument's
+-- position, or another registrar's, is refused. The registrar can leave a
+-- position out; it cannot put a foreign one in.
+register_snapshotIsVerified : Script ()
+register_snapshotIsVerified = do
+  (c, instrumentCid) <- setupRegister
+  a <- position c c.alice 100.0
+  otherRegistrar <- allocateParty "OtherRegistrar"
+  foreignIsin <- submit c.registrar $ createCmd Position with
+    registrar = c.registrar
+    holder = c.bob
+    isin = "XS0000000002"
+    quantity = 5.0
+  foreignRegistrar <- submit otherRegistrar $ createCmd Position with
+    registrar = otherRegistrar
+    holder = c.bob
+    isin = "XS0000000001"
+    quantity = 5.0
+  Some foreignDisclosure <- queryDisclosure otherRegistrar foreignRegistrar
+  let recordDate = date 2027 Nov 15
+
+  submitMustFail c.registrar $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a, foreignIsin]
+  submitMustFail (actAs c.registrar <> disclose foreignDisclosure) $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a, foreignRegistrar]
+
+  -- Omission is allowed; the snapshot is the registrar's attestation.
+  snap <- submit c.registrar $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a]
+  Some s <- queryContractId c.registrar snap
+  s.positions === [(c.alice, 100.0)]

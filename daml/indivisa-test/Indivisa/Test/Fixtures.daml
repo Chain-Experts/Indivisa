@@ -88,6 +88,9 @@ data Cast = Cast
     topology    : Topology
     registry    : Party
     payingAgent : Party
+    issuer      : Party
+      -- ^ Announces the corporate action. Hosted with the agent on LocalNet;
+      -- a separate node would change nothing in the proofs.
     alice       : Party
     bob         : Party
     charlie     : Party
@@ -108,6 +111,7 @@ setupOn : Topology -> Script (Cast, Cash)
 setupOn topology = do
   registry    <- allocateOn topology "CashRegistry" "registry"
   payingAgent <- allocateOn topology "PayingAgent"  "agent"
+  issuer      <- allocateOn topology "Issuer"       "agent"
   alice       <- allocateOn topology "Alice"        "alice"
   bob         <- allocateOn topology "Bob"          "bob"
   charlie     <- allocateOn topology "Charlie"      "charlie"
@@ -307,6 +311,7 @@ createRun cast cash runId legs = do
         runId
         instrument = cash.instrument
         agentAccount = basicAccount cast.payingAgent
+        schedule = None
         legs
   cid <- submit cast.payingAgent $ createCmd run
   pure (cid, run)

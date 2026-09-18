@@ -1,0 +1,105 @@
+-- | The whole chain, end to end: a register, an announcement, a frozen
+-- snapshot, a schedule with rounding, a run built from the schedule, one
+-- settlement. The proofs in Indivisa.Test.Distribution feed the settlement
+-- hand-written legs; this is the product path.
+--
+-- Takes a Topology like the proofs, so it runs on the IDE ledger under
+-- dpm test and on LocalNet with --participant-config.
+module Indivisa.Test.Coupon where
+
+import DA.Assert ((===))
+import DA.Date (date, Month(..))
+import DA.Foldable (forA_)
+
+import Daml.Script
+
+import Indivisa.Types
+import Indivisa.Model.Register
+import Indivisa.Model.Event
+import Indivisa.Model.Entitlement
+import Indivisa.Model.Distribution
+import Indivisa.Test.Agent
+import Indivisa.Test.Fixtures
+
+coupon_endToEnd : Script ()
+coupon_endToEnd = couponWith Ide
+
+couponWith : Topology -> Script ()
+couponWith topology = do
+  (cast, cash) <- setupOn topology
+  fund cash cast.payingAgent 1000.0
+  agreements <- onboardAll cast cash [cast.alice, cast.bob, cast.charlie]
+
+  -- The register. The paying agent is the registrar.
+  let isin = "XS0000000001"
+  instrumentCid <- submit cast.payingAgent $ createCmd Instrument with
+    registrar = cast.payingAgent
+    issuer = cast.issuer
+    isin
+    name = "Northwind Rail 4% 2031"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.04
+    maturity = date 2031 Dec 1
+  positionCids <- forA [(cast.alice, 3.0), (cast.bob, 7.0), (cast.charlie, 11.0)] $ \(holder, quantity) ->
+    submit cast.payingAgent $ createCmd Position with
+      registrar = cast.payingAgent
+      holder
+      isin
+      quantity
+
+  -- The announcement. Half-year coupon on a 4% bond would be 20.00 per
+  -- unit; 17.1234 is chosen so that every product carries sub-cent
+  -- fractions and the rounding policy has work to do.
+  let recordDate = date 2027 Nov 15
+      paymentDate = date 2027 Dec 1
+  actionCid <- submit cast.issuer $ createCmd CorporateAction with
+    issuer = cast.issuer
+    payingAgent = cast.payingAgent
+    isin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 17.1234
+    recordDate
+    paymentDate
+  awaitVisible cast.payingAgent actionCid
+
+  -- Record date: freeze the register, derive the schedule on-ledger.
+  snapshotCid <- submit cast.payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids
+  scheduleCid <- submit cast.payingAgent $ exerciseCmd actionCid CorporateAction_Entitle with
+    snapshotCid
+    policy = LargestRemainder
+  Some schedule <- queryContractId cast.payingAgent scheduleCid
+
+  --   exact  51.3702 / 119.8638 / 188.3574   total 359.5914 -> 359.59
+  --   floors 51.37   / 119.86   / 188.35     sum 359.58 -> one cent to
+  --   the largest discarded fraction, Charlie's .0074
+  schedule.total === 359.59
+  map (\e -> (e.holder, e.amount)) schedule.entries
+    === [(cast.alice, 51.37), (cast.bob, 119.86), (cast.charlie, 188.36)]
+
+  -- Payment date: the run is the schedule, leg for leg.
+  let run = runFromSchedule cast.registry scheduleCid schedule
+  runTotal run === schedule.total
+  run.instrument === cash.instrument
+  runCid <- submit cast.payingAgent $ createCmd run
+  sendCid <- allocateSend cast cash run
+  receiptCids <- allocateReceipts cast cash run agreements
+  (receiptCid, _) <- settle cast cash runCid (sendCid :: receiptCids)
+
+  -- Everyone holds exactly their scheduled amount; the agent is down the
+  -- total; the receipt points back at the schedule.
+  forA_ schedule.entries $ \e -> awaitBalance cash e.holder e.amount
+  awaitBalance cash cast.payingAgent (1000.0 - schedule.total)
+  Some receipt <- queryContractId cast.payingAgent receiptCid
+  receipt.schedule === Some scheduleCid
+  receipt.total === schedule.total
+  receipt.legsSettled === 3
+
+  -- The holders never saw the schedule, the snapshot or the run.
+  forA_ [cast.alice, cast.bob, cast.charlie] $ \h -> do
+    query @EntitlementSchedule h >>= (=== [])
+    query @RegisterSnapshot h >>= (=== [])
+    query @DistributionRun h >>= (=== [])

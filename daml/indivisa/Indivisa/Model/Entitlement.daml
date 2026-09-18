@@ -1,0 +1,94 @@
+-- | Rate x position, rounded to the minor unit, summing exactly to the
+-- announced total. Plain Daml, no V2.
+--
+-- Rounding is not a detail. Every entitlement is quantity x amount-per-unit,
+-- which is rarely a whole number of cents, and the cents have to go
+-- somewhere. Decide it once, here, record which policy was used, and make
+-- the legs sum to the total exactly. A settlement that is off by one cent
+-- does not settle: the paying agent's send allocation funds the total and
+-- the token checks every leg against it.
+module Indivisa.Model.Entitlement where
+
+import DA.List (sortOn)
+
+import Indivisa.Types
+
+-- | One holder's entitlement, with the audit trail of how it was derived.
+data Entitlement = Entitlement
+  with
+    holder   : Party
+    quantity : Decimal
+    exact    : Decimal
+      -- ^ quantity x amountPerUnit, before rounding
+    amount   : Decimal
+      -- ^ what is paid, in whole minor units
+  deriving (Eq, Show)
+
+-- | The schedule for one corporate action: every holder's amount, the policy
+-- that produced it, and a total the amounts sum to exactly. Created by the
+-- paying agent from a frozen register (see Indivisa.Model.Event); nothing
+-- downstream recomputes it. Visible to the paying agent only: it lists every
+-- holder.
+template EntitlementSchedule
+  with
+    payingAgent   : Party
+    isin          : Isin
+    kind          : EventKind
+    recordDate    : Date
+    paymentDate   : Date
+    currency      : Text
+    amountPerUnit : Decimal
+    policy        : RoundingPolicy
+    entries       : [Entitlement]
+    total         : Decimal
+  where
+    signatory payingAgent
+
+    ensure
+      not (null entries)
+        && all (\e -> e.amount > 0.0) entries
+        && total == sum (map (.amount) entries)
+
+-- | Compute the schedule entries and total from a frozen register.
+--
+-- Positions are (holder, quantity), one per holder, as RegisterSnapshot
+-- keeps them. The result is sorted by holder, so it is deterministic.
+-- A holder whose entitlement rounds to nothing is dropped: a transfer leg of
+-- zero is not a payment, and the standard refuses it. The total is unchanged
+-- by dropping zeros.
+entitlements : RoundingPolicy -> Decimal -> [(Party, Decimal)] -> ([Entitlement], Decimal)
+entitlements policy amountPerUnit positions =
+  let (es, total) = case policy of
+        LargestRemainder -> largestRemainder exactEntries
+        RoundHalfUpResidualToIssuer ->
+          let rs = [ e with amount = roundCommercial 2 e.exact | e <- exactEntries ]
+          in (rs, sum (map (.amount) rs))
+  in (filter (\e -> e.amount > 0.0) es, total)
+  where
+    exactEntries =
+      [ Entitlement with holder; quantity; exact = quantity * amountPerUnit; amount = 0.0
+      | (holder, quantity) <- sortOn fst positions
+      ]
+
+-- | The announced total is the exact total rounded half-up to the minor
+-- unit. Every entitlement is rounded DOWN to the minor unit, which leaves a
+-- residual of at most one minor unit per holder; that residual is handed
+-- out one minor unit each to the entitlements with the largest discarded
+-- fractions, ties broken by holder order. The amounts then sum to the
+-- announced total exactly, and nobody is short by more than a minor unit.
+largestRemainder : [Entitlement] -> ([Entitlement], Decimal)
+largestRemainder es = (sortOn (.holder) topped, total)
+  where
+    total = roundCommercial 2 (sum (map (.exact) es))
+    floored = [ e with amount = floorCents e.exact | e <- es ]
+    residualCents = truncate ((total - sum (map (.amount) floored)) * 100.0)
+    -- Largest discarded fraction first; holder order breaks ties.
+    byRemainder = sortOn (\e -> (negate (e.exact - e.amount), e.holder)) floored
+    topped =
+      [ if i <= residualCents then e with amount = e.amount + 0.01 else e
+      | (i, e) <- zip [1..length byRemainder] byRemainder
+      ]
+
+-- | Round down to whole minor units (cents). Inputs are non-negative.
+floorCents : Decimal -> Decimal
+floorCents x = intToDecimal (truncate (x * 100.0)) / 100.0

@@ -229,19 +229,35 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ## Phase 2 — The model (days 8–13)
 
-- [ ] `Indivisa.Types` — vocabulary, no templates. `PaymentLeg` is there (17 Sep);
-      the rest arrives with Register, Event and Entitlement.
-- [ ] `Indivisa.Model.Register` — instrument, positions, record-date snapshot. Plain
-      Daml, no V2.
-- [ ] `Indivisa.Model.Event` — coupon announcement: rate, record date, payment date.
-- [ ] `Indivisa.Model.Entitlement` — rate x position x period. **Settle the rounding
-      policy here and record it on-ledger.** The legs must total the announced
-      distribution exactly; a settlement off by one cent does not settle.
-- [ ] `Indivisa.Model.Distribution` — generalise from the proof into the real path.
-      `PaymentAgreement` stays in `Model.Payment`; `Utils` and `Model.*` are the
-      only places allowed to touch V2. Client-side builders stay in `Test.Agent`.
-- [ ] Scripts: `Test.Register`, `Test.Entitlement`, and `Test.Distribution`
-      extended to a holder base at whatever N proof 5 established.
+- [x] `Indivisa.Types` — `PaymentLeg`, `Isin`, `EventKind` (Coupon / Dividend /
+      Redemption), `RoundingPolicy` (LargestRemainder, RoundHalfUpResidualToIssuer). (18 Sep)
+- [x] `Indivisa.Model.Register` — `Instrument`, `Position` (registrar signs,
+      holder observes: each holder sees only its own), `RegisterSnapshot`.
+      `Instrument_Snapshot` verifies every position contract on-ledger
+      (right isin, right registrar), aggregates per holder, sorts. The
+      registrar can omit a position; it cannot invent one.
+- [x] `Indivisa.Model.Event` — `CorporateAction` (issuer signs, agent
+      observes; `amountPerUnit`, record and payment dates).
+      `CorporateAction_Entitle` attaches the snapshot and derives the
+      schedule **on-ledger**, so the schedule is verifiably announcement x
+      snapshot. `CorporateAction_Cancel` for the issuer.
+- [x] `Indivisa.Model.Entitlement` — `entitlements`: quantity x amountPerUnit,
+      **largest-remainder** rounding by default (floor to the cent, hand the
+      residual cents to the largest discarded fractions), sums to the
+      announced total exactly; half-up-with-issuer-residual as the
+      alternative; zero entitlements dropped. `EntitlementSchedule` records
+      policy, exact and paid amounts per holder, and ensures the total.
+- [x] `Indivisa.Model.Distribution` — `runFromSchedule`: one leg per entry,
+      currency from the schedule, `schedule` link on the run and the receipt.
+      Proofs still create runs by hand (`schedule = None`).
+- [x] Scripts: `Test.Register` (3), `Test.Entitlement` (5), `Test.Coupon`
+      (the whole chain, IDE and LocalNet). Holder-base-at-N is the scale
+      harness; the coupon path at N is Phase 3's `Test.Demo`.
+- [x] **Model package is now 0.2.0.** Canton refuses to vet two packages with
+      the same name and version; `dpm upgrade-check --both old.dar new.dar`
+      passes, after moving the new `schedule` fields to the end of their
+      records (SCU appends). Uploaded to LocalNet over the JSON API without a
+      restart.
 
 ---
 

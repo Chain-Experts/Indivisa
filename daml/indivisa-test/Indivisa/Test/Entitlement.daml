@@ -1,0 +1,87 @@
+-- | The arithmetic: rounding, the residual, and that the legs sum to the
+-- announced total exactly. Pure functions exercised through Daml Script so
+-- they run under dpm test with everything else.
+module Indivisa.Test.Entitlement where
+
+import DA.Assert ((===))
+import DA.Date (date, Month(..))
+import DA.Foldable (forA_)
+
+import Daml.Script
+
+import Indivisa.Types
+import Indivisa.Model.Entitlement
+
+-- | Three holders whose products all carry sub-cent fractions.
+--
+--   exact:  17.1234 / 34.2468 / 51.3702   total 102.7404 -> announced 102.74
+--   floors: 17.12   / 34.24   / 51.37     sum 102.73 -> one cent to hand out
+--   fractions discarded: .0034 / .0068 / .0002 -> the cent goes to the second
+entitlement_largestRemainder_handsOutTheResidual : Script ()
+entitlement_largestRemainder_handsOutTheResidual = do
+  [a, b, c] <- forA ["A", "B", "C"] allocateParty
+  let (entries, total) = entitlements LargestRemainder 17.1234 [(a, 1.0), (b, 2.0), (c, 3.0)]
+  total === 102.74
+  map (.amount) entries === [17.12, 34.25, 51.37]
+  sum (map (.amount) entries) === total
+  map (.exact) entries === [17.1234, 34.2468, 51.3702]
+
+-- | Half-up per holder, total follows. Here the same three round to
+-- 17.12 / 34.25 / 51.37 and the total is their sum by definition.
+entitlement_halfUp_totalFollowsTheLegs : Script ()
+entitlement_halfUp_totalFollowsTheLegs = do
+  [a, b, c] <- forA ["A", "B", "C"] allocateParty
+  let (entries, total) = entitlements RoundHalfUpResidualToIssuer 17.1234 [(a, 1.0), (b, 2.0), (c, 3.0)]
+  map (.amount) entries === [17.12, 34.25, 51.37]
+  total === 102.74
+  sum (map (.amount) entries) === total
+
+-- | Whatever the rate and however many holders, the legs sum to the total
+-- to the cent, every amount is a whole number of cents, and nobody is short
+-- by more than a cent.
+entitlement_sumsExactly_acrossRatesAndSizes : Script ()
+entitlement_sumsExactly_acrossRatesAndSizes = do
+  holders <- forA [1..37] $ \i -> allocateParty ("H" <> show i)
+  let positions = [ (h, intToDecimal (i * 7 % 23 + 1)) | (i, h) <- zip [1..length holders] holders ]
+  forA_ [0.0001, 0.3333, 1.0, 17.1234, 20.0, 999.9999] $ \apu -> do
+    let (entries, total) = entitlements LargestRemainder apu positions
+    sum (map (.amount) entries) === total
+    total === roundCommercial 2 (sum (map (\(_, q) -> q * apu) positions))
+    forA_ entries $ \e -> do
+      e.amount === roundCommercial 2 e.amount
+      assertMsg "nobody short by more than a cent" (e.exact - e.amount < 0.01)
+      assertMsg "nobody overpaid by more than a cent" (e.amount - e.exact <= 0.01)
+
+-- | An entitlement that rounds to nothing is dropped, not paid as zero and
+-- not allowed to block the run. The total still counts everyone.
+entitlement_zeroEntitlementIsDropped : Script ()
+entitlement_zeroEntitlementIsDropped = do
+  [a, b] <- forA ["A", "B"] allocateParty
+  let (entries, total) = entitlements LargestRemainder 0.001 [(a, 1.0), (b, 1000.0)]
+  -- exact 0.001 and 1.000; announced total 1.00; the cent that a's 0.001
+  -- would need is not there, so a gets nothing and is dropped.
+  map (.holder) entries === [b]
+  map (.amount) entries === [1.00]
+  total === 1.00
+
+-- | The schedule template refuses inconsistent data.
+entitlementSchedule_ensuresTheTotal : Script ()
+entitlementSchedule_ensuresTheTotal = do
+  agent <- allocateParty "PayingAgent"
+  a <- allocateParty "A"
+  let entry = Entitlement with holder = a; quantity = 1.0; exact = 20.0; amount = 20.0
+      schedule = EntitlementSchedule with
+        payingAgent = agent
+        isin = "XS0000000001"
+        kind = Coupon
+        recordDate = date 2027 Nov 15
+        paymentDate = date 2027 Dec 1
+        currency = "USD"
+        amountPerUnit = 20.0
+        policy = LargestRemainder
+        entries = [entry]
+        total = 20.0
+  _ <- submit agent $ createCmd schedule
+  submitMustFail agent $ createCmd schedule with total = 20.01
+  submitMustFail agent $ createCmd schedule with entries = []
+  submitMustFail agent $ createCmd schedule with entries = [entry with amount = 0.0]; total = 0.0

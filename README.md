@@ -143,7 +143,7 @@ is, the benchmark goes in this repo and to the Canton forum.
 ## Build
 
 ```bash
-dpm build --all
+dpm build --all          # model package indivisa-0.2.0, scripts indivisa-test
 cd daml/indivisa-test
 dpm test
 ```

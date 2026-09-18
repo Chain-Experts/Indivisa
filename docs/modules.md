@@ -23,9 +23,9 @@ Indivisa/
 │   │       ├── Model/
 │   │       │   ├── Payment.daml           exists; the once-only consent (V2)
 │   │       │   ├── Distribution.daml      exists; the run and its settle (V2)
-│   │       │   ├── Register.daml          planned
-│   │       │   ├── Event.daml             planned
-│   │       │   └── Entitlement.daml       planned
+│   │       │   ├── Register.daml          exists; instrument, positions, snapshot
+│   │       │   ├── Event.daml             exists; the corporate action
+│   │       │   └── Entitlement.daml       exists; rate x position, rounding
 │   │
 │   └── indivisa-test/             package `indivisa-test` — never uploaded
 │       ├── daml.yaml
@@ -33,8 +33,9 @@ Indivisa/
 │           ├── Fixtures.daml              exists
 │           ├── Agent.daml                 exists
 │           ├── Distribution.daml          exists
-│           ├── Register.daml              planned
-│           ├── Entitlement.daml           planned
+│           ├── Register.daml              exists
+│           ├── Entitlement.daml           exists
+│           ├── Coupon.daml                exists; the whole chain, end to end
 │           ├── Scale.daml                 exists
 │           └── Demo.daml                  planned
 │
@@ -80,10 +81,10 @@ Indivisa/
 | `Types.daml` | Vocabulary, no templates. `PaymentLeg` today; `Isin`, `RunId`, `EventKind` (Coupon / Dividend / Redemption), `RoundingPolicy` as Phase 2 adds them. | no |
 | `Utils.daml` | Our vocabulary in V2 terms: `settlementInfo`, `holderAccount`, `transferLegOf`. Used by the ledger itself (`Run_Settle` derives the transfer legs from these), so anything a client builds must agree with them. | **yes** |
 | `Model/Payment.daml` | `PaymentProposal` (agent proposes; holder `Accept`s once, or `Decline`s; agent may `Withdraw`) and `PaymentAgreement`. Its one choice, `CreateReceiptAllocation`, lets the paying agent create that holder's receipt allocations, guarded by `ensureIsReceiptAllocation` plus admin and instrument checks. | **yes** |
-| `Model/Distribution.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
-| `Model/Register.daml` | `Instrument` — ISIN, name, coupon rate, currency, payment dates. `Position` — instrument, holder, quantity. `RegisterSnapshot` — the record-date freeze. The bond is **not** tokenized. | no |
-| `Model/Event.daml` | `CorporateAction` — instrument, kind, rate, record date, payment date, status. Announce, fix record date, cancel. | no |
-| `Model/Entitlement.daml` | rate x position x period. `EntitlementSchedule` recording each holder's amount and the rounding policy applied. The residual is resolved here so the legs total the announced distribution exactly. | no |
+| `Model/Distribution.daml` | `DistributionRun` (paying agent only; no holder observers) whose `Run_Settle` exercises `SettlementFactory_SettleBatch`, and `DistributionReceipt`, what the agent keeps after a run; both link the `EntitlementSchedule` they pay. `runFromSchedule` builds a run leg for leg from a schedule. Plus `runTotal`, `runSettlementInfo`, `runTransferLegs`. | **yes** |
+| `Model/Register.daml` | `Instrument` (registrar signs, issuer observes; ISIN, name, currency, denomination, coupon rate, maturity). `Position` (registrar signs, holder observes: each holder sees only its own; `Position_Transfer`). `RegisterSnapshot`, created by `Instrument_Snapshot`, which verifies every position contract and aggregates per holder. The bond is **not** tokenized. | no |
+| `Model/Event.daml` | `CorporateAction` (issuer signs, agent observes): kind, currency, `amountPerUnit`, record and payment dates. `CorporateAction_Entitle` attaches the snapshot and derives the schedule on-ledger; `CorporateAction_Cancel`. | no |
+| `Model/Entitlement.daml` | `entitlements`: quantity x amountPerUnit under a `RoundingPolicy`; largest-remainder by default so the legs sum to the announced total exactly; zero entitlements dropped. `EntitlementSchedule` records exact and paid amounts per holder, the policy, and ensures the total. | no |
 
 **Token Standard V2 is touched by `Indivisa.Utils` and `Indivisa.Model.*`, and
 nothing else.** `Types` and the future `Register`, `Event` and `Entitlement`
@@ -103,8 +104,9 @@ example: they are the paying agent's client logic, so they sit in
 | `Fixtures.daml` | `Cast` (parties), `Cash` (the reference token: rules contract, disclosure, choice context), `setup`, `fund` (simulated cash), balances through the V2 `Holding` interface, `onboard` / `onboardAll`, `threeLegs`, `createRun`, `requestedAt`, `errorText`. Shared by the rest. |
 | `Agent.daml` | The paying agent's client moves: `sendAllocationSpec`, `receiptAllocationSpec` and their `run*` forms, `allocateSend`, `allocateReceipt`, `trySettle`, `settle`. A UI or daemon reimplements exactly this sequence. |
 | `Distribution.daml` | The proofs, assertions only: batch settles (1), per-holder visibility in single-participant form (2), holders authorise once and the delegation cannot be abused (3), one bad leg settles zero with the rejection recorded (4). |
-| `Register.daml` | Positions, transfers before the record date, the snapshot freezing correctly. |
-| `Entitlement.daml` | The arithmetic. Rounding, the residual, and that legs sum to the announced total exactly. |
+| `Register.daml` | Positions aggregate and transfer; each holder sees only its own; the snapshot freezes and is verified against real position contracts. |
+| `Entitlement.daml` | The arithmetic: largest remainder hands out the residual cent; half-up lets the total follow; sums are exact across rates and sizes; zero entitlements dropped; the schedule template ensures its total. |
+| `Coupon.daml` | The whole chain: register, announcement, snapshot, on-ledger schedule (Charlie gets the residual cent), run from schedule, one settlement, balances equal the schedule, receipt links the schedule, holders never see the schedule or the run. IDE and LocalNet. |
 | `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle so the difference is the one transaction. Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file. Results in `benchmark.md`. |
 | `Demo.daml` | Seats the demo: realistic holders, announces the coupon, arms the deliberate failure. |
 

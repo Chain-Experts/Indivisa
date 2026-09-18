@@ -3,6 +3,33 @@
 -- The V2 mapping happens in Indivisa.Utils.
 module Indivisa.Types where
 
+-- | ISO 6166 identifier of the instrument, e.g. "XS1234567890". Text, not a
+-- newtype: it is a key into other people's systems, not ours.
+type Isin = Text
+
+-- | The kinds of corporate action Indivisa pays. Coupons are the demo;
+-- dividends and redemptions are the same engine with a different rate.
+data EventKind
+  = Coupon
+  | Dividend
+  | Redemption
+  deriving (Eq, Show)
+
+-- | How a holder's entitlement is rounded to the currency's minor unit, and
+-- what happens to the residual so that the legs sum exactly to the announced
+-- total. Recorded on the schedule so the audit trail says which was used.
+data RoundingPolicy
+  = LargestRemainder
+    -- ^ Round every entitlement down to the minor unit, then hand out the
+    -- remaining minor units one each to the entitlements with the largest
+    -- discarded fractions. Sums exactly to the announced total; standard in
+    -- apportionment. The default.
+  | RoundHalfUpResidualToIssuer
+    -- ^ Round every entitlement half-up to the minor unit and let the total
+    -- move by the residual. The issuer funds a cent more or less; nobody is
+    -- short. Some paying agents work this way.
+  deriving (Eq, Show)
+
 -- | One holder's share of a distribution.
 data PaymentLeg = PaymentLeg
   with
