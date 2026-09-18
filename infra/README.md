@@ -37,6 +37,7 @@ can host parties and accept DAR uploads, connected to a synchronizer.
 | Need | Value |
 |---|---|
 | Canton | 3.5.x participant (LocalNet uses 3.5.17). LF 2.1 packages. |
+| Splice (validator) | whatever DevNet mandates today (0.8.x), never below 0.6.11 (first release with Token Standard V2). Built and tested against 0.8.1; the V2 DARs are byte-identical through 0.8.3 (Canton 3.5.18), checked 18 Sep. |
 | Packages to upload | the ten DARs in `daml/dars/` (Token Standard V2 from Splice 0.8.1, plus `splice-test-token-v2`, the reference cash) and `daml/indivisa/.daml/dist/indivisa-<version>.dar` |
 | Parties | one cash registry, one paying agent, N holders; the scripts create them. Privacy needs holders on a participant **other than** the agent's. |
 | Ledger API | gRPC, one per participant, for Daml Script. JSON Ledger API for the UI. |
