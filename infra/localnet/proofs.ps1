@@ -4,7 +4,9 @@
 #   pwsh infra/localnet/proofs.ps1 [-Network localnet]
 
 param(
-  [string] $Network = "localnet"
+  [string] $Network = "localnet",
+  [switch] $Tls,
+  [string] $CaCrt = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +32,9 @@ $proofs = @(
   "Indivisa.Test.Coupon:couponWith"
 )
 
+$tlsArgs = @()
+if ($Tls) { $tlsArgs += "--tls" }
+if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }
 $env:JAVA_TOOL_OPTIONS = "-Xss64m"
 Set-Location $testDir
 $failed = 0
@@ -38,7 +43,7 @@ try {
     $name = $p.Split(":")[1]
     $log = Join-Path $logDir "proof-$name.log"
     $t = Measure-Command {
-      & dpm script --dar $dar --script-name $p --input-file $topology --participant-config $participants *> $log
+      & dpm script --dar $dar --script-name $p --input-file $topology --participant-config $participants @tlsArgs *> $log
       $script:exit = $LASTEXITCODE
     }
     $status = if ($exit -eq 0) { "pass" } else { $failed++; "FAIL" }

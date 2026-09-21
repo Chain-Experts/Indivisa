@@ -212,10 +212,19 @@ Worth saying before anyone else says it.
 | `docs/architecture.md` | Components, settlement flow, boundaries, settled and open questions |
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
-| `docs/demo-script.md` | The recording: shot list and what each caption may claim |
+| `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
+| `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
 | `ui/README.md` | The four panes |
+
+---
+
+## Demo
+
+- **Recorded demo** — 250-holder coupon settled as one atomic transaction: [link]
+- **Explainer page** — plain-English walkthrough, not a live instance: https://chain-experts.com/indivisa/
+- **Benchmark** — how many legs fit in one transaction: [docs/benchmark.md](docs/benchmark.md)
 
 ---
 

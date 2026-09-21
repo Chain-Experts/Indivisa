@@ -82,7 +82,8 @@ Indivisa/
     ├── explainer.html             the story for a beginner, standalone page
     ├── Indivisia Logo.png         the logo
     ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
-    └── demo-script.md             shot list, captions and timings for the recording
+    ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
+    └── demo-script.md             the recording, step by step, for someone who has never seen the project
 ```
 
 ## `daml/indivisa/` — the model

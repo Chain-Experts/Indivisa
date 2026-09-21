@@ -12,7 +12,9 @@
 param(
   [string] $Network = "localnet",
   [int] $Holders = 0,
-  [string] $Prepared = ""
+  [string] $Prepared = "",
+  [switch] $Tls,
+  [string] $CaCrt = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,12 +35,15 @@ if (-not $Prepared) {
   $argsFile = Join-Path $logDir "settle-args-$Holders.json"
   $Prepared = Join-Path $logDir "settle-prepared-$Holders.json"
   Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + '}') -NoNewline
+  $tlsArgs = @()
+  if ($Tls) { $tlsArgs += "--tls" }
+  if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }
   $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
   Set-Location $testDir
   try {
     $t = Measure-Command {
       & dpm script --dar $dar --script-name "Indivisa.Test.Scale:scalePrepare" `
-        --input-file $argsFile --output-file $Prepared --participant-config $mapFile *> (Join-Path $logDir "settle-prepare-$Holders.log")
+        --input-file $argsFile --output-file $Prepared --participant-config $mapFile @tlsArgs *> (Join-Path $logDir "settle-prepare-$Holders.log")
       if ($LASTEXITCODE -ne 0) { throw "prepare failed; see $logDir\settle-prepare-$Holders.log" }
     }
     Write-Host ("prepared {0} legs in {1:N0}s -> {2}" -f $Holders, $t.TotalSeconds, $Prepared)

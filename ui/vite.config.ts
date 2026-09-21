@@ -20,6 +20,8 @@ import { resolve } from "node:path";
 
 interface UiConfig {
   participants: Record<string, { jsonApi: string; token?: string }>;
+  // true when the JSON API sits behind a self-signed or private-CA certificate (a VPN-only validator)
+  insecureTls?: boolean;
 }
 
 const network = process.env.INDIVISA_NETWORK ?? "localnet";
@@ -72,6 +74,7 @@ export default defineConfig({
           changeOrigin: true,
           rewrite: (path: string) => path.replace(`/api/${name}`, ""),
           headers: p.token ? { Authorization: `Bearer ${p.token}` } : undefined,
+          secure: !ui.insecureTls,
         },
       ]),
     ),

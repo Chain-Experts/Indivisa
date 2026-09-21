@@ -189,7 +189,11 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
 4. **Config.** Copy `infra/devnet/participants.example.json` to
    `participants.json` and `ui.example.json` to `ui.json`, fill in host,
    port, `access_token`, `user_id` and `jsonApi`. Both real files are
-   git-ignored; never commit them.
+   git-ignored; never commit them. If the JSON API is HTTPS with a private
+   or self-signed certificate (usual behind a VPN), set `"insecureTls": true`
+   in `ui.json`. If the gRPC Ledger API is behind TLS, add `-Tls` (and
+   `-CaCrt <file>` for a private CA) to every `demo.ps1`, `settle.ps1` and
+   `proofs.ps1` call below.
 5. **Smoke.** `pwsh infra/participants-with-parties.ps1 -Network devnet`
    must print a party count (0 is fine) for every participant name. If it
    warns "cannot reach", the JSON API URL or token is wrong.

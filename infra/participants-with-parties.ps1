@@ -32,7 +32,7 @@ foreach ($name in $base.participants.PSObject.Properties.Name) {
   $headers = @{}
   if ($u.token) { $headers["Authorization"] = "Bearer " + $u.token }
   try {
-    $resp = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -TimeoutSec 30
+    $resp = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -TimeoutSec 30 -SkipCertificateCheck:([bool]$ui.insecureTls)
   } catch {
     Write-Warning "cannot reach $url ($_); skipping $name"
     continue

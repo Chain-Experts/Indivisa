@@ -19,7 +19,9 @@ param(
   [string] $Network = "localnet",
   [string] $Tag = "demo",
   [int] $Holders = 250,
-  [int] $Withhold = 0
+  [int] $Withhold = 0,
+  [switch] $Tls,
+  [string] $CaCrt = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +40,11 @@ pwsh -NoProfile -File (Join-Path $PSScriptRoot "participants-with-parties.ps1") 
 # The scripts' "LocalNet" topology means "named participants, one party per
 # command". On DevNet the same five names are keys in participants.json that
 # point at real validators, so the topology name does not change.
+# TLS on the gRPC Ledger API is a runner-wide flag, not a per-participant one.
+$tlsArgs = @()
+if ($Tls) { $tlsArgs += "--tls" }
+if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }
+
 $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
 Set-Location $testDir
 try {
@@ -48,7 +55,7 @@ try {
       Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"tag":"' + $Tag + '"}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_seat" `
-          --input-file $argsFile --output-file $seatFile --participant-config $mapFile 2>&1 |
+          --input-file $argsFile --output-file $seatFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "seat-$Tag.log") | Select-String -Pattern "seated|FailedCmd|Exception" | ForEach-Object { $_.Line }
       }
       Write-Host ("seat '{0}' on {1}: {2} holders in {3:N0}s -> {4}" -f $Tag, $Network, $Holders, $t.TotalSeconds, $seatFile)
@@ -62,7 +69,7 @@ try {
       Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_prepare" `
-          --input-file $argsFile --output-file $outFile --participant-config $mapFile 2>&1 |
+          --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "prepare-$Tag.log") | Select-String -Pattern "withholding|FailedCmd|Exception" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
       }
       Write-Host ("prepare '{0}' (withhold {1}): {2:N0}s -> {3}" -f $Tag, $Withhold, $t.TotalSeconds, $outFile)
@@ -77,7 +84,7 @@ try {
       Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_attempt" `
-          --input-file $argsFile --output-file $outFile --participant-config $mapFile 2>&1 |
+          --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "attempt-$Tag-$stamp.log") | Select-String -Pattern "SETTLED|REJECTED|withholding|FailedCmd|Exception" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
       }
       Write-Host ("attempt '{0}' (withhold {1}): {2:N0}s -> {3}" -f $Tag, $Withhold, $t.TotalSeconds, $outFile)

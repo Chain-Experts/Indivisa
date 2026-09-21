@@ -22,7 +22,8 @@ if (!target) {
   process.exit(2);
 }
 
-const ui = JSON.parse(readFileSync(uiPath, "utf8")) as { participants: Record<string, { jsonApi: string; token?: string }> };
+const ui = JSON.parse(readFileSync(uiPath, "utf8")) as { participants: Record<string, { jsonApi: string; token?: string }>; insecureTls?: boolean };
+if (ui.insecureTls) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // private-CA JSON API behind a VPN
 const map = JSON.parse(readFileSync(mapPath, "utf8")) as { party_participants: Record<string, string> };
 
 function ledgerFor(party: string): Ledger {

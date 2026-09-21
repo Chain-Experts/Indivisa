@@ -1,4 +1,5 @@
 {
+  "insecureTls": false,
   "participants": {
     "registry": { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
     "agent":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
