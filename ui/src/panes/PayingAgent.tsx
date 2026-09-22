@@ -112,11 +112,20 @@ export function PayingAgent({ config }: { config: Config }) {
       )}
 
       <div className="action">
+        {config.readOnly ? null : (
         <button className="settle" disabled={!canPress} onClick={onSettle}>
           {pressed.kind === "busy" ? "Settling…" : settled ? "Settled" : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
         </button>
+        )}
         <div className="action-note">
-          {settled ? "This run has settled. Every holder was paid in the same transaction." : !state?.run ? "Prepare the run first: demo.ps1 prepare -Tag " + seat.tag : state.run.approver ? "All or nothing, and not alone: this run names an approver, so the agent's own button is refused until the approvers have confirmed and executed." : "All or nothing. If any leg cannot settle, nothing moves."}
+          {config.readOnly
+            ? settled
+              ? "This run has settled. Every holder was paid in the same transaction; this page reads the ledger and cannot change it."
+              : "This page reads the ledger and cannot change it. The settlement is run by the paying agent from its own client."
+            : settled ? "This run has settled. Every holder was paid in the same transaction."
+            : !state?.run ? "Prepare the run first: demo.ps1 prepare -Tag " + seat.tag
+            : state.run.approver ? "All or nothing, and not alone: this run names an approver, so the agent's own button is refused until the approvers have confirmed and executed."
+            : "All or nothing. If any leg cannot settle, nothing moves."}
         </div>
       </div>
 

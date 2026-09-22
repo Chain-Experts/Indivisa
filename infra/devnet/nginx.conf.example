@@ -1,0 +1,118 @@
+# Public, read-only Indivisa for the hackathon judges.
+#
+# One host serves two things:
+#   /                     the four panes, static files from ui/dist
+#   /api/<participant>/   a read-only window onto that participant's
+#                         JSON Ledger API, with the bearer token added here
+#                         so it never reaches the browser
+#
+# Everything that could change the ledger is refused: /v2/commands/*,
+# /v2/packages, /v2/users, POST /v2/parties. The pages know they are
+# read-only (demo/participants.json carries "readOnly": true) and hide the
+# settle button, but this config is what enforces it.
+#
+# Copy to the proxy host, replace <...>, and drop in the files from
+# infra/devnet/public/ (see infra/README.md, "A public page for the judges").
+
+# One request a second per address, bursts of 20, for a page that polls
+# every two seconds.
+limit_req_zone $binary_remote_addr zone=indivisa:10m rate=1r/s;
+
+# The participants the page may reach, by the names the seat file uses.
+# On a one-validator DevNet every name maps to the same upstream.
+map $1 $indivisa_upstream {
+    default              "";
+    registry             "<json api host:port>";
+    agent                "<json api host:port>";
+    alice                "<json api host:port>";
+    bob                  "<json api host:port>";
+    charlie              "<json api host:port>";
+}
+
+server {
+    listen 443 ssl http2;
+    server_name <indivisa.example.org>;
+
+    ssl_certificate     /etc/letsencrypt/live/<host>/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/<host>/privkey.pem;
+    ssl_protocols TLS1.2 TLS1.3;
+
+    # No credentials in the browser, nothing embeddable, no sniffing.
+    add_header Referrer-Policy   "no-referrer"        always;
+    add_header X-Content-Type-Options "nosniff"       always;
+    add_header X-Frame-Options   "DENY"               always;
+
+    root /srv/indivisa;            # ui/dist plus the demo/ folder
+    index index.html;
+
+    # The page and its assets.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # The seat and the party map, written by our scripts. Both are public
+    # facts (party ids and amounts of a synthetic demo); neither carries a
+    # token. Keep them out of caches so a re-seat is picked up.
+    location /demo/ {
+        add_header Cache-Control "no-store" always;
+        types { application/json json; }
+    }
+
+    # ---- the read-only window on the ledger --------------------------------
+    #
+    # Exactly four paths are allowed, all of them reads. The JSON Ledger API
+    # uses POST for several reads, so the allowlist is by path, not method.
+
+    location ~ ^/api/([a-z0-9_-]+)/v2/state/ledger-end$ {
+        limit_req zone=indivisa burst=20 nodelay;
+        if ($indivisa_upstream = "") { return 404; }
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "Bearer <read-only token>";
+        proxy_pass https://$indivisa_upstream/v2/state/ledger-end;
+    }
+
+    location ~ ^/api/([a-z0-9_-]+)/(v2/state/active-contracts(-page)?)$ {
+        limit_req zone=indivisa burst=20 nodelay;
+        if ($indivisa_upstream = "") { return 404; }
+        limit_except POST { deny all; }
+        client_max_body_size 64k;              # a filter, not a command
+        proxy_set_header Authorization "Bearer <read-only token>";
+        proxy_pass https://$indivisa_upstream/$2;
+    }
+
+    location ~ ^/api/([a-z0-9_-]+)/(v2/updates/update-by-offset)$ {
+        limit_req zone=indivisa burst=20 nodelay;
+        if ($indivisa_upstream = "") { return 404; }
+        limit_except POST { deny all; }
+        client_max_body_size 64k;
+        proxy_set_header Authorization "Bearer <read-only token>";
+        proxy_pass https://$indivisa_upstream/$2;
+    }
+
+    location ~ ^/api/([a-z0-9_-]+)/v2/parties$ {
+        limit_req zone=indivisa burst=20 nodelay;
+        if ($indivisa_upstream = "") { return 404; }
+        limit_except GET { deny all; }         # POST /v2/parties allocates one
+        proxy_set_header Authorization "Bearer <read-only token>";
+        proxy_pass https://$indivisa_upstream/v2/parties;
+    }
+
+    # Anything else under /api/ is refused, including /v2/commands/*,
+    # /v2/packages and /v2/users.
+    location /api/ { return 403; }
+}
+
+server {
+    listen 80;
+    server_name <indivisa.example.org>;
+    return 301 https://$host$request_uri;
+}
+
+# Notes for whoever installs this
+#
+# * The token belongs to a ledger user with read rights only (CanReadAs on
+#   the demo parties, nothing else). Even so it never leaves this host.
+# * If the participant's own certificate is private-CA or self-signed, add
+#   `proxy_ssl_trusted_certificate /path/ca.pem;` rather than turning
+#   verification off.
+# * Take the whole server block out after judging, and revoke the token.

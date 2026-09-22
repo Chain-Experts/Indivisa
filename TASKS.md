@@ -383,6 +383,19 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       (4), smoke with `participants-with-parties.ps1 -Network devnet` (5).
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
+- [ ] **A one-command local deployment for the judges**, after the DevNet run
+      and the recording, not before (they have the hard dates). `docker
+      compose up`: one container with Canton and our five-participant
+      topology; a one-shot seed container (JDK, the Daml Script runner, the
+      eleven DARs) that uploads the packages and seats 8 to 20 holders with
+      one allocation deliberately withheld; nginx serving the four panes and
+      proxying the participants (no token, LocalNet has no auth). The judge
+      presses the button and is refused, runs one given command, presses
+      again and it settles. Under five minutes on their side after the image
+      pull; about a day of ours, and the test that matters is a clean run on
+      a machine that is not this one (macOS especially). `docker compose up`
+      then goes at the top of the README. Cut to fewer holders or one
+      participant before letting it eat the recording.
 - [ ] Deck: the problem in Canton's own numbers, what V2 changed in June, the
       demo, the benchmark, the honest limits.
 - [ ] Label every component **real / simulated / planned**.

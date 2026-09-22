@@ -25,8 +25,9 @@ export function App() {
         <div className="brand">Indivisa</div>
         <div className="tagline">Corporate actions, settled in one atomic batch, without exposing the register.</div>
         <div className="labels">
-          <span className="label real">real · ledger reads and the settle are live over the JSON Ledger API</span>
+          <span className="label real">real · {config.readOnly ? "every number is read live from a Canton participant" : "ledger reads and the settle are live over the JSON Ledger API"}</span>
           <span className="label sim">simulated · the cash is TestTokenV2, the holders are synthetic</span>
+          {config.readOnly ? <span className="label">read only · this page cannot change the ledger</span> : null}
         </div>
       </header>
       <main className="panes">

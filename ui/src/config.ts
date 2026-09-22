@@ -23,10 +23,14 @@ export interface Seat {
 export interface ParticipantMap {
   network: string;
   party_participants: Record<Party, string>;
+  // A deployment whose proxy allows reads only (the public one for judges).
+  // The settle button is hidden rather than left to fail on a refused POST.
+  readOnly?: boolean;
 }
 
 export interface Config {
   network: string;
+  readOnly: boolean;
   seat: Seat;
   /** participant name -> proxied base URL */
   baseOf: (participant: string) => string;
@@ -45,7 +49,7 @@ export async function loadConfig(): Promise<Config> {
     if (!p) throw new Error(`no participant known for ${party}; regenerate participants-with-parties.json`);
     return p;
   };
-  return { network: map.network, seat, participantOf, baseOf: (participant) => `/api/${participant}` };
+  return { network: map.network, readOnly: map.readOnly === true, seat, participantOf, baseOf: (participant) => `/api/${participant}` };
 }
 
 /** "Meridian-Paying-Agent-sep18-20260918...-4f1df03a::1220..." -> "Meridian Paying Agent" */

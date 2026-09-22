@@ -27,8 +27,10 @@ interface UiConfig {
 const network = process.env.INDIVISA_NETWORK ?? "localnet";
 const netDir = resolve(`../infra/${network}`);
 const uiPath = resolve(netDir, "ui.json");
-if (!existsSync(uiPath)) throw new Error(`no ${uiPath}; copy ui.example.json and fill it in`);
-const ui = JSON.parse(readFileSync(uiPath, "utf8")) as UiConfig;
+// Only the dev server needs the network config: it is the proxy. A production
+// build is static files, and nginx does the proxying from its own config, so
+// `vite build` must work on a machine that has no ui.json at all.
+const ui: UiConfig | null = existsSync(uiPath) ? (JSON.parse(readFileSync(uiPath, "utf8")) as UiConfig) : null;
 
 const seatPath = resolve(process.env.INDIVISA_SEAT ?? resolve(netDir, "demo", `seat-${process.env.INDIVISA_TAG ?? "demo"}.json`));
 const mapPath = resolve(netDir, "participants-with-parties.json");
@@ -62,21 +64,28 @@ function notFound(res: { statusCode: number; end: (s: string) => void }, file: s
   res.end(JSON.stringify({ error: `not found: ${file}` }));
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => {
+  if (command === "build" && !ui) {
+    // Nothing to warn about: the build has no network in it.
+  } else if (!ui) {
+    throw new Error(`no ${uiPath}; copy ui.example.json and fill it in`);
+  }
+  return {
   plugins: [react(), serveDemoFiles()],
   server: {
     port: 5173,
     proxy: Object.fromEntries(
-      Object.entries(ui.participants).map(([name, p]) => [
+      Object.entries(ui?.participants ?? {}).map(([name, p]) => [
         `/api/${name}/`,
         {
           target: p.jsonApi.replace(/\/+$/, ""),
           changeOrigin: true,
           rewrite: (path: string) => path.replace(`/api/${name}`, ""),
           headers: p.token ? { Authorization: `Bearer ${p.token}` } : undefined,
-          secure: !ui.insecureTls,
+          secure: !ui?.insecureTls,
         },
       ]),
     ),
   },
+  };
 });

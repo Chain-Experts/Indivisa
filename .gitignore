@@ -34,3 +34,5 @@ CLAUDE.local.md
 
 # The 18 September backup of the working context; the live file is CLAUDE.md.
 CLAUDE-backup.md
+infra/*/public/
+ui/dist/
