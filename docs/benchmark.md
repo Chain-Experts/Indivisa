@@ -1,7 +1,8 @@
 # Benchmark — how many legs fit in one CIP-112 batch
 
-Proof 5. Nobody has published this number. Whatever it turns out to be, it goes
-here and to the Canton forum.
+Proof 5. We could find no published figure for how many legs fit in a CIP-112
+batch settlement. Whatever it turns out to be, it goes here and to the Canton
+forum.
 
 Two kinds of measurement, kept apart:
 

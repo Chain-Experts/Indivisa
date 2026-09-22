@@ -1,0 +1,40 @@
+Indivisa
+Copyright 2026 Chain-Experts
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this work except in compliance with the License. A copy of the License
+is in the LICENSE file and at http://www.apache.org/licenses/LICENSE-2.0.
+
+This repository redistributes, unmodified, the following prebuilt Daml
+packages from the Splice project (https://github.com/canton-network/splice,
+release 0.8.1, path daml/dars/), which are
+
+  Copyright (c) 2024-2025 Digital Asset (Switzerland) GmbH and/or its
+  affiliates. All rights reserved.
+  SPDX-License-Identifier: Apache-2.0
+
+    daml/dars/splice-api-token-metadata-v1-1.0.0.dar
+    daml/dars/splice-api-token-holding-v2-1.0.0.dar
+    daml/dars/splice-api-token-allocation-v2-1.0.0.dar
+    daml/dars/splice-api-token-allocation-instruction-v2-1.0.0.dar
+    daml/dars/splice-api-token-allocation-request-v2-1.0.0.dar
+    daml/dars/splice-api-token-transfer-instruction-v2-1.0.0.dar
+    daml/dars/splice-api-token-transfer-events-v2-1.0.0.dar
+    daml/dars/splice-token-standard-utils-2.0.0.dar
+    daml/dars/splice-test-token-v2-1.0.1.dar
+    daml/dars/splice-token-test-trading-app-v2-1.0.1.dar
+
+Token Standard V2 is specified in CIP-0112 by the Canton Foundation. Canton
+and Daml are trademarks of Digital Asset. Indivisa is not affiliated with or
+endorsed by Digital Asset, the Canton Foundation or the Splice project.
+
+This repository also redistributes, unmodified, two prebuilt Daml packages
+from BitSafe's Canton Decentralized Party Manager
+(https://github.com/DLC-link/decentralization-manager, branch hackathon,
+path releases/v1/), which are
+
+  Copyright 2026 BitSafe Finance
+  SPDX-License-Identifier: Apache-2.0
+
+    daml/dars/governance-action-v1-0.1.0.dar
+    daml/dars/governance-core-v1-0.1.0.dar

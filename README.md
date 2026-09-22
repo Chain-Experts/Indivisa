@@ -8,6 +8,12 @@ holder sees another's payment.
 
 Built by Chain-Experts for HackCanton Season 3.
 
+## Demo
+
+- **The recording** — *coming soon* (60–90 seconds: one coupon run settled, then the same run refused with one holder not ready, then settled after the fix).
+- **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
+- **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
+
 ---
 
 ## The problem
@@ -136,9 +142,9 @@ All five are in.
 Proof 3 was answered on 16 September by reading the V2 settlement logic as
 shipped in Splice 0.8.1: the standard requires receiver-side allocations, and
 its reference app shows the standing-agreement pattern that collects that
-authority once. Nobody had published how many legs fit in a CIP-112 batch;
-`docs/benchmark.md` has the method and the numbers, and they go to the Canton
-forum as well.
+authority once. We could find no published figure for how many legs fit in a
+CIP-112 batch settlement; `docs/benchmark.md` has the method and the numbers,
+and they go to the Canton forum as well.
 
 On top of the proofs, built and running on LocalNet (18 Sep):
 
@@ -152,6 +158,16 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   button; three holders each seeing only their own line, read live from
   their own participants over the JSON Ledger API.
 
+And, since 22 September, **governed settlement**: a run may name an
+approver, a decentralised party managed by BitSafe's Decentralization
+Manager, and then the paying agent alone can no longer settle. It proposes;
+two of three approvers confirm; the engine executes `Run_Settle`. Below
+threshold the ledger refuses and nothing moves. One optional field on the
+run (`indivisa` 0.4.0), a forty-line proposal template, and a generic
+module for any Token Standard V2 batch settlement (`governance-settlement-v0`)
+that has no Indivisa in it. Proven on the IDE ledger and in BitSafe's
+three-node sandbox; see `docs/decentralization.md`.
+
 Still to come: the DevNet evidence run (configuration only; handover in
 `infra/README.md`), the recording (`docs/demo-script.md`), the deck.
 
@@ -163,6 +179,8 @@ Still to come: the DevNet evidence run (configuration only; handover in
 dpm build --all          # model package indivisa-<version> (see daml/indivisa/daml.yaml), scripts indivisa-test
 cd daml/indivisa-test
 dpm test                 # the proofs, the model tests and a 12-holder demo, on the IDE ledger
+cd ../indivisa-governance-test
+dpm test                 # the governance proofs: 1 of 3 refused, 2 of 3 settles
 ```
 
 Daml SDK 3.5.x, `dpm` rather than the `daml` assistant, LF 2.1. The Token
@@ -214,6 +232,7 @@ Worth saying before anyone else says it.
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
+| `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
 | `ui/README.md` | The four panes |
@@ -230,8 +249,8 @@ Worth saying before anyone else says it.
 
 ## Context
 
-HackCanton Season 3, submission 9 October 2026. Open-sourced under the
-Chain-Experts name.
+HackCanton Season 3, submission 9 October 2026. Open source under the
+Apache-2.0 licence, copyright Chain-Experts (`LICENSE`, `NOTICE`).
 
 Sources: [CIP-0112](https://github.com/canton-foundation/cips/blob/main/cip-0112/cip-0112.md) ·
 [Canton Network, Post-Trade Transformation](https://www.canton.network/hubfs/eBook%2C%20Post-Trade%20Transformation%2C%202025-03-14.pdf) ·
