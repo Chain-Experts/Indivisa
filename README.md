@@ -185,7 +185,7 @@ dpm test                 # the governance proofs: 1 of 3 refused, 2 of 3 settles
 
 Daml SDK 3.5.x, `dpm` rather than the `daml` assistant, LF 2.1. The Token
 Standard V2 DARs are prebuilt in `canton-network/splice` at tag `0.8.1`, path
-`daml/dars/` and vendored in this repo under the same path; `CLAUDE.md` lists them.
+`daml/dars/` and vendored in this repo under the same path; `NOTICE` lists them.
 
 On real participants (`infra/README.md` has the detail):
 
@@ -225,7 +225,6 @@ Worth saying before anyone else says it.
 
 | | |
 |---|---|
-| `CLAUDE.md` | Working context, decisions, corrections already made |
 | `TASKS.md` | The plan to 9 October, proofs first, with results as they came in |
 | `docs/architecture.md` | Components, settlement flow, boundaries, settled and open questions |
 | `docs/modules.md` | Every file, and what is in it |

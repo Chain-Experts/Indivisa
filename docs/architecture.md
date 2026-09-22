@@ -3,8 +3,8 @@
 What each part holds, what it must never hold, and how a coupon actually travels
 from an announcement to hundreds of private payments.
 
-Read `CLAUDE.md` first for the decisions this document assumes, and
-`modules.md` for the full file inventory.
+Read `modules.md` for the full file inventory; the decisions this document
+assumes are stated where they apply.
 
 ---
 
@@ -133,7 +133,8 @@ which is exactly a paying agent's operational view of a coupon run.
 
 Package `indivisa`, version 0.4.0 (0.3.0 on the LocalNet of 18 Sep); every change to a deployed
 template is either a version bump that passes `dpm upgrade-check` or a new
-package lineage (`CLAUDE.md`, "Naming is permanent"). Everything else is
+package lineage (the `name` in `daml.yaml` is the upgrade identity and
+never changes; only `version` moves). Everything else is
 off-ledger.
 
 **Rounding is not a detail.** Coupon arithmetic produces fractions of the
@@ -227,7 +228,7 @@ list is `demo-script.md`.
 ## Settled questions
 
 **Does the recipient have to authorise?** Yes, by design of the standard, and
-it is not a problem. See *Authorisation* above and `CLAUDE.md`, question 1.
+it is not a problem. See *Authorisation* above.
 Settled 16 September 2026 by reading `settlementFactoryV2_settleBatchDefaultImpl`
 as released in Splice 0.8.1. Proof 3 confirms it and records the error shape.
 

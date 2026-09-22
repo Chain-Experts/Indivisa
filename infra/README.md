@@ -156,7 +156,7 @@ curl -X POST http://localhost:5013/v2/packages -H "Content-Type: application/oct
 
 Canton refuses a second package with the same name and version
 (`KNOWN_PACKAGE_VERSION`); a change the upgrade check rejects needs a new
-package name, not a version (see `CLAUDE.md`).
+package name, not a version: the `name` in `daml.yaml` is the Smart Contract Upgrade identity, and a change the upgrade check rejects starts a new lineage (`indivisa-v2`).
 
 For a demo that must survive a restart, switch the participants' storage to
 Postgres in `localnet.conf`; nothing else changes.

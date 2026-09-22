@@ -6,7 +6,6 @@ For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
 ```
 Indivisa/
 ├── README.md                      public front door
-├── CLAUDE.md                      working context for future sessions
 ├── TASKS.md                       order of work
 ├── LICENSE                        Apache-2.0, verbatim
 ├── NOTICE                         our copyright; attribution for the vendored Splice DARs
@@ -15,7 +14,7 @@ Indivisa/
 │
 ├── daml/
 │   ├── dars/                      prebuilt Token Standard V2 DARs, Splice 0.8.1
-│   │                              (ten files; list in CLAUDE.md)
+│   │                              (ten files; listed in NOTICE)
 │   ├── indivisa/                  package `indivisa` — uploaded to participants
 │   │   ├── daml.yaml
 │   │   └── Indivisa/

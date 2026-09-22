@@ -27,3 +27,7 @@ infra/bitsafe/log/
 
 # Internal working documents, never committed (briefs, messages, private notes).
 private/
+
+# Claude Code working context: read from disk, never committed.
+CLAUDE.md
+CLAUDE.local.md
