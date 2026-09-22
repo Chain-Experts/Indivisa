@@ -106,6 +106,7 @@ removed from the run. The demo's deliberate-failure path can use exactly this.
 | Paying agent | executor of the batch; in the demo also the registrar that keeps the register (`Entitle` insists the snapshot is the agent's own) | the entire distribution |
 | Holder | receiver | its own position and its own leg only |
 | Cash registry | administrator of the cash instrument | legs in its instrument |
+| Approvers (optional, 0.4.0) | a decentralised party named as the run's approver; its members confirm through BitSafe's Decentralization Manager | the run and every allocation of it, as an executor does; nothing about other runs |
 | Issuer | signs the `CorporateAction`; funds the paying agent off-batch (the funding leg is not modelled; see `TASKS.md`, open decisions) | the announcement, the instrument, and the entitlement schedule: `Entitle` runs inside the issuer's own contract, so its consequences are in the issuer's view. An issuer knows its register through its registrar anyway; the privacy claim is holder to holder |
 
 The paying agent as executor is the whole design. CIP-112's own worked example
@@ -124,11 +125,13 @@ which is exactly a paying agent's operational view of a coupon run.
 | `Indivisa.Model.Register` | Instrument, positions, record-date snapshot verified on-ledger. Plain Daml, no V2. | **built** |
 | `Indivisa.Model.Event` | The corporate action; `Entitle` derives the schedule from the snapshot on-ledger. | **built** |
 | `Indivisa.Model.Entitlement` | quantity x amount per unit, rounding policy, exact and paid per holder, total ensured. | **built** |
-| `Indivisa.Utils` | Our vocabulary in V2 terms; `Run_Settle` derives its transfer legs from it. | **built** |
-| `Indivisa.Model.Payment` | The once-only consent: `PaymentProposal`, `PaymentAgreement` with `CreateReceiptAllocation`. Touches V2. | **built** |
-| `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction), `DistributionReceipt`, `SettlementRejected` (the agent's record of a refusal, since a refused transaction leaves nothing behind), `runFromSchedule`. Touches V2. | **built** |
+| `Indivisa.Utils` | Our vocabulary in V2 terms; `Run_Settle` derives its transfer legs and its settlement (executors) from it. | **built** |
+| `Indivisa.Model.Payment` | The once-only consent: `PaymentProposal`, `PaymentAgreement` with `CreateReceiptAllocation`, covering settlements the agent executes alone or jointly. Touches V2. | **built** |
+| `Indivisa.Model.Distribution` | `DistributionRun.Run_Settle` (the one transaction), `DistributionReceipt`, `SettlementRejected` (the agent's record of a refusal, since a refused transaction leaves nothing behind), `runFromSchedule`. Since 0.4.0 a run may name an `approver` whose authority the settle then needs (`runExecutors`). Touches V2. | **built** |
+| `Governance.Settlement` (package `governance-settlement-v0`) | A V2 batch settlement as a governed action for BitSafe's Decentralization Manager; no Indivisa in it. | **built** |
+| `Indivisa.Governance` (package `indivisa-governance-v0`) | `SettleRunProposal`: `Run_Settle` as the governed action. | **built** |
 
-Package `indivisa`, version 0.3.0 on LocalNet; every change to a deployed
+Package `indivisa`, version 0.4.0 (0.3.0 on the LocalNet of 18 Sep); every change to a deployed
 template is either a version bump that passes `dpm upgrade-check` or a new
 package lineage (`CLAUDE.md`, "Naming is permanent"). Everything else is
 off-ledger.
@@ -252,6 +255,14 @@ the standard's own validation, naming the party, leg, side, amount and
 instrument; on a participant it arrives wrapped as `DAML_FAILURE` with an
 `UNHANDLED_EXCEPTION/DA.Exception.GeneralError`. Proof 4 keeps it as a
 regression test, and `SettlementRejected` keeps the text on-ledger.
+
+**Can the paying agent be made unable to settle alone?** Yes, without
+touching the settlement path, by naming a second executor. Token Standard
+V2 settles a batch only with the authority of every executor, so a run
+whose `approver` is a decentralised party can be settled only by a governed
+execution that carries that party's authority: the agent proposes, the
+members confirm to threshold, the engine executes `Run_Settle`. Built on
+BitSafe's Decentralization Manager, 22 September; `decentralization.md`.
 
 ## Open questions
 

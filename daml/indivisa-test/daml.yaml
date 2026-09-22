@@ -12,7 +12,7 @@ dependencies:
 # splice-test-token-v2 is the CIP's reference cash token. It is a test fixture
 # here: the model never depends on it, only the proofs do.
 data-dependencies:
-  - ../indivisa/.daml/dist/indivisa-0.3.0.dar
+  - ../indivisa/.daml/dist/indivisa-0.4.0.dar
   - ../dars/splice-api-token-metadata-v1-1.0.0.dar
   - ../dars/splice-api-token-holding-v2-1.0.0.dar
   - ../dars/splice-api-token-allocation-v2-1.0.0.dar
@@ -21,7 +21,11 @@ data-dependencies:
   - ../dars/splice-token-standard-utils-2.0.0.dar
   - ../dars/splice-test-token-v2-1.0.1.dar
 build-options:
-  - --target=2.1
+  # 2.2, not the model's 2.1: the governance test package reuses this DAR's
+  # fixtures and must be 2.2 for BitSafe's interface package, and damlc
+  # refuses two daml-script builds in one dependency tree. Scripts are never
+  # uploaded, so the ledger sees only the model's 2.1.
+  - --target=2.2
   # errorText reads the message out of a failed submission so proof 4 records
   # the rejection verbatim. That needs the deprecated exception API; there is
   # no other way to read a `fail` message from trySubmit. Test code only.

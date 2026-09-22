@@ -20,6 +20,8 @@ param(
   [string] $Tag = "demo",
   [int] $Holders = 250,
   [int] $Withhold = 0,
+  [string] $Approver = "",
+  [string] $User = "",
   [switch] $Tls,
   [string] $CaCrt = ""
 )
@@ -45,6 +47,9 @@ $tlsArgs = @()
 if ($Tls) { $tlsArgs += "--tls" }
 if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }
 
+$approverJson = if ($Approver) { '"' + $Approver + '"' } else { "null" }
+$userJson = if ($User) { '"' + $User + '"' } else { "null" }
+
 $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
 Set-Location $testDir
 try {
@@ -52,7 +57,7 @@ try {
     "seat" {
       $argsFile = Join-Path $demoDir "seat-args-$Tag.json"
       $seatFile = Join-Path $demoDir "seat-$Tag.json"
-      Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"tag":"' + $Tag + '"}') -NoNewline
+      Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"tag":"' + $Tag + '","user":' + $userJson + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_seat" `
           --input-file $argsFile --output-file $seatFile --participant-config $mapFile @tlsArgs 2>&1 |
@@ -66,7 +71,7 @@ try {
       $argsFile = Join-Path $demoDir "attempt-args-$Tag.json"
       $outFile = Join-Path $demoDir "prepared-$Tag.json"
       $seat = Get-Content $seatFile -Raw
-      Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + '}') -NoNewline
+      Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + ',"approver":' + $approverJson + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_prepare" `
           --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |
@@ -81,7 +86,7 @@ try {
       $stamp = Get-Date -Format "HHmmss"
       $outFile = Join-Path $demoDir "attempt-$Tag-$stamp.json"
       $seat = Get-Content $seatFile -Raw
-      Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + '}') -NoNewline
+      Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + ',"approver":' + $approverJson + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_attempt" `
           --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |

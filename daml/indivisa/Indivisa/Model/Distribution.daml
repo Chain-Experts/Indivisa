@@ -7,6 +7,7 @@
 module Indivisa.Model.Distribution where
 
 import DA.List (unique)
+import DA.Optional (optionalToList)
 
 import Splice.Api.Token.MetadataV1 (ExtraArgs)
 import Splice.Api.Token.HoldingV2 qualified as V2
@@ -30,10 +31,15 @@ template DistributionRun
     legs         : [PaymentLeg]
     schedule     : Optional (ContractId EntitlementSchedule)
       -- ^ The schedule this run pays, when there is one. The proofs run
-      -- without; the product always has one. Last field: added in 0.2.0,
-      -- and Smart Contract Upgrade requires new fields at the end.
+      -- without; the product always has one. Added in 0.2.0.
+    approver     : Optional Party
+      -- ^ A party whose authority the settlement needs besides the agent's,
+      -- typically a decentralised party whose members must confirm before
+      -- anything moves. None means the agent settles alone, as before.
+      -- Added in 0.4.0, last field: Smart Contract Upgrade appends.
   where
     signatory payingAgent
+    observer approver
 
     ensure
       not (null legs)
@@ -53,7 +59,7 @@ template DistributionRun
         factoryCid     : ContractId V2.SettlementFactory
         allocationCids : [ContractId V2.Allocation]
         extraArgs      : ExtraArgs
-      controller payingAgent
+      controller runExecutors this
       do
         result <- exercise factoryCid V2.SettlementFactory_SettleBatch with
           settlement = runSettlementInfo this
@@ -65,7 +71,7 @@ template DistributionRun
                 nextIterationFunding = None
             | allocationCid <- allocationCids
             ]
-          actors = [payingAgent]
+          actors = runExecutors this
           extraArgs
         receipt <- create DistributionReceipt with
           payingAgent
@@ -95,8 +101,15 @@ template DistributionReceipt
 runTotal : DistributionRun -> Decimal
 runTotal run = sum (map (.amount) run.legs)
 
+-- | Who must authorise the settlement: the paying agent, and the approver
+-- when the run names one. The same list is the choice's controllers, the
+-- batch's actors and the allocations' executors, so the token standard
+-- enforces it wherever the settle is attempted.
+runExecutors : DistributionRun -> [Party]
+runExecutors run = run.payingAgent :: optionalToList run.approver
+
 runSettlementInfo : DistributionRun -> V2.SettlementInfo
-runSettlementInfo run = settlementInfo run.payingAgent run.runId
+runSettlementInfo run = settlementInfo (runExecutors run) run.runId
 
 runTransferLegs : DistributionRun -> [V2.TransferLeg]
 runTransferLegs run = map (transferLegOf run.instrument run.agentAccount) run.legs
@@ -121,6 +134,7 @@ runFromSchedule cashRegistry scheduleCid s =
       | (i, e) <- zip [1..length s.entries] s.entries
       ]
     schedule = Some scheduleCid
+    approver = None
 
 -- | The paying agent's record of a settlement the ledger refused. A refused
 -- transaction leaves nothing behind, so the agent writes this itself after

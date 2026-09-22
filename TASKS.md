@@ -1,6 +1,6 @@
 # Tasks
 
-**18 September 2026. Submission 9 October. 21 days.**
+**22 September 2026. Submission 9 October. 17 days.**
 
 **Proofs 1, 3 and 4 run in Daml Script; proofs 2 and 5 run on LocalNet.** DevNet
 is used once, at the end, only to produce a real update id as evidence.
@@ -10,7 +10,9 @@ not need to spend, and the multi-participant setup that proof 2 requires.
 The order matters more than the list. Proofs 1–4 gated everything and passed
 on 17 September; proof 5, the one that could have killed the idea, was measured
 to 1,000 legs on LocalNet on 17–18 September (one transaction, seconds).
-Phases 2 to 4 were built on 18 September. Phase 5 is what is left.
+Phases 2 to 4 were built on 18 September. Phase 5 is what is left of the main
+submission; the BitSafe challenge (its own section below) reached its sandbox
+milestones on 22 September.
 
 Done on 16 September: dpm-sdk 3.5.10 confirmed, `sdk-version` corrected, two
 missing imports fixed, `dpm build --all` green, `dpm test` gives proof 1 and 4
@@ -232,8 +234,9 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 > LocalNet is the right place for this: push to failure without spending real
 > traffic, and control the configuration while you do.
 >
-> Nobody has published how many legs fit in a CIP-112 batch. Post the benchmark
-> to the Canton forum whatever happens to the hackathon.
+> We could find no published figure for how many legs fit in a CIP-112 batch
+> settlement. Post the benchmark to the Canton forum whatever happens to the
+> hackathon.
 
 **Gate: do not start Phase 2 until proofs 1–4 pass.** Passed 17 September.
 
@@ -269,7 +272,10 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
       the same name and version; `dpm upgrade-check --both old.dar new.dar`
       passes, after moving the new `schedule` fields to the end of their
       records (SCU appends). Uploaded to LocalNet over the JSON API without a
-      restart.
+      restart. Since then: 0.3.0 (`SettlementRejected`, 18 Sep) and 0.4.0
+      (`DistributionRun.approver`, 22 Sep, for the BitSafe challenge; inert
+      when `None`). Each passed `upgrade-check`; the current version is in
+      `daml/indivisa/daml.yaml`.
 
 ---
 
@@ -376,6 +382,56 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 
 ---
 
+## BitSafe challenge — governed settlement · **sandbox end to end 22 Sep**
+
+Separate, capped workstream (the brief and the first-task report are in
+`private/`, outside the repo; `docs/decentralization.md` is the public
+write-up). Kill criteria from the brief, with status:
+
+| Check | Deadline | Status |
+|---|---|---|
+| Sandbox runs propose → confirm → execute | 23 Sep | **passed 21 Sep** (BitSafe's own demo.sh, then ours) |
+| Scope stays `Run_Settle` only | ongoing | holds: one governed action, nothing else governed |
+| Only party/authority changes, not settlement logic | ongoing | holds: `approver` field, executors and actors derived; consent covers joint execution; `SettleBatch` path untouched |
+| Main deliverables unchanged by this work | 27 Sep | `indivisa` 0.4.0 is additive (`approver = None` everywhere in the main demo); all 24 main tests pass; LocalNet regression still to run |
+| Governed path settles end to end in the sandbox | 1 Oct | **passed 22 Sep**: seat `bs3`, 10 holders, $16,034.38, settled through DecMan |
+| Refusal below threshold and success at threshold | 1 Oct | **passed 22 Sep**: 1 of 3 refused ("Enough confirmations..."), 2 of 3 executed; audit trail written |
+| Gold application decision | 4 Oct | checkpoint 30 Sep: our DecMan on DevNet, BitSafe confirmed as the second node |
+
+Done:
+
+- [x] `indivisa` 0.4.0: `DistributionRun.approver : Optional Party` (last
+      field, `upgrade-check` passes); `runExecutors`; `Run_Settle` controllers
+      and `actors` and the settlement's `executors` all `payingAgent ::
+      approver`; `PaymentAgreement.CreateReceiptAllocation` accepts any
+      executors that include the agent.
+- [x] `governance-settlement-v0`: `BatchSettlementProposal`, a `GovernableAction`
+      over a raw V2 `SettleBatch`; no Indivisa dependency; BitSafe's package
+      layout. `indivisa-governance-v0`: `SettleRunProposal` over `Run_Settle`.
+- [x] `indivisa-governance-test`: nine scripts on the IDE ledger, all green,
+      including the three refusal shapes recorded in `decentralization.md`.
+      `indivisa-test` moved to LF 2.2 so both test packages share one
+      `daml-script` (the model stays 2.1).
+- [x] Sandbox tooling: `infra/bitsafe/` (config with the sandbox's public dev
+      token, `distribute.ps1`), `infra/govern.ps1` (status, admit, propose,
+      confirm, execute, audit against DecMan's REST API), `demo.ps1 -User`
+      (rights for the runner's ledger user) and `-Approver`.
+- [x] Two network lessons folded into the scripts: the runner grants no user
+      rights on the parties it allocates; a participant's clock can be behind
+      the runner's by enough to fail `offeredAt = now` (`requestedAt` is now
+      five minutes in the past).
+- [ ] LocalNet regression of the six proofs and the main demo on 0.4.0
+      (LocalNet is down while the sandbox has the memory).
+- [ ] Show the governed run in the four panes (today they show the settled
+      state, not the vote).
+- [ ] Offer `governance-settlement-v0` to BitSafe's repository as a pull
+      request (needs their `multi-package.yaml` entry and a `daml.yaml` at
+      their SDK version).
+- [ ] Gold: DevOps request sent (`private/devops-handover-message.md` §6, outside the repo);
+      30 Sep checkpoint.
+
+---
+
 ## Phase 6 — Buffer (days 20–23)
 
 You will need it.
@@ -406,4 +462,9 @@ You will need it.
 - [ ] Whether the issuer-funds-paying-agent leg rides the same batch or precedes
       it.
 - [x] LF target: **2.1**, forced by the V2 DARs' bundled stdlib (17 Sep).
-- [ ] Licence for the public repo.
+- [x] Licence for the public repo: **Apache-2.0**, copyright Chain-Experts
+      (21 Sep). `LICENSE` is the verbatim licence text; `NOTICE` carries our
+      copyright and the attribution for the ten Splice DARs in `daml/dars/`,
+      which are Apache-2.0 (Digital Asset (Switzerland) GmbH) and may be
+      redistributed unmodified. Splice has no NOTICE file of its own, so
+      nothing else has to be carried.

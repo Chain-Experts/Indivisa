@@ -99,10 +99,19 @@ export class Ledger {
     const out: ActiveContract[] = [];
     let pageToken: string | undefined;
     for (;;) {
-      const page = await this.post<{ activeContracts: any[]; activeAtOffset: number; nextPageToken?: string }>(
-        "/v2/state/active-contracts-page",
-        { eventFormat, pageToken, maxPageSize: PAGE_SIZE },
-      );
+      let page: { activeContracts: any[]; activeAtOffset: number; nextPageToken?: string };
+      try {
+        page = await this.post("/v2/state/active-contracts-page", { eventFormat, pageToken, maxPageSize: PAGE_SIZE });
+      } catch (e) {
+        // Canton before 3.5.9 (BitSafe's sandbox runs 3.5.8) has no paged
+        // endpoint and answers 405; fall back to the unpaged one, which is
+        // enough below the node's 200-element cap.
+        if (e instanceof LedgerError && e.status === 405 && !pageToken) {
+          const entries = await this.post<any[]>("/v2/state/active-contracts", { eventFormat, activeAtOffset: await this.ledgerEnd() });
+          return entries.map((x) => x.contractEntry?.JsActiveContract).filter(Boolean) as ActiveContract[];
+        }
+        throw e;
+      }
       for (const e of page.activeContracts ?? []) {
         const c = e.contractEntry?.JsActiveContract;
         if (c) out.push(c);

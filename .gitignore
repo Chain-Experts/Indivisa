@@ -21,3 +21,9 @@ infra/devnet/participants.json
 infra/devnet/ui.json
 infra/devnet/participants-with-parties.json
 infra/devnet/demo/
+infra/bitsafe/participants-with-parties.json
+infra/bitsafe/demo/
+infra/bitsafe/log/
+
+# Internal working documents, never committed (briefs, messages, private notes).
+private/

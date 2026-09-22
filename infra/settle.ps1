@@ -13,6 +13,7 @@ param(
   [string] $Network = "localnet",
   [int] $Holders = 0,
   [string] $Prepared = "",
+  [string] $User = "",
   [switch] $Tls,
   [string] $CaCrt = ""
 )
@@ -34,7 +35,7 @@ if (-not $Prepared) {
   pwsh -NoProfile -File (Join-Path $PSScriptRoot "participants-with-parties.ps1") -Network $Network -Out $mapFile | Out-Null
   $argsFile = Join-Path $logDir "settle-args-$Holders.json"
   $Prepared = Join-Path $logDir "settle-prepared-$Holders.json"
-  Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + '}') -NoNewline
+  Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"user":' + $(if ($User) { '"' + $User + '"' } else { "null" }) + '}') -NoNewline
   $tlsArgs = @()
   if ($Tls) { $tlsArgs += "--tls" }
   if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }

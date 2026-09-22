@@ -95,6 +95,8 @@ data ScaleArgs = ScaleArgs
   with
     topology : Topology
     holders  : Int
+    user     : Optional Text
+      -- ^ See DemoSeatArgs.user.
   deriving (Eq, Show)
 
 -- | Everything up to the settle: parties, funding, onboarding, the run and
@@ -104,8 +106,8 @@ data ScaleArgs = ScaleArgs
 scaleAllocateOnlyWith : ScaleArgs -> Script Prepared
 scaleAllocateOnlyWith args = do
   let n = args.holders
-  (cast, cash) <- setupOn args.topology
-  holders <- scaleHolders args.topology n
+  (cast, cash) <- setupAs args.topology args.user
+  holders <- scaleHoldersAs args.topology args.user n
   let legs = scaleLegs holders
       total = sum (map (.amount) legs)
   fund cash cast.payingAgent (total + 1000.0)
@@ -181,10 +183,10 @@ scaleWith args = do
 
 -- IDE-ledger entry points, by holder count.
 scale : Int -> Script ScaleResult
-scale n = scaleWith (ScaleArgs Ide n)
+scale n = scaleWith (ScaleArgs Ide n None)
 
 scaleAllocateOnly : Int -> Script Prepared
-scaleAllocateOnly n = scaleAllocateOnlyWith (ScaleArgs Ide n)
+scaleAllocateOnly n = scaleAllocateOnlyWith (ScaleArgs Ide n None)
 
 -- Fixed sizes for `dpm test`. Larger sizes go through `scale` or `scaleWith`
 -- with an input file so the test suite stays fast.

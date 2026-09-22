@@ -20,11 +20,14 @@ import Splice.TokenStandard.Utils (basicAccount)
 
 import Indivisa.Types
 
--- | The settlement every allocation of a run refers to. The paying agent is
--- the sole executor: it sees every leg, which is a paying agent's job.
-settlementInfo : Party -> Text -> V2.SettlementInfo
-settlementInfo payingAgent runId = V2.SettlementInfo with
-  executors = [payingAgent]
+-- | The settlement every allocation of a run refers to. The executors are
+-- the paying agent and, when the run has one, its approver: the standard
+-- settles a batch only with the authority of every executor, so naming an
+-- approver here is what makes a settlement need more than the agent alone.
+-- Executors see every leg, which is a paying agent's job and an approver's.
+settlementInfo : [Party] -> Text -> V2.SettlementInfo
+settlementInfo executors runId = V2.SettlementInfo with
+  executors
   id = runId
   cid = None
   meta = emptyMetadata

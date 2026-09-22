@@ -1,0 +1,67 @@
+-- | The paying agent's one governance move, driven from a shell: file the
+-- settlement of a prepared run as a proposal for the approvers. Everything
+-- after that (confirm, execute) goes through the Decentralization Manager's
+-- API, which is the point; see infra/govern.ps1.
+--
+--   dpm script --dar .daml/dist/indivisa-governance-test-0.1.0.dar \
+--     --script-name Indivisa.Governance.Demo:govern_propose \
+--     --input-file propose-args.json --output-file proposal.json \
+--     --participant-config <participants>
+module Indivisa.Governance.Demo where
+
+import Daml.Script
+
+import Governance.Action
+
+import Indivisa.Model.Distribution
+import Indivisa.Governance.SettleRunProposal
+import Indivisa.Test.Demo (DemoPrepared)
+import Indivisa.Test.Fixtures (cashFor)
+
+data ProposeArgs = ProposeArgs
+  with
+    prepared : DemoPrepared
+      -- ^ infra/demo.ps1 prepare's output, for a run whose approver is set.
+    approver : Party
+      -- ^ The decentralised party: the run's approver and the rules' governance party.
+  deriving (Eq, Show)
+
+data Proposal = Proposal
+  with
+    proposalCid : ContractId SettleRunProposal
+    actionCid   : ContractId GovernableAction
+    payingAgent : Party
+    runId       : Text
+    legs        : Int
+    total       : Decimal
+    description : Text
+  deriving (Eq, Show)
+
+govern_propose : ProposeArgs -> Script Proposal
+govern_propose args = do
+  let p = args.prepared
+      payingAgent = p.payingAgent
+  cash <- cashFor p.registry p.rulesCid
+  Some run <- queryContractId payingAgent p.runCid
+  case run.approver of
+    Some a | a == args.approver -> pure ()
+    _ -> fail "the run does not name this approver; prepare it with -Approver first"
+  let description =
+        "Settle " <> run.runId <> ": " <> show (length run.legs) <> " legs, "
+          <> show (runTotal run) <> " " <> run.instrument.id
+  proposalCid <- submit payingAgent $ createCmd SettleRunProposal with
+    governanceParty = args.approver
+    proposer = payingAgent
+    runCid = p.runCid
+    factoryCid = toInterfaceContractId p.rulesCid
+    allocationCids = p.allocationCids
+    extraArgs = cash.extraArgs
+    description
+  pure Proposal with
+    proposalCid
+    actionCid = toInterfaceContractId proposalCid
+    payingAgent
+    runId = run.runId
+    legs = length run.legs
+    total = runTotal run
+    description

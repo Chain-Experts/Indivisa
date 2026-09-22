@@ -45,8 +45,10 @@ Environment variables the dev server reads:
   `party_participants` first because the runner's file also carries tokens.
   In production nginx does the proxy.
 - `src/ledger/client.ts` — the JSON Ledger API v2 calls used: `ledger-end`,
-  `active-contracts` (templates by `#package-name:Module:Template`, interfaces
-  with views), `submit-and-wait`, `update-by-offset`. Shapes verified against
+  `active-contracts-page` (templates by `#package-name:Module:Template`,
+  interfaces with views; paged, because the unpaged endpoint caps at 200
+  elements; falls back to it on a Canton before 3.5.9, which has no paged
+  endpoint), `submit-and-wait`, `update-by-offset`. Shapes verified against
   Canton 3.5.17's `/docs/openapi`.
 - `src/ledger/queries.ts` — what each pane reads, and the settle.
 - `src/panes/PayingAgent.tsx`, `src/panes/Holder.tsx` — the panes.

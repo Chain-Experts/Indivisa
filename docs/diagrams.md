@@ -34,7 +34,7 @@ flowchart TB
   end
 
   subgraph DIST["Distribution  (V2-aware)"]
-    Run["<b>DistributionRun</b><br/>signatory: payingAgent  (no holder sees it)<br/>runId, instrument, agentAccount,<br/>legs: [legId, recipient, amount],<br/>schedule (optional link)"]
+    Run["<b>DistributionRun</b><br/>signatory: payingAgent · observer: approver (optional)<br/>runId, instrument, agentAccount,<br/>legs: [legId, recipient, amount],<br/>schedule (optional link), approver (optional, 0.4.0)"]
     Receipt["<b>DistributionReceipt</b><br/>signatory: payingAgent<br/>runId, legsSettled, total, schedule"]
     Rejected["<b>SettlementRejected</b><br/>signatory: payingAgent<br/>runId, attemptedAt, legsRequested, reason"]
   end
@@ -54,7 +54,7 @@ flowchart TB
   Agreement -- "CreateReceiptAllocation (agent alone)<br/>guarded by ensureIsReceiptAllocation" --> Alloc
   Rules -. "AllocationFactory_Allocate" .-> Alloc
   Holding -. "locked by the send allocation" .-> Alloc
-  Run -- "Run_Settle(factoryCid, allocationCids)<br/>= SettlementFactory_SettleBatch<br/>ONE transaction, all legs or none" --> Receipt
+  Run -- "Run_Settle(factoryCid, allocationCids)<br/>controllers and actors: payingAgent + approver<br/>= SettlementFactory_SettleBatch<br/>ONE transaction, all legs or none" --> Receipt
   Alloc -. "all N+1 consumed by the settle" .-> Receipt
   Receipt -. "new Holding per holder" .-> Holding
   Run -. "if refused: nothing moves,<br/>the agent records why" .-> Rejected
@@ -156,3 +156,8 @@ prepared, allocations counted, holders "allocated" with zeros about
 everyone else), then step 14 both ways: settled on one seat, and on a
 second seat refused with one holder withheld, then settled after the fix.
 See `demo-script.md`.
+
+Since 0.4.0 a run may name an **approver**, a decentralised party managed by
+BitSafe's Decentralization Manager. It joins the executors, so step 14 can
+only happen as a governed execution: the agent proposes, two of three
+members confirm, the engine executes. `decentralization.md` has that flow.

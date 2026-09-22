@@ -63,9 +63,11 @@ network starts, because the network uploads the built package on start).
 dpm build --all
 ```
 
-Wait for the prompt to come back. The last lines must include
-`Created .daml\dist\indivisa-test-0.1.0.dar`. Any line starting with
-`error` means stop and ask for help.
+Wait for the prompt to come back. Among the last lines there must be
+`Created .daml\dist\indivisa-0.4.0.dar` and
+`Created .daml\dist\indivisa-test-0.1.0.dar` (three more packages build
+after them; they belong to a separate challenge and do not matter here).
+Any line starting with `error` means stop and ask for help.
 
 **A3. Start LocalNet** (about 5 minutes).
 

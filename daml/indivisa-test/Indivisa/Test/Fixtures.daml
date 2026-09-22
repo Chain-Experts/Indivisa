@@ -11,7 +11,7 @@ import DA.List (chunksOf)
 import DA.Optional (isNone, isSome)
 import DA.Text qualified as T
 import DA.TextMap qualified as TextMap
-import DA.Time (milliseconds)
+import DA.Time (addRelTime, milliseconds, minutes)
 
 import Daml.Script
 
@@ -46,10 +46,23 @@ data Topology
 -- carries a time tag so the proofs can be re-run against a ledger that still
 -- holds earlier runs; on the IDE ledger every run starts empty.
 allocateOn : Topology -> Text -> Text -> Script Party
-allocateOn Ide name _ = allocateParty name
-allocateOn LocalNet name participant = do
+allocateOn topology = allocateOnAs topology None
+
+-- | The same, and on a network with authentication grant the ledger user
+-- the runner submits as the right to act and read as the new party. The
+-- runner allocates parties but grants nothing (BitSafe's sandbox, 21 Sep:
+-- PERMISSION_DENIED on the first submit); a validator with auth is the same.
+-- The user is the one named in participants.json (`ledger-api-user` on a
+-- Splice LocalNet); None on a network without auth.
+allocateOnAs : Topology -> Optional Text -> Text -> Text -> Script Party
+allocateOnAs Ide _ name _ = allocateParty name
+allocateOnAs LocalNet user name participant = do
   t <- getTime
-  allocatePartyOn (name <> "-" <> timeTag t) (ParticipantName participant)
+  p <- allocatePartyOn (name <> "-" <> timeTag t) (ParticipantName participant)
+  forA_ user $ \u -> do
+    userId <- validateUserId u
+    grantUserRightsOn userId [CanActAs p, CanReadAs p] (ParticipantName participant)
+  pure p
   where
     timeTag t = T.implode (filter (`elem` map show [0..9]) (T.explode (show t)))
 
@@ -73,14 +86,17 @@ holderParticipants = ["alice", "bob", "charlie"]
 -- earlier holdings and agreements belong to other instruments. On the IDE
 -- ledger every run starts empty.
 scaleHolders : Topology -> Int -> Script [Party]
-scaleHolders Ide n = forA [1..n] $ \i -> allocateParty ("Holder-" <> show i)
-scaleHolders LocalNet n = do
+scaleHolders topology = scaleHoldersAs topology None
+
+scaleHoldersAs : Topology -> Optional Text -> Int -> Script [Party]
+scaleHoldersAs Ide _ n = forA [1..n] $ \i -> allocateParty ("Holder-" <> show i)
+scaleHoldersAs LocalNet user n = do
   existing <- fmap concat $ forA holderParticipants $ \p -> do
     ds <- listKnownPartiesOn (ParticipantName p)
     pure [ d.party | d <- ds, d.isLocal, "Holder-" `T.isPrefixOf` partyToText d.party ]
   let reused = take n existing
   fresh <- forA [length reused + 1 .. n] $ \i ->
-    allocateOn LocalNet ("Holder-" <> show i) (holderParticipant i)
+    allocateOnAs LocalNet user ("Holder-" <> show i) (holderParticipant i)
   pure (reused ++ fresh)
 
 data Cast = Cast
@@ -108,13 +124,16 @@ data Cash = Cash
     rules      : Disclosure
 
 setupOn : Topology -> Script (Cast, Cash)
-setupOn topology = do
-  registry    <- allocateOn topology "CashRegistry" "registry"
-  payingAgent <- allocateOn topology "PayingAgent"  "agent"
-  issuer      <- allocateOn topology "Issuer"       "agent"
-  alice       <- allocateOn topology "Alice"        "alice"
-  bob         <- allocateOn topology "Bob"          "bob"
-  charlie     <- allocateOn topology "Charlie"      "charlie"
+setupOn topology = setupAs topology None
+
+setupAs : Topology -> Optional Text -> Script (Cast, Cash)
+setupAs topology user = do
+  registry    <- allocateOnAs topology user "CashRegistry" "registry"
+  payingAgent <- allocateOnAs topology user "PayingAgent"  "agent"
+  issuer      <- allocateOnAs topology user "Issuer"       "agent"
+  alice       <- allocateOnAs topology user "Alice"        "alice"
+  bob         <- allocateOnAs topology user "Bob"          "bob"
+  charlie     <- allocateOnAs topology user "Charlie"      "charlie"
   let cast = Cast with ..
 
   rulesCid <- submit registry $ createCmd TestTokenV2.TokenRules with admin = registry
@@ -177,8 +196,17 @@ fund cash owner amount = do
 -- returns wall time while ledger-time bounds are checked against a static
 -- clock, so even a stamp a day in the past is "strictly before" ledger time.
 -- Verified 17 Sep 2026; not a Canton behaviour.
+--
+-- Network note: the stamp is taken a few minutes in the past. A participant
+-- stamps ledger time from its own clock when it interprets the command, and
+-- a clock a few hundred milliseconds behind the runner's is enough to make
+-- "now" strictly after ledger time (BitSafe's sandbox in Docker, 21 Sep:
+-- deadline-not-exceeded on the first mint). An offer or allocation requested
+-- a little earlier is just as valid, and a validator's clock is never ours.
 requestedAt : Script Time
-requestedAt = getTime
+requestedAt = do
+  now <- getTime
+  pure (now `addRelTime` minutes (-5))
 
 -- ---------------------------------------------------------------------------
 -- Waiting for other participants
@@ -320,6 +348,7 @@ createRun cast cash runId legs = do
         instrument = cash.instrument
         agentAccount = basicAccount cast.payingAgent
         schedule = None
+        approver = None
         legs
   cid <- submit cast.payingAgent $ createCmd run
   pure (cid, run)

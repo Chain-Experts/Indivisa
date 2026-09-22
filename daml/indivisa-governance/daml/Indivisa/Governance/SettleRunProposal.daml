@@ -1,0 +1,54 @@
+-- | The one governed action in Indivisa: settling a distribution run.
+--
+-- Everything else the paying agent does (the register, the schedule, the
+-- allocations) stays ungoverned; it moves no money. Run_Settle moves all of
+-- it at once, so that is where a second signature belongs. With the run's
+-- approver set to a decentralised party, Run_Settle needs that party's
+-- authority as well as the agent's (the run's executors are its
+-- controllers and the batch's actors), and the only way to bring both
+-- together is this proposal executed by the governance engine: the agent
+-- signs it as proposer, the members confirm to threshold, and executeImpl
+-- runs with the governance party's authority plus the proposer's.
+--
+-- The generic form of this, for any Token Standard V2 batch, is
+-- Governance.Settlement.BatchSettlement. This one goes through Run_Settle
+-- so that the run is consumed and the DistributionReceipt written, which
+-- the paying agent's records and panes rely on.
+module Indivisa.Governance.SettleRunProposal where
+
+import Governance.Action
+import Splice.Api.Token.MetadataV1 (ExtraArgs)
+import Splice.Api.Token.AllocationV2 qualified as V2
+
+import Indivisa.Model.Distribution
+
+template SettleRunProposal
+  with
+    governanceParty : Party
+      -- ^ The run's approver: a decentralised party whose members confirm.
+    proposer        : Party
+      -- ^ The paying agent, admitted to the governance rules as an
+      -- additional proposer: it may propose, never confirm.
+    runCid          : ContractId DistributionRun
+    factoryCid      : ContractId V2.SettlementFactory
+    allocationCids  : [ContractId V2.Allocation]
+    extraArgs       : ExtraArgs
+    description     : Text
+      -- ^ What the members approve, e.g. the run id, the leg count and the
+      -- total. Copied verbatim into the audit trail.
+  where
+    signatory proposer
+    observer governanceParty
+
+    ensure not (null allocationCids)
+
+    interface instance GovernableAction for SettleRunProposal where
+      view = GovernableActionView with
+        governanceParty
+        proposer
+        actionLabel = "SettleDistributionRun"
+        description
+
+      executeImpl = do
+        _ <- exercise runCid Run_Settle with factoryCid; allocationCids; extraArgs
+        pure ()

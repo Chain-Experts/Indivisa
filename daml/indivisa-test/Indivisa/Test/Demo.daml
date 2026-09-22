@@ -127,6 +127,9 @@ data DemoSeatArgs = DemoSeatArgs
     tag      : Text
       -- ^ Suffix on every party name so a demo can be seated more than once
       -- on the same LocalNet. On the IDE ledger anything will do.
+    user     : Optional Text
+      -- ^ On a network with authentication, the ledger user the runner
+      -- submits as, granted rights on every party the seat allocates.
   deriving (Eq, Show)
 
 -- | Everything the run and the panes need, as the seat left it.
@@ -156,7 +159,7 @@ demo_seat : DemoSeatArgs -> Script DemoSeat
 demo_seat args = do
   let n = args.holders
       tag = args.tag
-      named name participant = allocateOn args.topology (name <> "-" <> tag) participant
+      named name participant = allocateOnAs args.topology args.user (name <> "-" <> tag) participant
 
   -- Parties. The registry on its own node, issuer and agent together, the
   -- holders spread over the three holder nodes.
@@ -246,6 +249,10 @@ data DemoAttemptArgs = DemoAttemptArgs
     withhold : Int
       -- ^ Leave this many holders (from the end) without a receipt
       -- allocation. 1 arms the deliberate failure; 0 completes the run.
+    approver : Optional Party
+      -- ^ A party whose authority the settlement needs besides the agent's
+      -- (the BitSafe demo: a decentralised party). Set when the run is
+      -- created, on the first attempt; None is the main demo.
   deriving (Eq, Show)
 
 data DemoOutcome
@@ -292,7 +299,7 @@ demo_prepare args = do
   existingRuns <- query @DistributionRun agent
   runCid <- case [ cid | (cid, r) <- existingRuns, r.runId == seat.runId ] of
     cid :: _ -> pure cid
-    [] -> submit agent $ createCmd (runFromSchedule seat.registry seat.scheduleCid schedule)
+    [] -> submit agent $ createCmd (runFromSchedule seat.registry seat.scheduleCid schedule) with approver = args.approver
   Some run <- queryContractId agent runCid
 
   -- Allocations already made for this run, by authorizing account.
@@ -367,14 +374,14 @@ demo_attempt args = do
 
 demo_smoke : Script ()
 demo_smoke = do
-  seat <- demo_seat DemoSeatArgs with topology = Ide; holders = 12; tag = "smoke"
+  seat <- demo_seat DemoSeatArgs with topology = Ide; holders = 12; tag = "smoke"; user = None
   seat.legs === 12
   Some schedule <- queryContractId seat.payingAgent seat.scheduleCid
   sum (map (.amount) schedule.entries) === schedule.total
   cash <- cashFor seat.registry seat.rulesCid
 
   -- Run two, but first: one holder is not ready. Nothing moves.
-  first <- demo_attempt DemoAttemptArgs with seat; withhold = 1
+  first <- demo_attempt DemoAttemptArgs with seat; withhold = 1; approver = None
   case first of
     Rejected {..} -> do
       assertMsg "reason names the missing authorisation" ("missing authorizations" `T.isInfixOf` reason)
@@ -385,7 +392,7 @@ demo_smoke = do
   length rejected === 1
 
   -- Then the retry: the one missing receipt is created, and everyone is paid.
-  second <- demo_attempt DemoAttemptArgs with seat; withhold = 0
+  second <- demo_attempt DemoAttemptArgs with seat; withhold = 0; approver = None
   case second of
     Settled {..} -> do
       legsSettled === 12

@@ -1,4 +1,7 @@
-# dpm build --all builds both packages below, in dependency order.
+# dpm build --all builds every package below, in dependency order.
 packages:
   - daml/indivisa
   - daml/indivisa-test
+  - daml/governance-settlement
+  - daml/indivisa-governance
+  - daml/indivisa-governance-test

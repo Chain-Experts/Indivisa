@@ -8,8 +8,11 @@ this page is written so that handover needs no Daml knowledge.
 infra/
 ├── demo.ps1                        seat / prepare / attempt   -Network localnet|devnet
 ├── participants-with-parties.ps1   regenerates the runner's party map        -Network
+├── settle.ps1                      the benchmark client: prepare N legs, settle over the JSON API, time it
+├── govern.ps1                      the governed settlement against BitSafe's DecMan (admit, propose, confirm, execute, audit)
 ├── localnet/   participants.json, ui.json, localnet.conf, bootstrap.canton, up.ps1, proofs.ps1
-└── devnet/     participants.example.json, ui.example.json   (copy, fill in, keep out of git)
+├── devnet/     participants.example.json, ui.example.json   (copy, fill in, keep out of git)
+└── bitsafe/    BitSafe's sandbox as a network: participants.json, ui.json (its public dev token), distribute.ps1
 ```
 
 Every network is a directory with two files:
@@ -41,7 +44,7 @@ can host parties and accept DAR uploads, connected to a synchronizer.
 | Packages to upload | the ten DARs in `daml/dars/` (Token Standard V2 from Splice 0.8.1, plus `splice-test-token-v2`, the reference cash) and `daml/indivisa/.daml/dist/indivisa-<version>.dar` |
 | Parties | one cash registry, one paying agent, N holders; the scripts create them. Privacy needs holders on a participant **other than** the agent's. |
 | Ledger API | gRPC, one per participant, for Daml Script. JSON Ledger API for the UI. |
-| Auth | none on LocalNet. On DevNet whatever the validator enforces: a bearer token per participant in both files. |
+| Auth | none on LocalNet. On DevNet whatever the validator enforces: a bearer token per participant in both files, and `-User <ledger user>` on `demo.ps1` and `settle.ps1` so the scripts grant that user act-as rights on every party they allocate (the runner does not). |
 | Time | participants assign ledger time at submission; nothing to configure. |
 
 There is no off-ledger service. The paying agent's client is a Daml Script
@@ -223,6 +226,22 @@ uptime we do not own. And do not use Canton Coin as the cash: `TestTokenV2`
 is uploaded like any package and its registry party is ours, so there is no
 dependency on anyone else's asset (see `TASKS.md`, open decisions, for the
 Canton Coin question).
+
+## BitSafe's sandbox (the governed settlement)
+
+The third network, `infra/bitsafe/`, is BitSafe's Decentralization Manager
+sandbox: Splice LocalNet 0.6.12 (Canton 3.5.8, three participants in one
+container) plus three DecMan nodes, brought up by their `hackathon/up.sh`
+and seeded by `seed.sh`. Its ledger token is the public LocalNet dev token
+from their repository, so the config is committed. Steps, in order, from a
+clean clone: `docs/decentralization.md`, section 6. In short:
+`bitsafe/distribute.ps1` (our DARs to all three nodes), `demo.ps1 seat
+-Network bitsafe -User ledger-api-user`, `govern.ps1 admit`, `demo.ps1
+prepare -Approver <party>`, `govern.ps1 propose | confirm | execute | audit`.
+Run on 22 September: one confirmation refused, two settled.
+
+Docker wants 12 GB; stop our LocalNet or start it with `-Heap 6g` while
+the sandbox is up.
 
 ### The four panes
 

@@ -1,0 +1,229 @@
+-- | The governance proofs for the BitSafe challenge, on the IDE ledger.
+--
+-- Three approvers, threshold two, the paying agent admitted as an
+-- additional proposer. The evidence BitSafe asks for: with one confirmation
+-- the governed action does not execute and nothing moves; with two it
+-- settles and every holder is paid. Plus the property that makes the vote
+-- worth anything: the paying agent alone can no longer settle a run that
+-- names an approver.
+--
+-- Members submit with readAs on the governance party, which is how their
+-- participants host a decentralised party on a real network (BitSafe's own
+-- tests do the same).
+module Indivisa.Test.Governance where
+
+import DA.Assert ((===))
+import DA.Foldable (forA_)
+import DA.Set qualified as Set
+import DA.Text qualified as T
+import DA.Time (hours)
+
+import Daml.Script
+
+import Governance.Action
+import Governance.Confirmation
+import Governance.ExecutionResult
+import Governance.Rules
+import Splice.Api.Token.HoldingV2 qualified as V2
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount)
+import Splice.Testing.Tokens.TestTokenV2.Holding qualified as TestTokenV2
+
+import Indivisa.Types
+import Indivisa.Model.Distribution
+import Indivisa.Governance.SettleRunProposal
+import Indivisa.Test.Agent
+import Indivisa.Test.Fixtures
+
+-- ---------------------------------------------------------------------------
+-- The committee
+-- ---------------------------------------------------------------------------
+
+data Committee = Committee
+  with
+    approvers : Party
+      -- ^ The decentralised party. On a network, hosted by every member's
+      -- participant; here, a party the members read as.
+    members   : [Party]
+    rulesCid  : ContractId GovernanceRules
+
+-- | A member acts as itself and reads as the governance party.
+memberContext : Party -> Party -> Commands a -> Script a
+memberContext member gp = submit (actAs member <> readAs gp)
+
+-- | Three members, threshold two, the paying agent may propose.
+setupCommittee : Party -> Script Committee
+setupCommittee payingAgent = do
+  approvers <- allocateParty "Approvers"
+  members <- forA ["Member1", "Member2", "Member3"] allocateParty
+  rulesCid <- submit approvers $ createCmd GovernanceRules with
+    governanceParty = approvers
+    members = Set.fromList members
+    threshold = 2
+    actionConfirmationTimeout = hours 1
+    additionalProposers = Some (Set.fromList [payingAgent])
+  pure Committee with ..
+
+-- | A run that names the committee as its approver.
+createGovernedRun : Cast -> Cash -> Party -> Text -> [PaymentLeg] -> Script (ContractId DistributionRun, DistributionRun)
+createGovernedRun cast cash approver runId legs = do
+  let run = DistributionRun with
+        payingAgent = cast.payingAgent
+        runId
+        instrument = cash.instrument
+        agentAccount = basicAccount cast.payingAgent
+        schedule = None
+        approver = Some approver
+        legs
+  cid <- submit cast.payingAgent $ createCmd run
+  pure (cid, run)
+
+-- | The paying agent's day up to the proposal: fund, onboard, run, allocate,
+-- propose. Returns what the members need.
+data Proposed = Proposed
+  with
+    cast           : Cast
+    cash           : Cash
+    committee      : Committee
+    runCid         : ContractId DistributionRun
+    run            : DistributionRun
+    allocationCids : [ContractId V2.Allocation]
+    proposalCid    : ContractId SettleRunProposal
+    actionCid      : ContractId GovernableAction
+
+propose : Script Proposed
+propose = do
+  (cast, cash) <- setup
+  committee <- setupCommittee cast.payingAgent
+  fund cash cast.payingAgent 10000.0
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
+  (runCid, run) <- createGovernedRun cast cash committee.approvers "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
+  let allocationCids = sendCid :: receiptCids
+  proposalCid <- submit cast.payingAgent $ createCmd SettleRunProposal with
+    governanceParty = committee.approvers
+    proposer = cast.payingAgent
+    runCid
+    factoryCid = toInterfaceContractId cash.rulesCid
+    allocationCids
+    extraArgs = cash.extraArgs
+    description = "Settle " <> run.runId <> ": " <> show (length run.legs) <> " legs, " <> show (runTotal run)
+  let actionCid = toInterfaceContractId @GovernableAction proposalCid
+  pure Proposed with ..
+
+-- | A member's confirmation.
+confirm : Proposed -> Party -> Script (ContractId GovernanceConfirmation)
+confirm p member = do
+  r <- memberContext member p.committee.approvers $
+    exerciseCmd p.committee.rulesCid GovernanceRules_ConfirmAction with
+      confirmer = member
+      actionProposalCid = p.actionCid
+  pure r.confirmationCid
+
+-- | A member's attempt to execute. The executing node must be able to see
+-- the registry's rules contract and the agent's locked cash, neither of
+-- which it hosts, so both are disclosed, as the execute call on a network
+-- would carry them.
+tryExecute : Proposed -> Party -> [ContractId GovernanceConfirmation] -> Script (Either SubmitError ExecuteConfirmedActionResult)
+tryExecute p member confirmations = do
+  lockedCids <- lockedHoldingCids p.cash p.cast.payingAgent
+  holdingDisclosures <- forA lockedCids $ \cid -> do
+    Some d <- queryDisclosure p.cast.payingAgent (fromInterfaceContractId @TestTokenV2.Token cid)
+    pure d
+  trySubmit (actAs member <> readAs p.committee.approvers <> disclose p.cash.rules <> discloseMany holdingDisclosures) $
+    exerciseCmd p.committee.rulesCid GovernanceRules_ExecuteConfirmedAction with
+      executor = member
+      actionProposalCid = p.actionCid
+      confirmations
+
+lockedHoldingCids : Cash -> Party -> Script [ContractId V2.Holding]
+lockedHoldingCids cash party = do
+  hs <- holdings cash party
+  pure [ cid | (cid, v) <- hs, isLocked v ]
+  where
+    isLocked v = case v.lock of
+      None -> False
+      Some _ -> True
+
+-- ---------------------------------------------------------------------------
+-- The proofs
+-- ---------------------------------------------------------------------------
+
+-- | One confirmation of three: the engine refuses to execute, and nothing
+-- has moved. The refusal names the threshold.
+governance_belowThresholdRefused : Script ()
+governance_belowThresholdRefused = do
+  p <- propose
+  let [m1, m2, _] = p.committee.members
+  c1 <- confirm p m1
+  r <- tryExecute p m2 [c1]
+  case r of
+    Right _ -> fail "executed with one confirmation of three"
+    Left err -> do
+      let msg = errorText err
+      debug ("below threshold: " <> msg)
+      assertMsg ("expected the threshold refusal, got: " <> msg)
+        ("Enough confirmations to execute action" `T.isInfixOf` msg)
+  forA_ [p.cast.alice, p.cast.bob, p.cast.charlie] $ \h -> balance p.cash h >>= (=== 0.0)
+  lockedBalance p.cash p.cast.payingAgent >>= (=== 3000.0)
+  Some _ <- queryContractId p.cast.payingAgent p.runCid
+  pure ()
+
+-- | The paying agent alone cannot settle a run that names an approver: the
+-- run's controllers and the token's actors both need the approver.
+governance_agentAloneRefused : Script ()
+governance_agentAloneRefused = do
+  p <- propose
+  r <- trySettle p.cast.payingAgent p.cash p.runCid p.allocationCids
+  case r of
+    Right _ -> fail "the paying agent settled without the approver"
+    Left err -> debug ("agent alone: " <> errorText err)
+  forA_ [p.cast.alice, p.cast.bob, p.cast.charlie] $ \h -> balance p.cash h >>= (=== 0.0)
+
+-- | Two confirmations of three: the third member executes, the batch
+-- settles, every holder is paid, the run is consumed, the receipt and the
+-- audit record exist.
+governance_atThresholdSettles : Script ()
+governance_atThresholdSettles = do
+  p <- propose
+  let [m1, m2, m3] = p.committee.members
+  c1 <- confirm p m1
+  c2 <- confirm p m2
+  r <- tryExecute p m3 [c1, c2]
+  result <- case r of
+    Left err -> fail ("execute at threshold failed: " <> errorText err)
+    Right ok -> pure ok
+  balance p.cash p.cast.alice   >>= (===  500.0)
+  balance p.cash p.cast.bob     >>= (=== 1000.0)
+  balance p.cash p.cast.charlie >>= (=== 1500.0)
+  balance p.cash p.cast.payingAgent >>= (=== 7000.0)
+  lockedBalance p.cash p.cast.payingAgent >>= (=== 0.0)
+  None <- queryContractId p.cast.payingAgent p.runCid
+  [(_, receipt)] <- query @DistributionReceipt p.cast.payingAgent
+  receipt.legsSettled === 3
+  Some audit <- queryContractId p.committee.approvers result.executionResultCid
+  audit.actionLabel === "SettleDistributionRun"
+  audit.confirmers === [m1, m2]
+  audit.executor === m3
+
+-- | The proposer can withdraw its own proposal without a vote.
+governance_proposerCancel : Script ()
+governance_proposerCancel = do
+  p <- propose
+  submit p.cast.payingAgent $ exerciseCmd p.actionCid GovernableAction_ProposerCancel
+  None <- queryContractId p.cast.payingAgent p.proposalCid
+  pure ()
+
+-- | A run without an approver settles as before: the change is inert for
+-- the main product.
+governance_noApproverUnchanged : Script ()
+governance_noApproverUnchanged = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
+  (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
+  _ <- settle cast.payingAgent cash runCid (sendCid :: receiptCids)
+  balance cash cast.charlie >>= (=== 1500.0)
