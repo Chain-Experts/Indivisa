@@ -27,6 +27,7 @@
 module Indivisa.Test.Scale where
 
 import DA.Assert ((===))
+import DA.List ((!!))
 import DA.Text qualified as T
 import DA.Time (convertRelTimeToMicroseconds, subTime)
 
@@ -53,15 +54,26 @@ data ScaleResult = ScaleResult
 -- | N holders, N legs, amounts 100 + i so no two legs are alike and the
 -- total is exact.
 scaleLegs : [Party] -> [PaymentLeg]
-scaleLegs holders =
+scaleLegs holders = scaleLegsN (length holders) holders
+
+-- | N legs over the holders given, cycling if there are fewer holders than
+-- legs. One leg per holder is the realistic shape of a coupon run and what
+-- every benchmark row up to 1,000 used. More legs than holders is the
+-- ceiling test: it grows the transaction without waiting for a topology
+-- transaction per party (about five seconds each). Both are legal, and the
+-- difference is recorded in docs/benchmark.md: with M holders and N legs
+-- the batch is M+1 allocations rather than N+1, so the same leg count
+-- carries fewer allocations.
+scaleLegsN : Int -> [Party] -> [PaymentLeg]
+scaleLegsN n holders =
   [ PaymentLeg with
       legId = "leg-" <> pad i
-      recipient = h
+      recipient = holders !! ((i - 1) % length holders)
       amount = 100.0 + intToDecimal i
-  | (i, h) <- zip [1..length holders] holders  -- Daml is strict; no infinite lists
+  | i <- [1..n]
   ]
   where
-    pad i = let s = show i in T.implode (replicate (4 - T.length s) "0") <> s
+    pad i = let s = show i in T.implode (replicate (max 0 (5 - T.length s)) "0") <> s
 
 -- | What the allocation phase leaves behind for the settle.
 data Prepared = Prepared
@@ -97,6 +109,10 @@ data ScaleArgs = ScaleArgs
     holders  : Int
     user     : Optional Text
       -- ^ See DemoSeatArgs.user.
+    legs     : Optional Int
+      -- ^ How many legs to settle. None means one per holder, the realistic
+      -- shape. A number larger than `holders` spreads the legs over them and
+      -- is how the ceiling was pushed past the holder pool; see scaleLegsN.
   deriving (Eq, Show)
 
 -- | Everything up to the settle: parties, funding, onboarding, the run and
@@ -108,7 +124,7 @@ scaleAllocateOnlyWith args = do
   let n = args.holders
   (cast, cash) <- setupAs args.topology args.user
   holders <- scaleHoldersAs args.topology args.user n
-  let legs = scaleLegs holders
+  let legs = scaleLegsN (optional n identity args.legs) holders
       total = sum (map (.amount) legs)
   fund cash cast.payingAgent (total + 1000.0)
 
@@ -183,10 +199,10 @@ scaleWith args = do
 
 -- IDE-ledger entry points, by holder count.
 scale : Int -> Script ScaleResult
-scale n = scaleWith (ScaleArgs Ide n None)
+scale n = scaleWith (ScaleArgs Ide n None None)
 
 scaleAllocateOnly : Int -> Script Prepared
-scaleAllocateOnly n = scaleAllocateOnlyWith (ScaleArgs Ide n None)
+scaleAllocateOnly n = scaleAllocateOnlyWith (ScaleArgs Ide n None None)
 
 -- Fixed sizes for `dpm test`. Larger sizes go through `scale` or `scaleWith`
 -- with an input file so the test suite stays fast.

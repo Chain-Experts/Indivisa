@@ -239,16 +239,21 @@ Canton participant. Its Holding is signed by owner and admin — the same hard
 case as Canton Coin — so nothing proven against it is easier than the real
 thing.
 
-**How many legs fit in one transaction?** Measured, 17–18 September, on
-LocalNet (`benchmark.md`). One committed send allocation carries every leg,
-so the batch is N+1 allocations. 1,000 legs settle in one transaction:
-1.67 MB, 11.1 s submit to commit over the JSON Ledger API (500 in 4.0 s, 250
-in 1.6 s). Size is linear at 1.67 KB per allocation and a sixth of the
-sequencer's 10 MB cap at 1,000; latency is linear at about 4.5 ms per leg
-on the ledger. No ceiling was reached. CIP-0120's 100 bytes per view was an
-arithmetic assumption; the measured figure is roughly seventeen times that
-per allocation. (The first published figures, 104 s and 333 s, were the Daml
-Script runner reading the result back, not the ledger; `benchmark.md`
+**How many legs fit in one transaction?** Measured to refusal, 17–22
+September, on LocalNet (`benchmark.md`). A realistic run, one allocation per
+holder: 1,000 legs in one transaction, 1.67 MB, 11.1 s submit to commit
+(500 in 4.0 s, 250 in 1.6 s). Pushed further, with legs sharing allocations:
+**13,000 legs settled in 10.4 s**, and 14,000 were refused — by the Ledger
+API's 10 MB gRPC limit on the command that authorises them, not by the
+settlement. That command costs 756 bytes per leg, so one send allocation
+holds 13,869 legs; past that the standard's own answer is several send
+allocations. The settle request costs 85 bytes per leg and 1,554 per
+allocation, which puts a realistic run at the 10 MB budget near 6,400
+holders (derived; the model reproduces the measured 1,000-holder run to
+0.6%). Time never bound: 0.69 ms per leg. CIP-0120's 100 bytes per view was
+an arithmetic assumption; per allocation the measured figure is about
+fifteen times that. (The first published figures, 104 s and 333 s, were the
+Daml Script runner reading the result back, not the ledger; `benchmark.md`
 explains.)
 
 **What does a failed batch actually return?** `missing authorizations` from

@@ -186,7 +186,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 - [ ] Still to add: an expired or insufficient **send** allocation as the bad
       leg, once settlement deadlines are in play.
 
-### Proof 5 — where is the ceiling? **MEASURED**: not reached at 1,000 legs; linear
+### Proof 5 — where is the ceiling? **FOUND, 22 Sep**: 13,000 legs settle; the command that authorises them refuses at 13,869
 
 Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
 - [x] N = 3, 10, 50 under `dpm test -p scale`; 250, 500, 1000, 2000 through
@@ -217,9 +217,9 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 - [x] The "silent phase" attributed: it was the client. No DEBUG run needed.
 - [ ] Traffic cost estimate (needs DevNet's fee parameters).
 - [ ] Hit the size cap on purpose to record the rejection message.
-- [ ] Two shapes per N: **one** send allocation carrying N `transferLegSides`,
-      versus N send allocations. Expected view count is N receipt allocations
-      plus send allocation(s) plus root; measure, do not assume.
+- [x] One send allocation carrying N legs, versus several: answered by the
+      ceiling (22 Sep). One is simpler and works to 13,869 legs; past that it
+      must be several, because the command, not the ledger, is the limit.
 - [x] Pre-settlement cost counted (`docs/benchmark.md`, "Onboarding cost"):
       parties ~5 s each, acceptances ~1 s each, receipt allocations batched
       fifty per command; the day for 500 existing holders is ~5 minutes, of
@@ -227,8 +227,16 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 - [x] Whether the **cash registry** is the bottleneck: not at these sizes.
       The registry confirms every leg and the whole confirmation round is
       2.2 s at 500 and 4.7 s at 1,000; nothing stands out per node in the log.
-- [x] Hard cap or latency wall: **neither reached**. Size at 1,000 legs is a
-      sixth of the sequencer cap; latency is linear and single-digit seconds.
+- [x] Hard cap or latency wall: **neither**, and now with the wall found
+      (22 Sep, `docs/benchmark.md` section 3). Pushed to refusal: 13,000 legs
+      settled in 10.4 s (1.52 MB); 14,000 refused with `RESOURCE_EXHAUSTED:
+      gRPC message exceeds maximum size 10485760: 10584915` on the send
+      allocation, not the settle. 756 bytes per leg in that command, so the
+      limit is 13,869 legs; the fix if ever needed is several send
+      allocations. The settle costs 85 bytes per leg and 1,554 per
+      allocation, so a realistic one-payment-per-holder run reaches 10 MB
+      near 6,400 holders (derived; model reproduces the measured 1,000-holder
+      run to 0.6%). Time never bound: 0.69 ms per leg.
 - [x] Section 2 of `docs/benchmark.md` filled in (18 Sep).
 
 > LocalNet is the right place for this: push to failure without spending real
@@ -462,8 +470,9 @@ You will need it.
       way `TestTokenV2` does, or only through its own `TransferPreapproval`.
 - [ ] One send allocation with N legs, or N send allocations. One works to
       2,000 legs; the comparison is optional now.
-- [x] What N the headline claims: **1,000 legs in one transaction, measured**;
-      a few hundred per batch is the comfortable size (18 Sep).
+- [x] What N the headline claims: **13,000 legs settled in one transaction**
+      (22 Sep), and for holders, 1,000 measured with ~6,400 derived. Never
+      say "13,000 holders": it was 13,000 legs over 250 holders.
 - [ ] Whether the issuer-funds-paying-agent leg rides the same batch or precedes
       it.
 - [x] LF target: **2.1**, forced by the V2 DARs' bundled stdlib (17 Sep).

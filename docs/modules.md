@@ -96,7 +96,8 @@ Indivisa/
     ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
     ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
     ├── demo-script.md             the recording, step by step, for someone who has never seen the project
-    └── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce
+    ├── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce
+    └── for-a-teenager.md          the whole idea, BitSafe included, from zero: finance words, blockchain, the flow, the vote
 ```
 
 ## `daml/indivisa/` — the model

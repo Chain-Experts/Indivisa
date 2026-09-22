@@ -12,6 +12,7 @@
 param(
   [string] $Network = "localnet",
   [int] $Holders = 0,
+  [int] $Legs = 0,
   [string] $Prepared = "",
   [string] $User = "",
   [switch] $Tls,
@@ -33,21 +34,22 @@ if (-not $Prepared) {
   if ($Holders -le 0) { throw "Give -Holders N or -Prepared <file>" }
   if (-not (Test-Path $dar)) { throw "Build first: dpm build --all" }
   pwsh -NoProfile -File (Join-Path $PSScriptRoot "participants-with-parties.ps1") -Network $Network -Out $mapFile | Out-Null
-  $argsFile = Join-Path $logDir "settle-args-$Holders.json"
-  $Prepared = Join-Path $logDir "settle-prepared-$Holders.json"
-  Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"user":' + $(if ($User) { '"' + $User + '"' } else { "null" }) + '}') -NoNewline
+  $tag = if ($Legs -gt 0) { "$Holders-x$Legs" } else { "$Holders" }
+  $argsFile = Join-Path $logDir "settle-args-$tag.json"
+  $Prepared = Join-Path $logDir "settle-prepared-$tag.json"
+  Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"user":' + $(if ($User) { '"' + $User + '"' } else { "null" }) + ',"legs":' + $(if ($Legs -gt 0) { $Legs } else { "null" }) + '}') -NoNewline
   $tlsArgs = @()
   if ($Tls) { $tlsArgs += "--tls" }
   if ($CaCrt) { $tlsArgs += "--cacrt"; $tlsArgs += (Resolve-Path $CaCrt).Path }
-  $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
+  $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx2g"
   Set-Location $testDir
   try {
     $t = Measure-Command {
       & dpm script --dar $dar --script-name "Indivisa.Test.Scale:scalePrepare" `
-        --input-file $argsFile --output-file $Prepared --participant-config $mapFile @tlsArgs *> (Join-Path $logDir "settle-prepare-$Holders.log")
+        --input-file $argsFile --output-file $Prepared --participant-config $mapFile @tlsArgs *> (Join-Path $logDir "settle-prepare-$tag.log")
       if ($LASTEXITCODE -ne 0) { throw "prepare failed; see $logDir\settle-prepare-$Holders.log" }
     }
-    Write-Host ("prepared {0} legs in {1:N0}s -> {2}" -f $Holders, $t.TotalSeconds, $Prepared)
+    Write-Host ("prepared {0} legs over {1} holders in {2:N0}s -> {3}" -f $(if ($Legs -gt 0) { $Legs } else { $Holders }), $Holders, $t.TotalSeconds, $Prepared)
   } finally {
     $env:JAVA_TOOL_OPTIONS = $null
   }

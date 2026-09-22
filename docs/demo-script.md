@@ -195,7 +195,7 @@ art, no animations.
 | 2 | **A bond coupon. 250 holders. One paying agent.** / Every number you are about to see is read live from a Canton ledger. / *(small, 20 pt, at the bottom)* Real: the ledger, the settlement, the update id. Simulated: the cash (TestTokenV2, the reference Token Standard V2 asset) and the holders. |
 | 3 | **Each holder's node holds its own line.** / And nothing about anyone else. Not filtered: never delivered. |
 | 4 | **Now the same run, with one holder not ready.** / This is the atomicity test. If any leg cannot settle, nothing moves. |
-| 5 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 500 in 4.0 s · 1,000 in 11.1 s / Built on Token Standard V2 (CIP-0112, approved June 2026) / github.com/Chain-Experts/Indivisa |
+| 5 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / Built on Token Standard V2 (CIP-0112, approved June 2026) / github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
 (create the folder in the dialog if it does not exist).
@@ -385,6 +385,9 @@ One sentence per shot, spoken slowly; silence is fine between them.
   are in the page header throughout; keep the header in frame.
 - The timing line on card 5 is from `benchmark.md`; quote it as LocalNet
   (five nodes on one machine), not as DevNet, until the DevNet run exists.
+- The 13,000-leg figure on card 5 is **legs, not holders**: 13,000 legs over
+  250 holders, the run that found the ceiling. The holder figure is 1,000
+  measured and about 6,400 derived. Saying "13,000 holders" would be false.
 
 ## Part I. The BitSafe clip: the governed settlement (≈ 1.5 hours, separate sitting)
 

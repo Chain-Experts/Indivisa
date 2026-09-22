@@ -137,7 +137,7 @@ All five are in.
 | 2 | Does each recipient see only its own leg? | **passes** on LocalNet, each holder on its own participant (17 Sep) |
 | 3 | Do holders authorise **once**, at onboarding, and never per coupon? | **passes** (two coupons, no holder command; misuse refused) |
 | 4 | Does one bad leg settle **zero**, not N−1? | **passes** (rejection recorded) |
-| 5 | How many legs fit in one transaction? | **1,000 legs settle in one transaction on LocalNet**: 1.67 MB, 11.1 s submit to commit over the JSON Ledger API; 500 in 4.0 s, 250 in 1.6 s. Size and latency both linear, a sixth of the 10 MB cap at 1,000. `docs/benchmark.md` |
+| 5 | How many legs fit in one transaction? | **13,000 legs settled in one transaction, in 10.4 s** (1.52 MB). The first hard limit is not the settlement but the gRPC size of the command that authorises it, at 13,869 legs. A realistic run of one payment per holder reaches Canton's 10 MB budget near 6,400 holders (derived; 1,000 measured, 1.67 MB, 11.1 s). `docs/benchmark.md` |
 
 Proof 3 was answered on 16 September by reading the V2 settlement logic as
 shipped in Splice 0.8.1: the standard requires receiver-side allocations, and
@@ -209,10 +209,14 @@ Worth saying before anyone else says it.
   V2 asset, with our own registry party; no paying agent settles on Canton
   today, and the holders and their positions are generated. Every demo
   component is labelled real, simulated or planned.
-- **Scale is measured on one machine, not on DevNet.** 1,000 legs settle in
-  one transaction on LocalNet in 11.1 s (500 in 4.0 s, 250 in 1.6 s), with the
-  request at a sixth of the sequencer's 10 MB cap. Five nodes in one JVM is
-  not a network; DevNet adds hops and validators and will differ.
+- **Scale is measured on one machine, not on DevNet.** We pushed until it
+  refused: 13,000 legs settled in 10.4 s, and 14,000 were refused by the
+  Ledger API's gRPC message limit on the command that authorises them, not
+  by the settlement. A realistic coupon run of one payment per holder
+  reaches the 10 MB transaction budget near 6,400 holders, derived from a
+  size model that reproduces the measured 1,000-holder run to within 0.6%.
+  Five nodes in one JVM is not a network; DevNet adds hops and validators
+  and will differ.
 - **Holders are not zero-touch; they are one-touch.** The standard requires the
   receiver's authority on every leg. Indivisa collects it once, in a standing
   agreement, and never again. A holder who has not signed cannot be paid — the
@@ -232,6 +236,7 @@ Worth saying before anyone else says it.
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |
+| `docs/for-a-teenager.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
 | `ui/README.md` | The four panes |

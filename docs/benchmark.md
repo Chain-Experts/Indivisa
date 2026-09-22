@@ -206,8 +206,125 @@ parties already exist is about 5 minutes, of which 4 s is the settle.
 
 ### Still to do
 
-- The second shape, N send allocations instead of one, for comparison.
-- Hit the size cap deliberately (N ≈ 6,000) to record the sequencer's
-  rejection message.
 - The same sweep on DevNet at 250, 500 and 1,000.
 - Traffic cost (needs DevNet's fee parameters).
+- A realistic-shape run past 1,000 holders, to check the 6,400 figure by
+  measurement rather than by model. It costs a party per holder at about
+  four seconds each, so 6,400 holders is seven hours of party creation.
+---
+
+## 3. Where it stops, 22 September 2026
+
+Section 2 answered "how big can one settlement be" with sizes we had run.
+This section pushed until something refused, and something did. Two limits
+exist, they are different, and the one that binds first is not the one we
+expected.
+
+### Method
+
+Same LocalNet (Canton 3.5.17, five participants in one JVM, 16 GB heap),
+fresh ledger, 250 holder parties created once and reused by every row. The
+sweep is `infra/localnet/ceiling.ps1`, which for each size prepares the run
+with the script and settles it with the Node client over the JSON Ledger
+API, then reads the sequencer's log for that submission's size and its
+phase 1 to phase 6 stamps. Raw rows: `infra/localnet/log/ceiling.csv`.
+
+Past 250 legs the legs are spread over the same 250 holders
+(`Indivisa.Test.Scale.scaleLegsN`), so a holder receives several. That is
+**not** the shape of a coupon run: the batch is 251 allocations rather than
+one per leg. It is a deliberate instrument. Holding the allocation count
+fixed while the leg count grows separates the cost of a leg from the cost
+of an allocation, which is what makes the realistic-shape answer below a
+calculation rather than a guess.
+
+### Results
+
+| Legs | Allocations | Settle request | Submit to commit | Ledger: interpret to finalise | Result |
+|---|---|---|---|---|---|
+| 1,000 | 251 | 494 KB | 2.0 s | 1.1 s | settled |
+| 2,000 | 251 | 582 KB | 2.9 s | 1.7 s | settled |
+| 4,000 | 251 | 751 KB | 3.7 s | 1.9 s | settled |
+| 6,000 | 251 | 919 KB | 5.7 s | 3.2 s | settled |
+| 8,000 | 251 | 1.09 MB | 7.8 s | 4.8 s | settled |
+| 12,000 | 251 | 1.43 MB | 9.9 s | 5.9 s | settled |
+| **13,000** | 251 | **1.52 MB** | **10.4 s** | 5.9 s | **settled** |
+| 14,000 | 251 | | | | **refused, before the settle** |
+| 20,000 | 251 | | | | **refused, before the settle** |
+
+### What refused it, verbatim
+
+Not the settlement. The command that *prepares* it: the single send
+allocation in which the paying agent authorises every leg at once
+(`Indivisa.Test.Agent.allocateSend`).
+
+```
+RESOURCE_EXHAUSTED: gRPC message exceeds maximum size 10485760: 10584915
+  at Indivisa.Test.Agent:72        (14,000 legs)
+
+RESOURCE_EXHAUSTED: gRPC message exceeds maximum size 10485760: 15124323
+  at Indivisa.Test.Agent:72        (20,000 legs)
+```
+
+Both payloads are **756 bytes per leg**, exactly, so the limit is
+arithmetic: 10,485,760 / 756 = **13,869 legs in one send allocation**. We
+settled 13,000 and were refused at 14,000; the measurement and the
+arithmetic agree to within 1%.
+
+This is the Ledger API's own gRPC message limit on the way in, not a
+Canton transaction limit, and the fix is in the standard: split the send
+side into several allocations. The settlement takes a list of them. That
+answers the open question "one send allocation carrying N legs, or N of
+them": one is simpler and cheaper until about thirteen thousand legs, and
+beyond that it has to be several.
+
+### The two ceilings, separated
+
+Fitting the seven settled rows (allocations fixed, legs varying):
+
+| | |
+|---|---|
+| Cost of a leg in the settle request | **85 bytes** |
+| Cost of an allocation in the settle request | **1,554 bytes** |
+| Fixed overhead | ~20 KB |
+| Cost of a leg in the send-allocation command | **756 bytes** |
+| Time | **0.69 ms per leg**, submit to commit |
+
+The model is checked against a measurement it did not come from: for the
+1,000-holder run of section 2 (1,001 allocations, 1,000 legs) it predicts a
+1.66 MB settle request; the sequencer logged 1.67 MB. **0.6% error.**
+
+So, on this hardware:
+
+1. **A settlement of a real coupon run** — one allocation per holder —
+   reaches the 10 MB request cap at about **6,400 holders**. Derived, not
+   measured: the largest realistic-shape run actually settled is 1,000
+   holders at 1.67 MB.
+2. **A settlement whose legs share allocations** reaches 10 MB at about
+   120,000 legs, but cannot be prepared past **13,869 legs** in one send
+   allocation. Measured.
+3. **Time is not the binding constraint** at any size we reached. Thirteen
+   thousand legs committed in 10.4 s, of which the ledger's own
+   confirmation was 5.9 s.
+
+### What to say out loud, and what not to
+
+Say: *we settled 13,000 payment legs in one transaction in ten seconds, and
+the first hard limit we met was the gRPC message size of the command that
+authorises them, at 13,869 legs; a realistic coupon run of one payment per
+holder reaches Canton's 10 MB transaction budget near 6,400 holders.*
+
+Do not say: "Indivisa pays 13,000 holders in one transaction." It does not.
+Thirteen thousand *legs* over 250 holders is not the same as 13,000
+holders, and the honest figure for holders is the derived 6,400, with 1,000
+the largest actually run.
+
+Do not say the limit is Canton's transaction size. On this evidence Canton
+was never the constraint; the client's command was.
+
+### What this still cannot say
+
+This is one machine: five participants in one JVM, one synchronizer,
+in-memory storage, no traffic pricing. On DevNet the confirming nodes are
+separate machines, the sequencer is real, and traffic costs money. The
+sizes should carry over almost exactly, since they are properties of the
+serialised transaction, and the times should not.
