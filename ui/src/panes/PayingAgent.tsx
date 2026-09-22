@@ -100,6 +100,12 @@ export function PayingAgent({ config }: { config: Config }) {
             <span className="muted"> · 1 send + {legs} receipts</span>
             {state.run && !settled && haveAllocations < expectedAllocations ? <span className="warn"> · {expectedAllocations - haveAllocations} missing</span> : null}
           </dd>
+          {state.run?.approver ? (
+            <>
+              <dt>Approver</dt>
+              <dd>{displayName(state.run.approver, seat.tag)} <span className="muted">· a decentralised party; its members must confirm before the settle can execute</span></dd>
+            </>
+          ) : null}
         </dl>
       ) : (
         <p className="muted">Reading the ledger…</p>
@@ -110,7 +116,7 @@ export function PayingAgent({ config }: { config: Config }) {
           {pressed.kind === "busy" ? "Settling…" : settled ? "Settled" : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
         </button>
         <div className="action-note">
-          {settled ? "This run has settled. Every holder was paid in the same transaction." : !state?.run ? "Prepare the run first: demo.ps1 prepare -Tag " + seat.tag : "All or nothing. If any leg cannot settle, nothing moves."}
+          {settled ? "This run has settled. Every holder was paid in the same transaction." : !state?.run ? "Prepare the run first: demo.ps1 prepare -Tag " + seat.tag : state.run.approver ? "All or nothing, and not alone: this run names an approver, so the agent's own button is refused until the approvers have confirmed and executed." : "All or nothing. If any leg cannot settle, nothing moves."}
         </div>
       </div>
 

@@ -422,8 +422,13 @@ Done:
       five minutes in the past).
 - [ ] LocalNet regression of the six proofs and the main demo on 0.4.0
       (LocalNet is down while the sandbox has the memory).
-- [ ] Show the governed run in the four panes (today they show the settled
-      state, not the vote).
+- [x] The panes show the approver (22 Sep): an APPROVER line on the agent's
+      pane, a note that the agent's own button is refused until the vote,
+      and honest wording on a holder pane that shares the agent's node. The
+      button pressed alone is the "agent refused" shot of the BitSafe clip.
+      The vote itself stays in DecMan (its API; its Approvals page does not
+      list custom proposals, checked 22 Sep, question for Richie).
+- [ ] Record the BitSafe clip: `docs/demo-script.md`, Part I.
 - [ ] Offer `governance-settlement-v0` to BitSafe's repository as a pull
       request (needs their `multi-package.yaml` entry and a `daml.yaml` at
       their SDK version).

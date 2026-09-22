@@ -32,7 +32,7 @@ export interface HoldingView {
 export interface AgentState {
   instrument: { name: string; isin: string; currency: string; couponRate: number; maturity: string } | null;
   schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string } | null;
-  run: { cid: ContractId; legs: number; total: number } | null;
+  run: { cid: ContractId; legs: number; total: number; approver: Party | null } | null;
   allocations: { cid: ContractId; authorizer: Party | null; legs: number; isSend: boolean }[];
   rejections: { cid: ContractId; attemptedAt: string; legsRequested: number; reason: string }[];
   receipt: { cid: ContractId; legsSettled: number; total: number; offset: number; updateId: string | null; effectiveAt: string | null } | null;
@@ -90,7 +90,7 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
           policy: sched.createdEvent.createArgument.policy,
         }
       : null,
-    run: run ? { cid: run.createdEvent.contractId, legs: run.createdEvent.createArgument.legs.length, total: run.createdEvent.createArgument.legs.reduce((s: number, l: any) => s + num(l.amount), 0) } : null,
+    run: run ? { cid: run.createdEvent.contractId, legs: run.createdEvent.createArgument.legs.length, total: run.createdEvent.createArgument.legs.reduce((s: number, l: any) => s + num(l.amount), 0), approver: run.createdEvent.createArgument.approver ?? null } : null,
     allocations,
     rejections: rejected
       .filter((c) => c.createdEvent.createArgument.runId === runId)

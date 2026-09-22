@@ -6,8 +6,9 @@ you see it, so you know whether you are looking at the right thing.
 
 Nothing in the recording is mocked. The numbers on screen are read from a
 Canton ledger running on this machine while you record. There is **no
-Docker** anywhere in this; the network is one Java process started by a
-script.
+Docker** in the main recording (Parts A to H); the network is one Java
+process started by a script. Part I, a separate short clip for the BitSafe
+challenge, is the one place Docker appears.
 
 Time budget, first time through: about 2.5 hours, of which 1 hour is
 waiting for two demo seats to build. Second time: about 1 hour.
@@ -21,6 +22,7 @@ waiting for two demo seats to build. Second time: about 1 hour.
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-settled.mp4` | the fix and the retry |
 | `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide5.PNG` | five title cards |
 | `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-HackCanton-S3.mp4` | the finished 60–90 second video |
+| `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-BitSafe-governed.mp4` | the separate 45–60 second BitSafe clip (Part I), recorded on another day |
 
 The `Indivisa-recording` folder sits **next to** the repo, not inside it, so
 video files never end up in git.
@@ -380,6 +382,128 @@ One sentence per shot, spoken slowly; silence is fine between them.
   are in the page header throughout; keep the header in frame.
 - The timing line on card 5 is from `benchmark.md`; quote it as LocalNet
   (five nodes on one machine), not as DevNet, until the DevNet run exists.
+
+## Part I. The BitSafe clip: the governed settlement (≈ 1.5 hours, separate sitting)
+
+A second, separate video for BitSafe's challenge, 45–60 seconds. It is **not**
+cut into the main video and it is recorded on a different network: BitSafe's
+own sandbox in Docker, not our LocalNet. The two do not fit in memory
+together, so record the main video first (its freeze date comes first), stop
+LocalNet (`pwsh infra\localnet\up.ps1 -Down`), and do this on another day.
+
+What it shows, one shot per thing BitSafe scores: it runs from the
+instructions; below threshold the settlement is refused; at threshold it
+settles; only one action is governed; the module is reusable; and what is
+simulated is said out loud.
+
+### I1. Bring up the sandbox (≈ 40 minutes the first time, 5 after)
+
+In **window 1** (PowerShell 7):
+
+```
+cd D:\Dev\ChainExperts\decentralization-manager
+bash hackathon/up.sh
+bash hackathon/seed.sh
+```
+
+`up.sh` ends with `LocalNet is up` and three URLs; `seed.sh` ends with
+`The demo party is ready` and prints the party (`demo-party::1220…`), the
+rules contract and three member parties. If either fails, read its last
+lines: the usual cause is Docker with less than 12 GB.
+
+Then, in the Indivisa repo:
+
+```
+cd D:\Dev\ChainExperts\Indivisa
+dpm build --all
+pwsh infra\bitsafe\distribute.ps1
+```
+
+`distribute.ps1` ends with three lines `node 808x: governance-settlement-v0,
+indivisa, indivisa-governance-v0, splice-test-token-v2`. Copy the demo party
+id from seed.sh's output (or from
+`..\decentralization-manager\hackathon\.state`, line `DEC_PARTY_ID=`); you
+need it twice below. Call it `<DP>`.
+
+### I2. Seat, admit, prepare, propose (≈ 3 minutes)
+
+```
+pwsh infra\demo.ps1   seat    -Network bitsafe -Holders 10 -Tag clip -User ledger-api-user
+pwsh infra\govern.ps1 admit   -Network bitsafe -Tag clip
+pwsh infra\demo.ps1   prepare -Network bitsafe -Tag clip -Approver <DP>
+```
+
+Expected endings: `seat 'clip' on bitsafe: 10 holders in 2xs`, then
+`admit`'s three lines `node 1 confirmed`, `node 2 confirmed`, `executed`,
+then `prepare 'clip' (withhold 0): 1xs`. Do **not** run `propose` yet; that
+is done on camera.
+
+**Window 2**: the four panes on the sandbox.
+
+```
+cd D:\Dev\ChainExperts\Indivisa\ui
+$env:INDIVISA_NETWORK = "bitsafe"
+$env:INDIVISA_TAG = "clip"
+npm run dev
+```
+
+Chrome, tab A: `http://localhost:5173`. The agent pane reads **PREPARED**,
+ALLOCATIONS **11 of 11**, and a new line **APPROVER** *demo party · a
+decentralised party; its members must confirm before the settle can
+execute*. Under the button: *All or nothing, and not alone: this run names
+an approver, so the agent's own button is refused until the approvers have
+confirmed and executed.* One holder pane says *This node also hosts the
+paying agent, so the data is on the node; the ledger filters it by party*
+instead of *never received*: in the sandbox one of the three nodes hosts
+both, and the pane says so.
+
+Chrome, tab B: `http://localhost:8081`, BitSafe's Decentralization Manager
+for node 1. Click **Parties**, then the `demo-party` row, then expand
+**Audit Trail**. Leave it there.
+
+DecMan's **Approvals** page does not list our proposal (it renders only its
+own proposal types; checked 22 September), so the confirmations are made
+with our `govern.ps1`, which calls the same DecMan API their own demo
+script calls. The Audit Trail shows them all the same.
+
+Recorder as in Part C. Window 1 (PowerShell) and Chrome both need to be on
+screen: make the PowerShell window large-font (Settings → Appearance → font
+size 18) and Alt+Tab between them; a split screen is harder to read.
+
+### I3. The shots
+
+| # | Seconds | On screen | Caption | Real / simulated |
+|---|---|---|---|---|
+| 1 | 0–6 | Card: **Governed settlement** / Indivisa on BitSafe's Decentralization Manager / *one governed action: `Run_Settle`* | | |
+| 2 | 6–14 | Tab A, still. Mouse rests on the **APPROVER** line, then on the note under the button. | The paying agent sees every leg. It can no longer settle alone: the run names an approver, a decentralised party. | real |
+| 3 | 14–22 | Tab A. **Click the button.** Red box: **SETTLEMENT REJECTED · 10 payments requested · 0 executed**, and in the reason the words *requires authorizers … Approvers … but only … PayingAgent were given*. Holder panes unchanged. | The agent's own button, refused by the ledger. The authority is not there. | real |
+| 4 | 22–30 | Window 1: type `pwsh infra\govern.ps1 propose -Network bitsafe -Tag clip`, Enter. One line back: `proposed XS2999912340/Coupon/2027-12-01: 10 legs, 16034.38 -> 00…` | So it proposes. Ten legs, $16,034.38, filed for the approvers. | real |
+| 5 | 30–38 | Window 1: `pwsh infra\govern.ps1 confirm -Network bitsafe -Tag clip -Node 1` → `node 1 confirmed`. Then `pwsh infra\govern.ps1 execute -Network bitsafe -Tag clip -Node 2` → **REFUSED:** … *'Enough confirmations to execute action' was not met.* | One of three approvers has confirmed. Execution refused. Nothing moved. | real |
+| 6 | 38–46 | Window 1: `pwsh infra\govern.ps1 confirm -Network bitsafe -Tag clip -Node 2` → `node 2 confirmed`. Then `… execute -Network bitsafe -Tag clip -Node 3` → `node 3 executes with 2 confirmation(s); can_execute=True` … **EXECUTED**. | Two of three. The third member executes. | real |
+| 7 | 46–54 | Tab A. Within two seconds: pill **SETTLED**, green box **SETTLED · 10 of 10 legs · 16,034.38 USD** with the update id; holder panes **PAID**. | Settled. Every holder paid in one transaction, and only because two members agreed. | real |
+| 8 | 54–60 | Tab B. The Audit Trail: rows `propose`, `confirm`, `confirm`, `execute`, `execute_result`, each with an update id. | BitSafe's own trail: every step attributable. | real |
+| 9 | 60–66 | Card: *Three nodes on one workstation are not three operators. The threshold is real; the independence is simulated. Cash is TestTokenV2; holders are synthetic.* / *`governance-settlement-v0`: any Token Standard V2 batch, no Indivisa in it.* | | |
+
+Record it as one continuous clip if you can (there is no waiting in it: the
+refusal and the settle each take a second or two); otherwise stop and start
+between shots 3 and 4 and cut in Clipchamp as in Part F. The two cards are
+made in PowerPoint exactly as in Part B (`cards-bitsafe.pptx`, two slides).
+
+If shot 3 shows a green box instead of a red one, the run was prepared
+without `-Approver`; stop, and redo I2 with a new tag.
+
+### I4. What this clip may claim
+
+- "Two of three approvers must confirm": yes; the threshold is in the
+  `GovernanceRules` contract on the ledger, not in our code.
+- "The agent cannot settle alone": yes, and shot 3 shows the ledger saying
+  so; the sentence to avoid is "the agent cannot see the run", which is
+  false and not the point.
+- "Independent approvers": **no.** Three DecMan nodes and three participants
+  on one workstation run by one person. Card 9 says so; keep it in.
+- "Built on BitSafe's Decentralization Manager": yes, unmodified. Never
+  "BitSafe governs the settlement": they provide the tooling; we govern
+  the action.
 
 ## Troubleshooting
 

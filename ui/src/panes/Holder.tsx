@@ -39,6 +39,11 @@ export function Holder({ config, party, currency }: { config: Config; party: str
 
   const paid = (state?.cash ?? 0) > 0;
   const othersTotal = state ? Object.values(state.others).reduce((s, n) => s + n, 0) : 0;
+  // On LocalNet each holder has its own node and the zeros mean the data never
+  // arrived. On a network where this holder shares the agent's node (one
+  // validator, or BitSafe's sandbox) the node does hold it; the ledger filters
+  // it by party. Say which, or the pane overclaims.
+  const sharesAgentNode = participant === config.participantOf(seat.payingAgent);
 
   return (
     <section className="pane pane-holder">
@@ -80,7 +85,11 @@ export function Holder({ config, party, currency }: { config: Config; party: str
         </ul>
       ) : null}
       <div className={`nothing ${othersTotal === 0 ? "" : "leak"}`}>
-        {state ? (othersTotal === 0 ? "Nothing. Not hidden — never received by this participant." : `${othersTotal} contracts about others reached this node`) : ""}
+        {state
+          ? othersTotal !== 0 ? `${othersTotal} contracts about others reached this node`
+            : sharesAgentNode ? "Nothing for this party. This node also hosts the paying agent, so the data is on the node; the ledger filters it by party."
+            : "Nothing. Not hidden — never received by this participant."
+          : ""}
       </div>
     </section>
   );

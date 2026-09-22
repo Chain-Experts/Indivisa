@@ -24,7 +24,13 @@ if (-not $Out) { $Out = Join-Path $netDir "participants-with-parties.json" }
 $base = Get-Content (Join-Path $netDir "participants.json") -Raw | ConvertFrom-Json
 $ui = Get-Content (Join-Path $netDir "ui.json") -Raw | ConvertFrom-Json
 
-$map = [ordered]@{}
+# Every name whose node hosts the party is a valid route. When several names
+# share one node (a one-validator DevNet, BitSafe's sandbox) the name chosen
+# is also the label the panes show, so pick by the party's role: the cash
+# registry keeps "registry", the agent and issuer keep "agent", holders get
+# the first holder node name. On LocalNet every name is its own node and
+# nothing here matters.
+$candidates = [ordered]@{}
 foreach ($name in $base.participants.PSObject.Properties.Name) {
   $u = $ui.participants.$name
   if (-not $u) { Write-Warning "ui.json has no JSON API for '$name'; skipping"; continue }
@@ -38,8 +44,23 @@ foreach ($name in $base.participants.PSObject.Properties.Name) {
     continue
   }
   foreach ($d in $resp.partyDetails) {
-    if ($d.isLocal -and $d.party.StartsWith($Prefix)) { $map[$d.party] = $name }
+    if ($d.isLocal -and $d.party.StartsWith($Prefix)) {
+      if (-not $candidates.Contains($d.party)) { $candidates[$d.party] = @() }
+      $candidates[$d.party] += $name
+    }
   }
+}
+
+$map = [ordered]@{}
+foreach ($party in $candidates.Keys) {
+  $names = @($candidates[$party])
+  $hint = $party.Split("::")[0]
+  $pick = $null
+  if ($hint -match "Registry" -and $names -contains "registry") { $pick = "registry" }
+  elseif ($hint -match "Paying-Agent|PayingAgent|Issuer|Northwind" -and $names -contains "agent") { $pick = "agent" }
+  else { $pick = $names | Where-Object { $_ -notin @("registry", "agent") } | Select-Object -First 1 }
+  if (-not $pick) { $pick = $names[0] }
+  $map[$party] = $pick
 }
 
 $cfg = [ordered]@{
