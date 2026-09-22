@@ -13,7 +13,10 @@ challenge, is the one place Docker appears.
 Time budget, first time through: about 2.5 hours, of which 1 hour is
 waiting for two demo seats to build. Second time: about 1 hour.
 
-## 0. What you will end up with
+## 0. What the recording session produces
+
+None of this exists yet. Following this script creates it; the folder is
+made at the first save.
 
 | File | What it is |
 |---|---|
