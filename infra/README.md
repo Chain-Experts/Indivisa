@@ -135,7 +135,7 @@ pwsh infra/demo.ps1 attempt -Tag sep18                # settled: 250/250
 
 Add `-Network devnet` to every line for DevNet. The seat writes
 `infra/<network>/demo/seat-<tag>.json` with every party and contract id the
-run and the four panes need. Each attempt writes its outcome next to it.
+run and the console need. Each attempt writes its outcome next to it.
 Party names are `<Name>-<tag>`, e.g. `Meridian-Paying-Agent-sep18`,
 `Pine-Pension-Fund-sep18`, `Maya-Lindqvist-sep18`; pick a new tag to seat
 again on the same ledger. Names and position sizes are synthetic.
@@ -214,7 +214,7 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
    it, or query the agent's JSON API for the `DistributionReceipt` and read
    `updateId` from `POST /v2/updates/update-by-offset` at its offset. Those
    are the evidence.
-8. **The four panes on DevNet**, optional:
+8. **The console on DevNet**, optional:
    `INDIVISA_NETWORK=devnet INDIVISA_TAG=devnet1 npm run dev` in `ui/`
    (PowerShell: `$env:INDIVISA_NETWORK="devnet"; $env:INDIVISA_TAG="devnet1"`).
    Run `demo.ps1 prepare -Network devnet -Tag devnet1` instead of `attempt`
@@ -243,7 +243,7 @@ Run on 22 September: one confirmation refused, two settled.
 Docker wants 12 GB; stop our LocalNet or start it with `-Heap 6g` while
 the sandbox is up.
 
-### The four panes
+### The console
 
 ```
 cd ui && npm install

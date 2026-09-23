@@ -1,0 +1,52 @@
+// Indivisa bootstrap, in the container. Same as infra/localnet/bootstrap.canton
+// with container paths.
+//
+//
+//
+//
+// Parties are NOT allocated here: the proofs allocate fresh parties per run
+// with allocatePartyOn, so every script starts from a clean cast on a ledger
+// that may already hold earlier runs. The demo seats named parties later, in
+// Indivisa.Test.Demo.
+
+// 1. Start every node in localnet.conf.
+nodes.local.start()
+
+// 2. One synchronizer from the local sequencer and mediator.
+bootstrap.synchronizer_local()
+
+// 3. Every participant joins it.
+participants.local.foreach(_.synchronizers.connect_local(sequencer1, alias = "localnet"))
+
+// 4. The packages, on every participant. Upload vets them. The V2 API DARs
+//    are also bundled inside the two application DARs; listing them keeps the
+//    package set explicit for whoever reads this later.
+val dars = Seq(
+  "/indivisa/dars/splice-api-token-metadata-v1-1.0.0.dar",
+  "/indivisa/dars/splice-api-token-holding-v2-1.0.0.dar",
+  "/indivisa/dars/splice-api-token-allocation-v2-1.0.0.dar",
+  "/indivisa/dars/splice-api-token-allocation-instruction-v2-1.0.0.dar",
+  "/indivisa/dars/splice-api-token-transfer-instruction-v2-1.0.0.dar",
+  "/indivisa/dars/splice-api-token-transfer-events-v2-1.0.0.dar",
+  "/indivisa/dars/splice-token-standard-utils-2.0.0.dar",
+  "/indivisa/dars/splice-test-token-v2-1.0.1.dar",
+  "/indivisa/dars/indivisa-0.4.0.dar"
+)
+participants.local.foreach { p =>
+  dars.foreach(d => p.dars.upload(d))
+}
+
+// 5. Prove the wiring: a ping crosses the synchronizer between two participants.
+agent.health.ping(alice)
+
+println("Indivisa LocalNet is up: 1 synchronizer, 5 participants, packages vetted.")
+
+// 6. Only now is the network usable: every package is vetted on every
+//    participant. The container's healthcheck waits for this file, because
+//    the JSON API answers long before the uploads are done, and a client
+//    that starts too early sees a half-vetted network
+//    (PACKAGE_SELECTION_FAILED, 22 Sep).
+java.nio.file.Files.write(
+  java.nio.file.Paths.get("/indivisa/ready"),
+  "ready\n".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+)

@@ -1,4 +1,4 @@
-// Dev server for the four panes.
+// Dev server for the settlement console.
 //
 // The JSON Ledger API sets no CORS headers, so the browser cannot call the
 // participants directly; the dev server proxies /api/<participant>/... to

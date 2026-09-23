@@ -26,7 +26,7 @@ $ui = Get-Content (Join-Path $netDir "ui.json") -Raw | ConvertFrom-Json
 
 # Every name whose node hosts the party is a valid route. When several names
 # share one node (a one-validator DevNet, BitSafe's sandbox) the name chosen
-# is also the label the panes show, so pick by the party's role: the cash
+# is also the label the console shows, so pick by the party's role: the cash
 # registry keeps "registry", the agent and issuer keep "agent", holders get
 # the first holder node name. On LocalNet every name is its own node and
 # nothing here matters.

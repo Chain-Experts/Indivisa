@@ -383,19 +383,23 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       (4), smoke with `participants-with-parties.ps1 -Network devnet` (5).
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
-- [ ] **A one-command local deployment for the judges**, after the DevNet run
-      and the recording, not before (they have the hard dates). `docker
-      compose up`: one container with Canton and our five-participant
-      topology; a one-shot seed container (JDK, the Daml Script runner, the
-      eleven DARs) that uploads the packages and seats 8 to 20 holders with
-      one allocation deliberately withheld; nginx serving the four panes and
-      proxying the participants (no token, LocalNet has no auth). The judge
-      presses the button and is refused, runs one given command, presses
-      again and it settles. Under five minutes on their side after the image
-      pull; about a day of ours, and the test that matters is a clean run on
-      a machine that is not this one (macOS especially). `docker compose up`
-      then goes at the top of the README. Cut to fewer holders or one
-      participant before letting it eat the recording.
+- [x] **A one-command local deployment for the judges** — `judge/`, built
+      and verified 23 Sep, ahead of the DevNet run rather than after it
+      (there was room, and it costs the recording nothing). `cd judge &&
+      docker compose up` gives one Canton container with the five-participant
+      topology and nine vetted packages, a one-shot seed container (the Daml
+      Script runner and `Indivisa.Test.Demo`) that seats 20 holders with one
+      allocation deliberately withheld, and nginx serving the console and
+      proxying the participants. Verified end to end on this machine: refused
+      (`20 payments requested · 0 executed`), `docker compose run --rm
+      prepare`, settled in 589 ms with the update id on screen.
+      `judge/README.md` tells the judge when it is ready, what to press and
+      what is real; the run is linked from the top of the main README.
+      **Still to test elsewhere:** the two shipped build paths
+      (`SCRIPT_SOURCE=download` for the script runner, `UI_SOURCE=build` for
+      the page) cannot be exercised here, because this machine intercepts TLS
+      and a container cannot verify the registry certificate. One clean run
+      on another machine, macOS ideally, is the test that matters.
 - [ ] Deck: the problem in Canton's own numbers, what V2 changed in June, the
       demo, the benchmark, the honest limits.
 - [ ] Label every component **real / simulated / planned**.

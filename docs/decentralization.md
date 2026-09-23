@@ -173,7 +173,7 @@ allocate, as the sandbox's own seed script does.
   operator independence, as section 4 says.
 - **Unfinished:** the DevNet deployment with BitSafe as the second
   operator (the ask is with our DevOps engineer); showing the governed run
-  in the four panes (the panes show the settled state today, not the vote);
+  in the console (it shows the settled state today, not the vote);
   a `Governed` variant of the recording.
 
 ## 8. What comes next

@@ -160,20 +160,24 @@ run without a human. It is the honest production component and it is invisible
 in a sixty-second video. Say on the slide: *in production this is a scheduled
 agent; for the demo it is a button.*
 
-### UI — four panes (built)
+### UI — the settlement console (built)
 
-| Pane | Shows |
+| Part | Shows |
 |---|---|
-| **Paying agent** | instrument, event, holder count, total due, allocations ready, one button; then SETTLED with the update id and the submit-to-commit time, or SETTLEMENT REJECTED with the ledger's reason and the on-ledger record |
-| **Holder A** | my position, my agreement, my allocation, my cash; then six counts of what this node holds about anyone else, all zero |
-| **Holder B** | the same, for B |
-| **Holder C** | the same, for C |
+| **Working header** | instrument, event, holder count, per unit, total due, how many allocations are on the ledger out of how many the batch needs, the run's state, one button; then SETTLED with the update id and the submit-to-commit time, or SETTLEMENT REJECTED with the ledger's reason and the on-ledger record |
+| **Holders** | a card per holder — position, entitlement, cash, leg state — filled by one request set per participant, not per holder. Search, filter, sort |
+| **Any card, opened** | that holder's own view, read **as that holder alone**: its contracts, then six counts of what its node holds about anyone else, all zero |
+| **Schedule** | the entitlement schedule as the executor sees it, sortable |
+| **Privacy** | the same per-party check run once per participant, continuously |
+| **Activity** | the settlement and every refusal, read back as contracts |
 
-No forms, no routing, no state library, no auth flows. Lists and numbers.
-`Holder` is one component rendered three times.
+No auth flows, no application backend, nothing cached: each view is a read
+of the participant that holds the data.
 
-**The impressive part is not the styling.** It is that Holder B's pane is
-conspicuously empty where Holder A's has data. That lands in a plain table.
+**The impressive part is not the styling.** It is that a card opened on one
+node is conspicuously empty where the executor's schedule has everything —
+and that the console holds every party's credential and still cannot make
+one node answer for another.
 
 The plumbing: four ledger connections, one per party, each to the participant
 that hosts it, through the dev server's proxy because the JSON Ledger API

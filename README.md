@@ -10,6 +10,10 @@ Built by Chain-Experts for HackCanton Season 3.
 
 ## Demo
 
+- **Run it yourself** — `cd judge && docker compose up`, then
+  http://localhost:8080. A real five-participant Canton network, the real
+  contracts, a coupon that is refused until every holder is ready. Nothing to
+  install but Docker, about five minutes: [`judge/README.md`](judge/README.md).
 - **The recording** — *coming soon* (60–90 seconds: one coupon run settled, then the same run refused with one holder not ready, then settled after the fix).
 - **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
 - **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
@@ -154,9 +158,11 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   `DistributionRun.Run_Settle`, `DistributionReceipt`, `SettlementRejected`.
 - **The demo driver** (`Indivisa.Test.Demo`, `infra/demo.ps1`): seats a
   realistic holder base, arms a deliberate failure, settles.
-- **The four panes** (`ui/`): the paying agent's whole distribution and one
-  button; three holders each seeing only their own line, read live from
-  their own participants over the JSON Ledger API.
+- **The settlement console** (`ui/`): the whole distribution and one button;
+  a card for every holder, each read live from the participant that hosts
+  it over the JSON Ledger API; and, on any card, the same node asked as
+  that holder alone — which answers with its own line and six zeros for
+  everyone else.
 
 And, since 22 September, **governed settlement**: a run may name an
 approver, a decentralised party managed by BitSafe's Decentralization
@@ -195,6 +201,14 @@ pwsh infra/localnet/proofs.ps1                     # the proofs across participa
 pwsh infra/demo.ps1 seat    -Holders 250 -Tag t1   # a holder base, onboarded, with a schedule
 pwsh infra/demo.ps1 prepare -Tag t1 -Withhold 1    # allocations, one holder deliberately not ready
 cd ui && npm install && INDIVISA_TAG=t1 npm run dev   # http://localhost:5173, press the button
+```
+
+Or with Docker, needing none of the above — the same topology, the same
+contracts, seated and served:
+
+```bash
+cd judge && docker compose up                      # http://localhost:8080
+docker compose run --rm prepare                    # after the first refusal
 ```
 
 ---
@@ -239,15 +253,8 @@ Worth saying before anyone else says it.
 | `docs/for-a-teenager.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
-| `ui/README.md` | The four panes |
-
----
-
-## Demo
-
-- **Recorded demo** — 250-holder coupon settled as one atomic transaction: [link]
-- **Explainer page** — plain-English walkthrough, not a live instance: https://chain-experts.com/indivisa/
-- **Benchmark** — how many legs fit in one transaction: [docs/benchmark.md](docs/benchmark.md)
+| `judge/README.md` | Run the whole thing with one Docker command, and what to look for |
+| `ui/README.md` | The settlement console: four tabs, and what each one reads |
 
 ---
 

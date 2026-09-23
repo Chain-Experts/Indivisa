@@ -1,0 +1,11 @@
+{
+  "default_participant": { "host": "canton", "port": 5021 },
+  "participants": {
+    "registry": { "host": "canton", "port": 5011 },
+    "agent":    { "host": "canton", "port": 5021 },
+    "alice":    { "host": "canton", "port": 5031 },
+    "bob":      { "host": "canton", "port": 5041 },
+    "charlie":  { "host": "canton", "port": 5051 }
+  },
+  "party_participants": {}
+}

@@ -151,10 +151,11 @@ single-party command. Step 14 is the product: the one transaction. On
 LocalNet it commits in 1.6 s for 250 holders and 11.1 s for 1,000
 (`benchmark.md`).
 
-What the recording shows of this: the state after step 13 (four panes:
-prepared, allocations counted, holders "allocated" with zeros about
-everyone else), then step 14 both ways: settled on one seat, and on a
-second seat refused with one holder withheld, then settled after the fix.
+What the recording shows of this: the state after step 13 (the console:
+prepared, allocations counted, every holder's card "ready", and any card
+opened showing zeros about everyone else), then step 14 both ways: settled
+on one seat, and on a second seat refused with one holder withheld, then
+settled after the fix.
 See `demo-script.md`.
 
 Since 0.4.0 a run may name an **approver**, a decentralised party managed by

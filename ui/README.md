@@ -1,9 +1,23 @@
-# The four panes
+# The settlement console
 
-One page, four parties, four ledger connections. The paying agent's pane on
-the left shows the whole distribution and has the one button; three holder
-panes show what each holder's own participant holds, which is its own line
-and nothing else. That contrast is the demo.
+One page, one command, as many ledger connections as there are parties on
+screen. A working header says what is being paid and how ready it is; four
+tabs are four ways of reading the same run.
+
+| Tab | What it is |
+|---|---|
+| **Holders** | A card for every holder, filled from the participant that hosts that holder. Search, filter by leg state, sort. Click a card and the page asks that node, **as that holder and nobody else**, what it will hand over: its own contracts, and the count of everyone else's. |
+| **Schedule** | The entitlement schedule as the executor sees it, sortable by any column, with each leg marked *waiting*, *ready* or *paid*. The one view a single party is entitled to. |
+| **Privacy** | The same question asked once per participant and refreshed continuously: six counts of what that node holds about other holders. |
+| **Activity** | What the ledger did. The settlement with its update id and offset, and every refusal with the reason the ledger gave — both read back as contracts, not log lines. |
+
+The grid costs one request set per **node**, not per holder, so twenty cards
+and two hundred and fifty cost the same. That is why the per-party check is
+a separate read: it is the claim, so it is made the expensive, honest way.
+
+This console holds every party's credential, the way a demo harness does.
+Say so when showing it — and then show that the nodes still answer for one
+party at a time, which is the whole point.
 
 Everything on screen is read live from the JSON Ledger API of the
 participant that hosts the party. The button submits `Run_Settle` as the
@@ -62,9 +76,9 @@ Real: every number, the settle, the update id, the rejection and its
 reason. Simulated: the cash is `TestTokenV2`, the holders and positions are
 synthetic. Not shown: the allocation phase (run from a shell before the
 button, `demo.ps1 prepare`), because it is many commands and the point of
-the pane is the one transaction.
+the page is the one transaction.
 
-The holder panes list six counts that are always zero: other holders'
+The per-holder check lists six counts that are always zero: other holders'
 positions, cash, allocations, the schedule, the run, the rejection records.
 On LocalNet each holder is on its own participant, so those zeros are not a
 filter; the data never reached the node. On a DevNet with one validator

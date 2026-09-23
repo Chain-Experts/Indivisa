@@ -210,3 +210,69 @@ export async function holderState(holder: Ledger, runId: string, isin: string, c
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Every holder on one node, in one pass
+// ---------------------------------------------------------------------------
+
+/** One holder's own facts, read from the node that hosts it. */
+export interface HolderFacts {
+  party: Party;
+  units: number;
+  agreement: boolean;
+  allocated: number | null;
+  cash: number;
+  cashContracts: number;
+}
+
+// The grid shows a card per holder, and a card per holder must not mean a
+// request per holder: at 250 holders that is a thousand round trips every
+// poll. Instead one request per node reads all of its holders together
+// (`Ledger.reading`), and the result is sliced by owner. The privacy claim
+// is untouched, because it is about what a node can answer for a party, not
+// about how many parties one request names; the per-party read that proves
+// it is `holderState`, run on demand from a card.
+export async function nodeHolders(
+  node: Ledger,
+  parties: Party[],
+  runId: string,
+  isin: string,
+  currency: string,
+): Promise<Map<Party, HolderFacts>> {
+  const out = new Map<Party, HolderFacts>();
+  if (parties.length === 0) return out;
+  for (const p of parties) out.set(p, { party: p, units: 0, agreement: false, allocated: null, cash: 0, cashContracts: 0 });
+
+  const all = node.reading(parties);
+  const [positions, agreements, allocs, holdings] = await Promise.all([
+    all.templates(T.position),
+    all.templates(T.agreement),
+    all.interfaces(I.allocation),
+    all.interfaces(I.holding),
+  ]);
+
+  for (const c of positions) {
+    const a = c.createdEvent.createArgument;
+    const f = out.get(a.holder);
+    if (f && a.isin === isin) f.units += num(a.quantity);
+  }
+  for (const c of agreements) {
+    const f = out.get(c.createdEvent.createArgument.holder);
+    if (f) f.agreement = true;
+  }
+  for (const c of allocs) {
+    const v = view<AllocationView>(c, ":Allocation");
+    if (!v || v.settlement.id !== runId) continue;
+    const f = v.allocation.authorizer.owner ? out.get(v.allocation.authorizer.owner) : undefined;
+    if (f) f.allocated = (f.allocated ?? 0) + v.allocation.transferLegSides.reduce((s, l) => s + num(l.amount), 0);
+  }
+  for (const c of holdings) {
+    const v = view<HoldingView>(c, ":Holding");
+    if (!v || v.instrumentId.id !== currency || !v.account.owner) continue;
+    const f = out.get(v.account.owner);
+    if (!f) continue;
+    f.cashContracts += 1;
+    if (v.lock == null) f.cash += num(v.amount);
+  }
+  return out;
+}

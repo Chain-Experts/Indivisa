@@ -66,7 +66,21 @@ export class LedgerError extends Error {
 export class Ledger {
   // `headers` is for a client outside the browser (scripts/settle.ts), which
   // has no proxy to add the bearer token for it.
-  constructor(public readonly base: string, public readonly party: Party, private readonly headers: Record<string, string> = {}) {}
+  constructor(
+    public readonly base: string,
+    public readonly party: Party,
+    private readonly headers: Record<string, string> = {},
+    // Whose contracts to read. Normally just `party`. A demo console holds
+    // every party's key and can read several at once, which is how the
+    // holder grid fills one card per holder with one request per node
+    // instead of one per holder. Submissions still act as `party` alone.
+    private readonly readers?: Party[],
+  ) {}
+
+  /** The same connection, reading as these parties together. */
+  reading(parties: Party[]): Ledger {
+    return new Ledger(this.base, this.party, this.headers, parties);
+  }
 
   private async post<R>(path: string, body: unknown): Promise<R> {
     const r = await fetch(`${this.base}${path}`, {
@@ -93,7 +107,9 @@ export class Ledger {
   // every page request is the first request plus the token and nothing else.
   private async activeContracts(filters: IdentifierFilter[], verbose = true): Promise<ActiveContract[]> {
     const eventFormat = {
-      filtersByParty: { [this.party]: { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) } },
+      filtersByParty: Object.fromEntries(
+        (this.readers ?? [this.party]).map((p) => [p, { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) }]),
+      ),
       verbose,
     };
     const out: ActiveContract[] = [];

@@ -1,4 +1,4 @@
-# Build the four panes as static files and gather everything the public,
+# Build the console as static files and gather everything the public,
 # read-only deployment needs into one folder.
 #
 #   pwsh infra/publish-ui.ps1 -Network devnet -Tag devnet1

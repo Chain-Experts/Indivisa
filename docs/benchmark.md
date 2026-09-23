@@ -156,8 +156,8 @@ validators hosting holders.
 
 Every row settled every leg on real participants. One committed send
 allocation carried all N legs in every row. The 250 row is the recording
-seat (250 synthetic holders, $1,197,240.63), settled from the paying agent's
-pane with three holder panes reading their own nodes at the same time.
+seat (250 synthetic holders, $1,197,240.63), settled from the console with
+every holder's own node being read at the same time.
 
 ### What it says
 

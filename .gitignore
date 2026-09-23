@@ -36,3 +36,7 @@ CLAUDE.local.md
 CLAUDE-backup.md
 infra/*/public/
 ui/dist/
+judge/.cache/
+# Scratch from driving the judge stack from a shell (party maps, a bundled
+# settle, an endpoint list): generated, never committed.
+infra/judge/

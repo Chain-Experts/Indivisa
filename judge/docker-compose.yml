@@ -1,0 +1,76 @@
+# Indivisa, for anyone who wants to run it: one Canton network with five
+# participants, a seeded demo, and the settlement console.
+#
+#   docker compose up                     start, seat, and serve
+#   docker compose run --rm prepare       create the withheld allocation
+#   docker compose down                   stop; the next up seats afresh
+#
+# Build context is the repository root, so the images use the very files the
+# proofs and the recording use.
+
+name: indivisa
+
+services:
+  canton:
+    build:
+      context: ..
+      dockerfile: judge/canton.Dockerfile
+    container_name: indivisa-canton
+    healthcheck:
+      # The bootstrap writes /indivisa/ready last, after every package is
+      # vetted on every participant. Waiting for the API to answer is not
+      # enough: it answers while the uploads are still running.
+      test: ["CMD-SHELL", "test -f /indivisa/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+    mem_limit: 4g
+    restart: unless-stopped
+
+  seed:
+    build:
+      context: ..
+      dockerfile: judge/seed.Dockerfile
+    image: indivisa-seed
+    container_name: indivisa-seed
+    depends_on:
+      canton:
+        condition: service_healthy
+    environment:
+      INDIVISA_HOLDERS: "${INDIVISA_HOLDERS:-20}"
+      INDIVISA_PORT: "${INDIVISA_PORT:-8080}"
+    volumes:
+      - demo:/demo
+    command: ["seat"]
+    restart: "no"
+
+  # `docker compose run --rm prepare` after the first refusal. Same image as
+  # the seed, already built by `up`, so this starts in a second.
+  prepare:
+    image: indivisa-seed
+    depends_on:
+      canton:
+        condition: service_healthy
+    volumes:
+      - demo:/demo
+    command: ["prepare"]
+    profiles: ["manual"]
+    restart: "no"
+
+  web:
+    build:
+      context: ..
+      dockerfile: judge/web.Dockerfile
+    container_name: indivisa-web
+    depends_on:
+      canton:
+        condition: service_healthy
+    ports:
+      - "${INDIVISA_PORT:-8080}:8080"
+    volumes:
+      - demo:/demo:ro
+    restart: unless-stopped
+
+volumes:
+  demo:

@@ -48,7 +48,7 @@ Indivisa/
 │       ├── Indivisa/Governance/Demo.daml         govern_propose, driven by infra/govern.ps1
 │       └── Governance/Settlement/Test/BatchSettlementTest.daml   the generic module on its own
 │
-├── ui/                            the four panes (Vite + React, no backend)
+├── ui/                            the settlement console (Vite + React, no backend)
 │   ├── README.md
 │   ├── package.json
 │   ├── vite.config.ts             proxy per participant (ui.json), serves the seat and the map
@@ -146,18 +146,40 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `indivisa-governance-v0` | `Indivisa.Governance.SettleRunProposal`: the same pattern over `Run_Settle`, so the run is consumed and the receipt written. Forty lines. |
 | `indivisa-governance-test` | `Indivisa.Test.Governance` (three members, threshold two: 1 of 3 refused, agent alone refused, 2 of 3 settles, proposer cancel, no-approver unchanged), `Governance.Settlement.Test.BatchSettlementTest` (the generic module without Indivisa), `Indivisa.Governance.Demo.govern_propose` (the shell-driven proposal). Reuses `indivisa-test`'s cash and agent fixtures. |
 
-## `ui/` — four panes
+## `ui/` — the settlement console
 
 | File | Does |
 |---|---|
-| `ledger/client.ts` | JSON Ledger API v2 over fetch: ledger end, active contracts by template or interface, submit-and-wait, update-by-offset. One client per party, pointed at its participant. No Java tier. |
-| `ledger/queries.ts` | `agentState` (instrument, schedule, run, allocations, rejections, receipt with update id), `holderState` (mine, and the counts of everything else), `factoryDisclosure`, `settle`, `recordRejection`. |
-| `panes/PayingAgent.tsx` | Instrument, holders, total due, allocations ready, the button, the outcome, the schedule table. |
-| `panes/Holder.tsx` | **One component rendered three times** with a different party. Not three files. |
-| `components/*` | `Money` (tabular figures), `LegTable`, `StatusPill`. |
+| `ledger/client.ts` | JSON Ledger API v2 over fetch: ledger end, active contracts by template or interface, submit-and-wait, update-by-offset. One client per party, pointed at its participant; `reading(parties)` returns one that reads several at once. No Java tier. |
+| `ledger/queries.ts` | `agentState` (instrument, schedule, run, allocations, rejections, receipt with update id), `holderState` (one party alone: mine, and the counts of everything else), `nodeHolders` (every holder on one node, in one pass), `factoryDisclosure`, `settle`, `recordRejection`. |
+| `state/useAgent.ts` | The executor's connection and the one command, held at the top of the app because the header and every tab read from it. |
+| `state/useHolders.ts` | The grid's poll — one request set per participant, not per holder — and `useNodeProbe`, the deliberately separate per-party read that proves the claim. |
+| `App.tsx` | The shell: header, working header, outcome strip, four tabs. Derives each holder's leg state from the allocations actually on the ledger. |
+| `panes/RunBar.tsx` | Instrument, holders, per unit, total due, an allocations meter, the run's state, and the button. |
+| `panes/Holders.tsx` | A card per holder with search, filter and sort, and the drawer that asks one node as one party. |
+| `panes/Privacy.tsx` | The same question once per participant, refreshed continuously. |
+| `panes/Activity.tsx` | The settlement and every refusal, read back as contracts. |
+| `components/*` | `Money` (tabular figures), `LegTable` (every holder, sortable, each leg waiting / ready / paid, and a footer naming whoever is holding the batch up), `NodeAnswer`, `Tabs`, `CopyId`, `StatusPill`. |
+| `public/indivisa-logo.png` | The mark, in the dark header bar. |
 | `config.ts` | Loads the seat and the party-to-participant map; display names from party ids. |
 | `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer token injected server-side; serves the seat and the party map (stripped to `party_participants`) at `/demo/*`. |
 | `scripts/settle.ts` | The same `settle` call as the button, run from Node against `infra/<network>/ui.json` directly (no proxy; adds the bearer header itself). `infra/settle.ps1` bundles it with esbuild and runs it after a script-side prepare; it is how the benchmark times submit to commit without the Daml Script runner. |
+
+## `judge/` — run it with one command
+
+Docker, for anyone who wants to see it work without a toolchain. Build
+context is the repository root, so the images carry the same DARs and the
+same scripts the proofs run.
+
+| File | Does |
+|---|---|
+| `docker-compose.yml` | Three services: `canton`, a one-shot `seed`, `web`. `prepare` is a fourth, behind the `manual` profile, that reuses the seed image. The seed and the page share a `demo` volume. |
+| `canton.Dockerfile`, `canton.conf`, `bootstrap.canton` | Canton 3.5 on the public image, five participants and a synchronizer in one container, every API bound to `0.0.0.0`. The bootstrap uploads the nine DARs and writes `/indivisa/ready` **last**: the compose healthcheck waits for that file, because the API answers while the uploads are still running. |
+| `seed.Dockerfile`, `seed.sh` | The Daml Script runner (fetched at build time from Digital Asset's public registry as an OCI blob, or `--build-arg SCRIPT_SOURCE=local`) running `Indivisa.Test.Demo`. `seat` creates the parties, the bond, the onboarding and the schedule, then the allocations with one holder withheld; `prepare` creates the one that was withheld. The party map is rebuilt from the ledger each time, because the runner only routes parties it allocated itself. |
+| | The seat outlives the ledger — `docker compose down` keeps the volume — so the seed fingerprints the ledger with the agent participant id and re-seats when it does not match. Without that, a second `up` serves a seat whose parties no longer exist. |
+| `web.Dockerfile`, `nginx.conf` | The built page on nginx, which also proxies `/api/<participant>/` to the five JSON Ledger APIs. No token: this network has no auth. `--build-arg UI_SOURCE=prebuilt` takes `ui/dist` from the host instead of running npm in the container. |
+| `participants.json` | The five JSON API endpoints inside the compose network, before party routing is added. |
+| `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated. |
 
 ## Not built, deliberately
 

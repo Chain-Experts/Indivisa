@@ -149,29 +149,26 @@ It shows `➜  Local:   http://localhost:5174/`. Window 3 serves demo two.
 **A8. Check both pages in Chrome.** Open Chrome, go to
 `http://localhost:5173`. Within two seconds you should see:
 
-- A header: **Indivisa** — *Corporate actions, settled in one atomic batch,
-  without exposing the register.* — and two small labels on the right,
-  "real · ledger reads and the settle are live over the JSON Ledger API" and
-  "simulated · the cash is TestTokenV2, the holders are synthetic".
-- A wide left pane, **Meridian Paying Agent**, with a green pill
-  **PREPARED**, and these lines: INSTRUMENT *Northwind Rail 4.375% 2031
-  XS2999912340* · EVENT *Coupon · record date 2027-11-15 · payment date
-  2027-12-01* · PER UNIT *21.88 USD · rounding LargestRemainder* · HOLDERS
-  *250* · TOTAL DUE **1,197,240.63 USD** · ALLOCATIONS **251 of 251** · 1
-  send + 250 receipts. Under that a big green button **Settle 250 legs in
-  one transaction** and the note "All or nothing. If any leg cannot settle,
-  nothing moves." Below the button, a table headed THE SCHEDULE listing
-  holders with units and amounts.
-- Three narrower panes: **Omar Berg** (MY POSITION 5 units, MY ALLOCATION
-  109.37 USD), **Ingrid Andersen** (30 units, 656.25 USD), **Tomasz Kaur**
-  (300 units, 6,562.50 USD). Each has the pill **ALLOCATED**, MY CASH
-  **0.00 USD**, and a list "WHAT THIS NODE HOLDS ABOUT OTHER HOLDERS" with
-  six lines all reading **0**, ending in the box "Nothing. Not hidden —
-  never received by this participant."
+- A dark bar across the top: the **Indivisa** mark and wordmark, the line
+  *Corporate actions, settled in one atomic batch, without exposing the
+  register.*, a green **live** pill, and two labels — "real · ledger reads
+  and the settle are live over the JSON Ledger API" and "simulated · the
+  cash is TestTokenV2, the holders are synthetic".
+- Under it a row of figures: INSTRUMENT *Northwind Rail 4.375% 2031
+  XS2999912340 · coupon · record 2027-11-15 · pays 2027-12-01* · HOLDERS
+  *250* · PER UNIT *21.88 USD* · TOTAL DUE **1,197,240.63 USD** ·
+  ALLOCATIONS **251 / 251** with a full bar · RUN **PREPARED**.
+- A big green button **Settle 250 legs in one transaction** and the note
+  "All or nothing. If any leg cannot settle, nothing moves."
+- Four tabs — **Holders 250**, Schedule, Privacy, Activity — with Holders
+  open: a search box, the chips **All 250 · Waiting 0 · Ready 250 · Paid
+  0**, and a card for every holder, each showing its participant, units,
+  amount due and cash, with a **READY** pill.
 
-Now open a second tab at `http://localhost:5174`. Identical, except
-ALLOCATIONS reads **250 of 251** · 1 send + 250 receipts · **1 missing**
-(the "1 missing" in red).
+Now open a second tab at `http://localhost:5174`. Identical, except the
+button's note ends **Waiting for <a holder name>** in red, the chips read
+**Waiting 1 · Ready 249**, and that holder's card has a red left edge and
+a **WAITING** pill.
 
 If either page shows a red error box instead, see Troubleshooting at the
 end. Do not record until both pages look right.
@@ -212,9 +209,9 @@ export?" click **All Slides**. PowerPoint creates a folder `cards` with
 else open in it. Hide the bookmarks bar (Ctrl+Shift+B until it disappears).
 Press **F11** for full screen: the address bar vanishes, so no
 "localhost" appears in the video. Check the zoom: press Ctrl+0 (100%),
-then Ctrl and + once (110%). All four panes must sit on **one row**; if
-the third holder pane has dropped to a second row, press Ctrl and − once.
-Scroll to the top of the page (Home key).
+then Ctrl and + once (110%). The figures across the top must sit on **one
+row** and the card grid must be at least five cards wide; if either has
+broken up, press Ctrl and − once. Scroll to the top of the page (Home key).
 
 **C2. OBS.** Open OBS Studio.
 
@@ -245,10 +242,15 @@ Chrome is full screen on the **5173** tab (demo one). OBS is behind it.
 1. In OBS click **Start Recording**. Alt+Tab to Chrome. Let the page sit
    still for **five full seconds** with the mouse parked at the bottom
    right, off any text. (This still frame is shots 1 and 2 of the edit.)
-2. Move the mouse slowly down the schedule table on the agent pane, then
-   back up to the button. Take about eight seconds. Do not click anything.
-3. Move the mouse over **Omar Berg**'s pane and rest it on the six zeros
-   for three seconds, then over **Ingrid Andersen**'s for three seconds.
+2. Move the mouse slowly down the card grid — **every one of the 250
+   holders has a card**, each marked **READY** — then back up to the
+   button. Take about eight seconds. Do not click anything.
+3. Click **Omar Berg**'s card. The panel on the right opens: his position,
+   his agreement, his allocation, his cash, and under WHAT THIS NODE HOLDS
+   ABOUT OTHER HOLDERS six lines all reading **0**, ending in "Nothing. Not
+   hidden — never received by this participant." Rest there three seconds,
+   close it, and open **Ingrid Andersen**'s for three more. Two different
+   nodes, the same answer.
 4. Move to the green button **Settle 250 legs in one transaction** and
    **click it once**. The button text changes to *Settling…*. Do not move
    the mouse.
@@ -257,9 +259,10 @@ Chrome is full screen on the **5173** tab (demo one). OBS is behind it.
    **SETTLED · 250 of 250 legs · 1,197,240.63 USD**, then *update id
    1220…* (a long code), then *effective 2026-… · submitted to committed in
    1,6xx ms*. ALLOCATIONS now reads *251 consumed by the settlement*. Within
-   two more seconds every holder pane flips: pill **PAID**, MY CASH in
-   large type (**109.37 USD · 1 holding**, **656.25 USD**, **6,562.50
-   USD**), MY ALLOCATION *none for this run*, and the six zeros unchanged.
+   two more seconds **every card in the grid turns green at once** — green
+   border, green tint, pill **PAID** — the CASH figure on each fills in, and
+   the chips read **Paid 250**. Open any card again: the six zeros are
+   unchanged.
 6. Let it sit for **ten seconds**. Then Alt+Tab to OBS, **Stop Recording**.
 7. Rename the new file to `take1.mp4`.
 
@@ -269,20 +272,26 @@ seat, not with your recording; stop, keep the file, and see Troubleshooting.
 ## Part E. Record take 2: the deliberate failure, then the fix (≈ 10 minutes)
 
 Switch Chrome to the **5174** tab (Ctrl+Tab, or Ctrl+2). Confirm
-ALLOCATIONS reads **250 of 251 · 1 missing**.
+ALLOCATIONS reads **250 of 251 · waiting for <name>**.
 
 **E1. The refusal.**
 
 1. **Start Recording** in OBS, Alt+Tab to Chrome, five seconds still with
-   the mouse parked. Hover over the words **1 missing** for two seconds.
+   the mouse parked. Hover over the red **Waiting for <name>** for two
+   seconds, then click the **Waiting 1** chip: the grid drops to that one
+   card, with its red edge and **WAITING** pill. Rest there for three, then
+   click **All** to bring the 250 back. The page names the holder who is
+   holding the batch up before the ledger does; that is worth showing,
+   because the refusal then agrees with it.
 2. Click **Settle 250 legs in one transaction**. *Settling…* for about a
    second, then the pill turns red **REJECTED** and a red box appears:
    **SETTLEMENT REJECTED · 250 payments requested · 0 executed**, then
    **NO PARTIAL SETTLEMENT**, then several lines of the ledger's own
    reason (it contains the words *missing authorizations* and the name
    *Hanna-Ivanova-take2-…*), then *recorded on-ledger at 2026-…*.
-3. Look at the three holder panes: unchanged. Still **ALLOCATED**, MY CASH
-   still **0.00 USD**. Rest the mouse on one of them for three seconds.
+3. Look at the grid: unchanged. Every card still **READY**, no green, every
+   CASH still **0.00**. Rest the mouse there for three seconds. Nothing
+   moved for the 249 who were ready either — that is the point.
 4. Ten seconds still, then **Stop Recording**. Rename to
    `take2-rejected.mp4`.
 
@@ -305,8 +314,8 @@ still showing (that is correct: the refusal happened and is on record).
 
 1. **Start Recording**, five seconds still, hover on **251 of 251**.
 2. Click the button. *Settling…*, then green: **SETTLED · 250 of 250 legs ·
-   1,197,240.63 USD**, update id, commit time; holder panes flip to
-   **PAID** with their cash.
+   1,197,240.63 USD**, update id, commit time; every card in the grid
+   flips to **PAID**, green, with its cash.
 3. Ten seconds still. **Stop Recording**. Rename to `take2-settled.mp4`.
 
 Recording is finished. You can close OBS. Leave the network running until
@@ -353,9 +362,10 @@ One sentence per shot, spoken slowly; silence is fine between them.
 
 - Over the still page: "A bond pays its coupon to two hundred and fifty
   holders. This is the paying agent's view: every holder, every amount."
-- Over the holder panes: "This is a holder's view, read from its own
-  node. Its own line, and nothing about anyone else. Not filtered — never
-  delivered."
+- Over the card grid: "Every holder, read from its own node." Over the
+  opened card: "This is one holder's view, answered by its own
+  participant. Its own line, and nothing about anyone else. Not filtered —
+  never delivered."
 - Over the click: "One transaction."
 - Over the green box: "Settled. Every holder paid at the same instant.
   The update id is on screen."
@@ -444,7 +454,7 @@ Expected endings: `seat 'clip' on bitsafe: 10 holders in 2xs`, then
 then `prepare 'clip' (withhold 0): 1xs`. Do **not** run `propose` yet; that
 is done on camera.
 
-**Window 2**: the four panes on the sandbox.
+**Window 2**: the console, pointed at the sandbox.
 
 ```
 cd D:\Dev\ChainExperts\Indivisa\ui
@@ -453,15 +463,16 @@ $env:INDIVISA_TAG = "clip"
 npm run dev
 ```
 
-Chrome, tab A: `http://localhost:5173`. The agent pane reads **PREPARED**,
-ALLOCATIONS **11 of 11**, and a new line **APPROVER** *demo party · a
-decentralised party; its members must confirm before the settle can
-execute*. Under the button: *All or nothing, and not alone: this run names
-an approver, so the agent's own button is refused until the approvers have
-confirmed and executed.* One holder pane says *This node also hosts the
-paying agent, so the data is on the node; the ledger filters it by party*
-instead of *never received*: in the sandbox one of the three nodes hosts
-both, and the pane says so.
+Chrome, tab A: `http://localhost:5173`. RUN reads **PREPARED**,
+ALLOCATIONS **11 / 11**, and under the button a second line: **Approver**
+*demo party · a decentralised party; its members must confirm before the
+settle can execute*, above the note *All or nothing, and not alone: this
+run names an approver, so the agent's own button is refused until the
+approvers have confirmed and executed.* Open a card on the node that also
+hosts the paying agent and it says *This node also hosts the paying agent,
+so the data is on the node; the ledger filters it by party* instead of
+*never received*: in the sandbox one of the three nodes hosts both, and the
+page says so rather than claiming more than it should.
 
 Chrome, tab B: `http://localhost:8081`, BitSafe's Decentralization Manager
 for node 1. Click **Parties**, then the `demo-party` row, then expand
@@ -482,11 +493,11 @@ size 18) and Alt+Tab between them; a split screen is harder to read.
 |---|---|---|---|---|
 | 1 | 0–6 | Card: **Governed settlement** / Indivisa on BitSafe's Decentralization Manager / *one governed action: `Run_Settle`* | | |
 | 2 | 6–14 | Tab A, still. Mouse rests on the **APPROVER** line, then on the note under the button. | The paying agent sees every leg. It can no longer settle alone: the run names an approver, a decentralised party. | real |
-| 3 | 14–22 | Tab A. **Click the button.** Red box: **SETTLEMENT REJECTED · 10 payments requested · 0 executed**, and in the reason the words *requires authorizers … Approvers … but only … PayingAgent were given*. Holder panes unchanged. | The agent's own button, refused by the ledger. The authority is not there. | real |
+| 3 | 14–22 | Tab A. **Click the button.** Red box: **SETTLEMENT REJECTED · 10 payments requested · 0 executed**, and in the reason the words *requires authorizers … Approvers … but only … PayingAgent were given*. Every card unchanged. | The agent's own button, refused by the ledger. The authority is not there. | real |
 | 4 | 22–30 | Window 1: type `pwsh infra\govern.ps1 propose -Network bitsafe -Tag clip`, Enter. One line back: `proposed XS2999912340/Coupon/2027-12-01: 10 legs, 16034.38 -> 00…` | So it proposes. Ten legs, $16,034.38, filed for the approvers. | real |
 | 5 | 30–38 | Window 1: `pwsh infra\govern.ps1 confirm -Network bitsafe -Tag clip -Node 1` → `node 1 confirmed`. Then `pwsh infra\govern.ps1 execute -Network bitsafe -Tag clip -Node 2` → **REFUSED:** … *'Enough confirmations to execute action' was not met.* | One of three approvers has confirmed. Execution refused. Nothing moved. | real |
 | 6 | 38–46 | Window 1: `pwsh infra\govern.ps1 confirm -Network bitsafe -Tag clip -Node 2` → `node 2 confirmed`. Then `… execute -Network bitsafe -Tag clip -Node 3` → `node 3 executes with 2 confirmation(s); can_execute=True` … **EXECUTED**. | Two of three. The third member executes. | real |
-| 7 | 46–54 | Tab A. Within two seconds: pill **SETTLED**, green box **SETTLED · 10 of 10 legs · 16,034.38 USD** with the update id; holder panes **PAID**. | Settled. Every holder paid in one transaction, and only because two members agreed. | real |
+| 7 | 46–54 | Tab A. Within two seconds: pill **SETTLED**, green box **SETTLED · 10 of 10 legs · 16,034.38 USD** with the update id; every card green and **PAID**. | Settled. Every holder paid in one transaction, and only because two members agreed. | real |
 | 8 | 54–60 | Tab B. The Audit Trail: rows `propose`, `confirm`, `confirm`, `execute`, `execute_result`, each with an update id. | BitSafe's own trail: every step attributable. | real |
 | 9 | 60–66 | Card: *Three nodes on one workstation are not three operators. The threshold is real; the independence is simulated. Cash is TestTokenV2; holders are synthetic.* / *`governance-settlement-v0`: any Token Standard V2 batch, no Indivisa in it.* | | |
 
