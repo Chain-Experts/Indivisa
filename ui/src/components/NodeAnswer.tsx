@@ -1,3 +1,4 @@
+import type { NodeSharing } from "../config";
 import type { HolderState } from "../ledger/queries";
 import type { Probe } from "../state/useHolders";
 
@@ -15,7 +16,7 @@ const ROWS: { key: keyof HolderState["others"]; label: string }[] = [
  * and they are the demo: not a filtered view of data the node has, but data
  * the node was never sent.
  */
-export function NodeAnswer({ probe, sharesAgentNode }: { probe: Probe | null; sharesAgentNode: boolean }) {
+export function NodeAnswer({ probe, sharing }: { probe: Probe | null; sharing: NodeSharing }) {
   if (!probe) return null;
   if (probe.error) return <div className="error">{probe.error}</div>;
   const s = probe.state;
@@ -40,9 +41,11 @@ export function NodeAnswer({ probe, sharesAgentNode }: { probe: Probe | null; sh
       <div className={`nothing ${total === 0 ? "" : "leak"}`}>
         {total !== 0
           ? `${total} contracts about others reached this node`
-          : sharesAgentNode
-            ? "Nothing for this party. This node also hosts the paying agent, so the data is on the node; the ledger filters it by party."
-            : "Nothing. Not hidden — never received by this participant."}
+          : sharing === "separate"
+            ? "Nothing. Not hidden — never received by this participant."
+            : sharing === "shared"
+              ? "Nothing for this party. This node also hosts the paying agent, so the data is on the node and the ledger filters it by party — a weaker guarantee than never receiving it, and the one this network can offer."
+              : "Nothing for this party. This deployment would not say which node answered, so we do not claim the data never arrived."}
       </div>
     </div>
   );

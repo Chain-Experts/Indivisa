@@ -163,6 +163,12 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   it over the JSON Ledger API; and, on any card, the same node asked as
   that holder alone — which answers with its own line and six zeros for
   everyone else.
+- **A one-command package for anyone who wants to run it** (`judge/`, 23 Sep):
+  `docker compose up` gives the whole thing — five participants, the nine
+  packages, twenty seated holders with one allocation deliberately withheld,
+  and the console — on a machine with nothing installed but Docker. Verified
+  end to end: refused, then `docker compose run --rm prepare`, then settled
+  in under a second.
 
 And, since 22 September, **governed settlement**: a run may name an
 approver, a decentralised party managed by BitSafe's Decentralization
@@ -175,7 +181,10 @@ that has no Indivisa in it. Proven on the IDE ledger and in BitSafe's
 three-node sandbox; see `docs/decentralization.md`.
 
 Still to come: the DevNet evidence run (configuration only; handover in
-`infra/README.md`), the recording (`docs/demo-script.md`), the deck.
+`infra/README.md`), the recording (`docs/demo-script.md`), the deck. And one
+clean `docker compose up` on a machine other than the one it was built on —
+this one intercepts TLS, so `judge/`'s two download paths could not be
+exercised here.
 
 ---
 

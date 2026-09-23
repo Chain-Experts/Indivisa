@@ -1,10 +1,16 @@
 {
   "insecureTls": false,
+  "auth": {
+    "tokenUrl": "https://<keycloak host>/realms/canton-devnet/protocol/openid-connect/token",
+    "clientId": "<client id>",
+    "clientSecret": "<secret, or leave out and set INDIVISA_CLIENT_SECRET>",
+    "scope": "daml_ledger_api"
+  },
   "participants": {
-    "registry": { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
-    "agent":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>", "token": "<token A>" },
-    "alice":    { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" },
-    "bob":      { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" },
-    "charlie":  { "jsonApi": "https://validator-b.example.org/<json ledger api prefix>", "token": "<token B>" }
+    "registry": { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },
+    "agent":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },
+    "alice":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },
+    "bob":      { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },
+    "charlie":  { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" }
   }
 }

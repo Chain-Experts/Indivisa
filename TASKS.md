@@ -1,6 +1,6 @@
 # Tasks
 
-**22 September 2026. Submission 9 October. 17 days.**
+**23 September 2026. Submission 9 October. 16 days.**
 
 **Proofs 1, 3 and 4 run in Daml Script; proofs 2 and 5 run on LocalNet.** DevNet
 is used once, at the end, only to produce a real update id as evidence.
@@ -12,7 +12,10 @@ on 17 September; proof 5, the one that could have killed the idea, was measured
 to 1,000 legs on LocalNet on 17–18 September (one transaction, seconds).
 Phases 2 to 4 were built on 18 September. Phase 5 is what is left of the main
 submission; the BitSafe challenge (its own section below) reached its sandbox
-milestones on 22 September.
+milestones on 22 September. On 23 September the judges' one-command Docker
+package was built and verified (`judge/`, brought forward from Phase 5
+because there was room), and the UI was rebuilt as a settlement console.
+**What now remains is the DevNet run, the recording and the deck.**
 
 Done on 16 September: dpm-sdk 3.5.10 confirmed, `sdk-version` corrected, two
 missing imports fixed, `dpm build --all` green, `dpm test` gives proof 1 and 4
@@ -322,9 +325,10 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 4 — UI (days 15–17) · **built 18 Sep**
+## Phase 4 — UI (days 15–17) · **built 18 Sep, rebuilt as a console 23 Sep**
 
-Four panes. Lists and numbers. No forms, no routing, no state library.
+Lists and numbers, and the interrogation of them. No forms, no auth flows,
+no application backend.
 
 - [x] Paying agent: instrument, holders, total due, allocations ready, **one
       button** that submits `Run_Settle` over the JSON Ledger API with the
@@ -332,9 +336,8 @@ Four panes. Lists and numbers. No forms, no routing, no state library.
       reload) and submit-to-commit time. On refusal: "SETTLEMENT REJECTED ·
       N requested · 0 executed · NO PARTIAL SETTLEMENT", the reason, and a
       `SettlementRejected` record written on-ledger.
-- [x] `Holder.tsx` — one component rendered three times: my position, my
-      agreement, my allocation, my cash, and six always-zero counts of what
-      this node holds about anyone else.
+- [x] ~~`Holder.tsx` — one component rendered three times~~ — replaced
+      23 Sep (below). The per-holder view survives as the drawer.
 - [x] JSON Ledger API v2 only, through the dev server's proxy (no CORS on
       the API; nginx in production). No Java tier.
 - [x] Verified live in Chrome on LocalNet (18 Sep): 8-holder seat, prepared
@@ -345,11 +348,41 @@ Four panes. Lists and numbers. No forms, no routing, no state library.
       header in its proxy and strips the served party map to
       `party_participants`, so no token reaches the browser. `client.ts`
       itself is unchanged. `INDIVISA_NETWORK` picks the network.
+- [x] **Rebuilt as a settlement console (23 Sep)**, because three holder
+      panes read as a sample of three people rather than as three nodes,
+      and a page with one button does not look like something anyone
+      operates. Now: a dark header carrying the mark; a row of figures
+      (instrument, holders, per unit, total due, an allocations meter, the
+      run's state); the button; and four tabs — **Holders** (a card for
+      every holder, searchable, filterable by leg state, sortable),
+      **Schedule** (sortable, each leg waiting / ready / paid),
+      **Privacy** (the per-party check once per participant), **Activity**
+      (the settlement and every refusal, read back as contracts).
+- [x] A card per holder must not mean a request per holder. `Ledger.reading`
+      names several parties in one `filtersByParty`, so the grid costs one
+      request set per **node**: twenty cards and two hundred and fifty cost
+      the same twelve. The per-party read that proves the privacy claim is
+      deliberately kept separate (`useNodeProbe`), run on demand from a card
+      and continuously in the Privacy tab.
+- [x] Say what the console is. It holds every party's credential, the way a
+      demo harness does; the page says so, and then shows that the nodes
+      still answer for one party at a time. That is a stronger claim than
+      hiding it.
+- [x] Arithmetic that reconciles on screen (23 Sep). The per-unit rate is
+      21.875, finer than a cent; formatting it as money made 3,809 units look
+      like 83,340.92 against a total of 83,321.88. Rates now keep their
+      decimals, PER UNIT shows `x N units = <exact>`, TOTAL DUE shows
+      `to the cent · LargestRemainder`, and the schedule marks the rows the
+      policy moved, with the counts computed from the run.
+- [x] Verified live against the judge stack (23 Sep): 20 holders, refused
+      naming the withheld holder, `prepare`, settled 20/20 in 698 ms, every
+      card green, every per-party count still zero.
 
 > Budgeted at one to two days because it is AI-assisted and the surface is
 > small. If Phase 1 or 2 slips, this phase absorbs it — but do not cut it to
 > nothing. Season 2's finalists all showed a polished one-minute recording, and
-> the four-pane contrast is the most persuasive thing we can put on screen.
+> the contrast between the executor's schedule and a single holder's node is
+> the most persuasive thing we can put on screen.
 
 ---
 
@@ -372,15 +405,43 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       back (seat file, both attempt files, the update id).
 - [x] `docs/demo-script.md`: shot list, captions, what each caption may claim.
 - [ ] **One DevNet run** (DevOps). Deploy, execute a real distribution, capture
-      the update id and ledger receipt. This is the evidence BitSafe's Season 2
-      postmortem names as a marker of the credible builds — everything else
-      was LocalNet. Confirm first (Phase 0 NODERS questions 2 and 3) which
-      DevNet carries V2 and what protocol version it demands.
+      the update id and ledger receipt. **One validator, confirmed 23 Sep**:
+      all five participant names resolve to the same node, so this run is
+      evidence that the real network vets our packages and commits a real
+      `SettlementFactory_SettleBatch` — not evidence of cross-operator
+      privacy, which stays with the five-participant local run. The console
+      now reads each node's own id and says which of the two claims applies.
+      A real update id on a real network is still the evidence BitSafe's
+      Season 2 postmortem names as a marker of the credible builds —
+      everything else was LocalNet.
       **18 Sep: Splice 0.8.1 installed on the DevNet validator** (DevOps
       confirmed), the release the DARs were built against. Next from the
       checklist in `infra/README.md`: upload the DARs (step 2), a ledger user
       with `ParticipantAdmin` and its token (3), fill in `infra/devnet/*.json`
       (4), smoke with `participants-with-parties.ps1 -Network devnet` (5).
+      **23 Sep: DevOps added `.github/workflows/actions.yml`**, a manual
+      Actions run that takes a Keycloak token and POSTs each DAR to the
+      chosen network's participant. It lists the twelve third-party DARs and
+      not `indivisa-0.4.0.dar`; the step to add is written out in
+      `infra/README.md` step 2. The pipeline failed on an expired token and
+      DevOps uploaded by hand instead.
+      **Checked directly, 23 Sep, and the state is better than feared:**
+      all **thirteen** DARs are vetted on the DevNet participant,
+      `indivisa-0.4.0` included, so the manual upload was complete. The
+      ledger user `d446488e-1170-4211-880e-0e7cd720a5d5` holds
+      `ParticipantAdmin` and `CanActAs` on the admin party, which is
+      handover step 3 done. The participant id is
+      `chain-experts-admin-1::1220d416…ba553`.
+      **23 Sep, both unblocked.** DevOps is deploying an HTTPRoute for the
+      gRPC Ledger API today (the DNS record already exists). And he chose
+      not to change Keycloak, so the clients mint their own tokens:
+      `infra/token.ps1`, stamped into the runner map by
+      `participants-with-parties.ps1` and refreshed in the background by the
+      dev server. Tested against the live identity provider. The runner
+      still cannot refresh mid-script, so **keep the DevNet seat to five or
+      eight holders**, which the evidence run does not need to exceed.
+      `indivisa-governance-v0` and `governance-settlement-v0` are not
+      vetted and not committed; they matter only for the BitSafe path.
 - [ ] Record 60–90 seconds. Success run first; the labelled failure run second,
       captioned as an atomicity demonstration before the click; then the retry.
 - [x] **A one-command local deployment for the judges** — `judge/`, built
@@ -407,7 +468,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 
 ---
 
-## BitSafe challenge — governed settlement · **sandbox end to end 22 Sep**
+## BitSafe challenge — governed settlement · **sandbox end to end 22 Sep, DevNet path agreed 23 Sep**
 
 Separate, capped workstream (the brief and the first-task report are in
 `private/`, outside the repo; `docs/decentralization.md` is the public
@@ -421,7 +482,50 @@ write-up). Kill criteria from the brief, with status:
 | Main deliverables unchanged by this work | 27 Sep | `indivisa` 0.4.0 is additive (`approver = None` everywhere in the main demo); all 24 main tests pass; LocalNet regression still to run |
 | Governed path settles end to end in the sandbox | 1 Oct | **passed 22 Sep**: seat `bs3`, 10 holders, $16,034.38, settled through DecMan |
 | Refusal below threshold and success at threshold | 1 Oct | **passed 22 Sep**: 1 of 3 refused ("Enough confirmations..."), 2 of 3 executed; audit trail written |
-| Gold application decision | 4 Oct | checkpoint 30 Sep: our DecMan on DevNet, BitSafe confirmed as the second node |
+| Gold application decision | 4 Oct | checkpoint 30 Sep: our DecMan on DevNet, BitSafe confirmed as the second node. **Their half is done** (call, 23 Sep); ours is the deployment |
+
+**Call with BitSafe, 23 September** (BitSafe, BitSafe).
+Outcome, and it confirms the plan rather than changing it:
+
+- **A DevNet PoC with a 2-of-2 party is enough for the hackathon.** No
+  MainNet party, no third node. Our own analysis had already chosen 2 of 2
+  for DevNet, because at 2 of 3 with two nodes ours we could settle without
+  them and the shared control would be nominal.
+- **BitSafe operate the second node.** That is the thing the sandbox could
+  not claim, and it retires our largest caveat: three DecMan nodes on one
+  workstation are not three operators; one node of theirs is one operator.
+- Sequence: shared Slack channel, exchange node data, peer the two DecMan
+  instances, onboard the decentralised party at threshold 2, then exercise
+  propose → confirm → execute.
+- Their note writes the standard as "DSC 112". It is **CIP-0112**; do not
+  let that spelling reach the deck or the channel.
+
+Next, by owner:
+
+- [ ] **Us**: send the Slack-associated email addresses to BitSafe (Telegram).
+- [ ] **Us (DevOps)**: a DecMan instance beside the DevNet validator, with
+      the seven Canton Admin API services reachable to it, and its Noise
+      listener reachable from BitSafe. **The port is ours to choose** —
+      9000 is only the default (`--noise-port`, `DECPM_NOISE_PORT`), and
+      BitSafe's own peers run on 443, 8443, 6865 and 5008, so 443 is
+      available if it makes the gateway simpler.
+- [ ] **Us**: post our node data in the channel once DecMan is up. A peer
+      row is `participant_id`, `name`, `address`, `port`, `public_key` —
+      the key comes from `GET /keys/status`, and peers are exchanged
+      through `GET`/`POST /network-config`.
+- [x] **BitSafe**: post their DevNet node data — **received 23 Sep**
+      (BitSafe). Validated and kept in `private/bitsafe-devnet-peer.md`:
+      participant id and public key are well formed, and all three of their
+      A records accept TCP on 9000. One field to confirm with them, the
+      `name`, which arrived as a truncated UI string.
+- [ ] **BitSafe**: create the shared channel (BitSafe).
+- [ ] **Verify before deploying**: DecMan pins protocol version 35. Confirm
+      our DevNet synchronizer runs 35 — the JSON API does not report it
+      (`/v2/version` gives Canton 3.5.17 and nothing about the protocol),
+      so it has to come from the Canton console or from BitSafe.
+- [ ] Commit `indivisa-governance-v0-0.1.0.dar` and
+      `governance-settlement-v0-0.1.0.dar` so CI can upload them, the way
+      `indivisa-0.4.0.dar` is committed.
 
 Done:
 

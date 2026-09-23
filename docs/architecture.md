@@ -146,7 +146,7 @@ settle.
 ### Off-ledger — deliberately thin
 
 **No Java is required, and none was built.** The JSON Ledger API v2 lets the
-panes read the ledger directly, which removes the REST tier entirely.
+console read the ledger directly, which removes the REST tier entirely.
 
 The paying agent's client, the sequence of commands before the one
 transaction (fund, propose, create the run, allocate the send, create N
@@ -197,13 +197,14 @@ a live run — which also removes stage risk.
 holder signs once; never again.* Five seconds, but it is the answer to the
 first question any judge who has read the CIP will ask.
 
-**Run one — success.** Fire the distribution. One transaction. Then flip through
-three holders, each seeing only its own payment.
+**Run one — success.** Fire the distribution. One transaction. Then open a
+holder's card, and another on a different node: each sees only its own
+payment.
 
 **Run two — deliberate failure.** Label the screen unambiguously as an atomicity
 demonstration before clicking, so nobody thinks the system broke. One leg is
 unavailable: one holder's receipt allocation is withheld (`demo.ps1 prepare
--Withhold 1`). Result, as the pane renders it:
+-Withhold 1`). Result, as the page renders it:
 
 ```
 SETTLEMENT REJECTED · 250 payments requested · 0 executed

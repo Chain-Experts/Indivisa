@@ -57,7 +57,10 @@ application server in between, and nothing is cached:
 
 - **The header**: the bond, the event, how many holders, the total due, and
   how many allocations are on the ledger out of how many the batch needs.
-  Below it, the one button.
+  That count is one more than the number of holders: each holder authorises
+  its own receipt, and the paying agent adds one send allocation carrying
+  every leg. Token Standard V2 wants both sides of every leg. Below it, the
+  one button.
 - **Holders**: a card for every holder — all twenty — each read from the
   participant that hosts it, showing its units, what it is due and what cash
   it has. Search them, filter by leg state, sort by amount.
@@ -66,7 +69,11 @@ application server in between, and nothing is cached:
   allocation and cash, and then six counts of what that node holds about
   *anyone else*. They are zero, and they stay zero through the settlement.
   Not filtered — never delivered.
-- **Schedule** is the same twenty rows as the executor sees them, sortable.
+- **Schedule** is the same twenty rows as the executor sees them, sortable —
+  and it shows its own arithmetic: the coupon rate is finer than a cent, so
+  a few holders land between cents and largest-remainder rounding decides
+  which way each one goes, marked in the table, with the parts still summing
+  to the total exactly.
   **Privacy** runs that check once per participant, continuously.
   **Activity** is what the ledger did, with the update id.
 
@@ -75,13 +82,14 @@ application server in between, and nothing is cached:
 The run has been prepared with **one holder deliberately left out**, so:
 
 1. Press **Settle N legs in one transaction**.
-   It is refused. The pane shows `SETTLEMENT REJECTED · N payments
-   requested · 0 executed · NO PARTIAL SETTLEMENT`, and the ledger's own
-   reason names the holder that is missing. The page names them too, before
-   you press: the allocations line reads *waiting for <name>*, and that
-   holder's row in the schedule is the one marked **waiting**. Check the
-   cards: nothing moved, for anyone. That is atomicity, demonstrated rather
-   than claimed.
+   It is refused. A red strip appears across the page: `SETTLEMENT REJECTED
+   · N payments requested · 0 executed · NO PARTIAL SETTLEMENT`, with the
+   ledger's own reason, which names the holder that is missing. The page
+   names them too, before you press: the note under the button reads
+   **Waiting for <name>**, the **Waiting 1** chip filters the grid down to
+   that one card, and its row in the schedule is the one marked **waiting**.
+   Check the other cards: nothing moved, for anyone. That is atomicity,
+   demonstrated rather than claimed.
 2. Fix the missing holder. **Leave the browser open and leave the first
    terminal running** — that one is the network itself. Open a *second*
    terminal, go to the same folder, and run:
@@ -92,9 +100,9 @@ The run has been prepared with **one holder deliberately left out**, so:
 
    It takes a few seconds and ends with `Done. The page shows every
    allocation ready`. The page notices by itself: it re-reads the ledger
-   every two seconds, so the allocations line stops saying *1 missing* and
-   the button becomes pressable again. Nothing to reload, nothing to
-   restart.
+   every two seconds, so the allocations meter fills to N+1, the
+   **Waiting for <name>** note disappears and every card turns **ready**.
+   Nothing to reload, nothing to restart.
 3. Press the button again.
    Settled. Every holder is paid in the same transaction, the update id of
    that transaction appears on screen, every card turns green and every row

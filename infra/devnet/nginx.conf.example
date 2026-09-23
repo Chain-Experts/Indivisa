@@ -60,7 +60,7 @@ server {
 
     # ---- the read-only window on the ledger --------------------------------
     #
-    # Exactly four paths are allowed, all of them reads. The JSON Ledger API
+    # Exactly five paths are allowed, all of them reads. The JSON Ledger API
     # uses POST for several reads, so the allowlist is by path, not method.
 
     location ~ ^/api/([a-z0-9_-]+)/v2/state/ledger-end$ {
@@ -87,6 +87,14 @@ server {
         client_max_body_size 64k;
         proxy_set_header Authorization "Bearer <read-only token>";
         proxy_pass https://$indivisa_upstream/$2;
+    }
+
+    location ~ ^/api/([a-z0-9_-]+)/v2/parties/participant-id$ {
+        limit_req zone=indivisa burst=20 nodelay;
+        if ($indivisa_upstream = "") { return 404; }
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "Bearer <read-only token>";
+        proxy_pass https://$indivisa_upstream/v2/parties/participant-id;
     }
 
     location ~ ^/api/([a-z0-9_-]+)/v2/parties$ {

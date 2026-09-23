@@ -12,6 +12,9 @@ export interface RunSummary {
   authorised: Set<string>;
   missing: string[];
   settled: boolean;
+  /** Units on the schedule, and what they come to before rounding. */
+  units: number;
+  exactTotal: number;
 }
 
 /**
@@ -22,7 +25,7 @@ export interface RunSummary {
 export function RunBar({ config, agent, run }: { config: Config; agent: AgentHandle; run: RunSummary }) {
   const { seat } = config;
   const { state, pressed } = agent;
-  const { currency, legs, expectedAllocations, haveAllocations, missing, settled } = run;
+  const { currency, legs, expectedAllocations, haveAllocations, missing, settled, units, exactTotal } = run;
   const canPress = !!state?.run && !settled && pressed.kind !== "busy";
   const ready = Math.min(haveAllocations, expectedAllocations);
   const pct = expectedAllocations > 0 ? Math.round((ready / expectedAllocations) * 100) : 0;
@@ -42,12 +45,15 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
           <span className="kpi-sub">on {new Set(seat.holders.map((h) => config.participantOf(h))).size} participants</span>
         </Kpi>
         <Kpi label="Per unit">
-          <span className="kpi-num">{state?.schedule ? <Money amount={state.schedule.amountPerUnit} currency={currency} /> : "—"}</span>
-          <span className="kpi-sub">rounding {state?.schedule?.policy ?? "—"}</span>
+          {/* At full precision. The rate carries more decimals than the cash does. */}
+          <span className="kpi-num">{state?.schedule ? <Money amount={state.schedule.amountPerUnit} currency={currency} maxDecimals={10} /> : "—"}</span>
+          <span className="kpi-sub">
+            × {units.toLocaleString("en-GB")} units = {exactTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 10 })}
+          </span>
         </Kpi>
         <Kpi label="Total due">
           <span className="kpi-num accent">{state?.schedule ? <Money amount={state.schedule.total} currency={currency} /> : "—"}</span>
-          <span className="kpi-sub">one transaction, or none</span>
+          <span className="kpi-sub">to the cent · {state?.schedule?.policy ?? "—"}</span>
         </Kpi>
         <Kpi label="Allocations">
           <span className="kpi-num">
@@ -58,7 +64,7 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
             <div className={`meter-fill${settled ? " done" : pct === 100 ? " full" : ""}`} style={{ width: `${settled ? 100 : pct}%` }} />
           </div>
           <span className="kpi-sub">
-            {settled ? "consumed by the settlement" : <>1 send + {legs} receipts</>}
+            1 send + {legs} receipts{settled ? ", consumed by the settlement" : null}
           </span>
         </Kpi>
         <Kpi label="Run">

@@ -47,8 +47,9 @@ function Console({ config }: { config: Config }) {
   const statusOf = (party: string): LegStatus => (settled ? "paid" : authorised.has(party) ? "ready" : "waiting");
 
   const rows: HolderRow[] = useMemo(() => {
-    const due = new Map<string, { units: number; amount: number }>();
-    for (const e of state?.schedule?.entries ?? []) due.set(e.holder, { units: Number(e.quantity), amount: Number(e.amount) });
+    const due = new Map<string, { units: number; amount: number; exact: number }>();
+    for (const e of state?.schedule?.entries ?? [])
+      due.set(e.holder, { units: Number(e.quantity), amount: Number(e.amount), exact: Number(e.exact) });
     return seat.holders.map((party) => {
       const facts = holders.facts.get(party);
       const d = due.get(party);
@@ -60,6 +61,7 @@ function Console({ config }: { config: Config }) {
         // the agent's schedule until then.
         units: facts?.units || d?.units || 0,
         due: d?.amount ?? facts?.allocated ?? 0,
+        exact: d?.exact ?? d?.amount ?? 0,
         facts,
         status: statusOf(party),
       };
@@ -67,6 +69,13 @@ function Console({ config }: { config: Config }) {
   }, [config, holders.facts, seat.holders, seat.tag, state?.schedule, authorised, settled]);
 
   const missing = rows.filter((r) => r.status === "waiting").map((r) => r.name);
+  // Straight from the schedule, not from the cards: these are the figures the
+  // amounts were derived from.
+  const entries = state?.schedule?.entries ?? [];
+  const units = entries.reduce((s, e) => s + Number(e.quantity), 0);
+  const exactTotal = entries.reduce((s, e) => s + Number(e.exact), 0);
+  const roundedUp = entries.filter((e) => Number(e.amount) > Number(e.exact)).length;
+  const roundedDown = entries.filter((e) => Number(e.amount) < Number(e.exact)).length;
   const run: RunSummary = {
     currency,
     legs,
@@ -75,13 +84,15 @@ function Console({ config }: { config: Config }) {
     authorised,
     missing,
     settled,
+    units,
+    exactTotal,
   };
 
   return (
     <div className="app">
       <header className="top">
         <div className="brand">
-          <img className="logo" src="/indivisa-logo.png" alt="" width={44} height={44} />
+          <img className="logo" src="/indivisa-logo.png" alt="" width={66} height={44} />
           <div className="brand-text">
             <div className="wordmark">Indivisa</div>
             <div className="tagline">Corporate actions, settled in one atomic batch, without exposing the register.</div>
@@ -94,6 +105,15 @@ function Console({ config }: { config: Config }) {
               real · {config.readOnly ? "every number is read live from a Canton participant" : "ledger reads and the settle are live over the JSON Ledger API"}
             </span>
             <span className="label sim">simulated · the cash is TestTokenV2, the holders are synthetic</span>
+            {config.distinctNodes === 1 ? (
+              <span className="label sim">
+                one participant · every party here is on the same node, so privacy is the ledger filtering by party
+              </span>
+            ) : config.distinctNodes && config.distinctNodes > 1 ? (
+              <span className="label real">
+                {config.distinctNodes} participants · each holder is on a node of its own
+              </span>
+            ) : null}
             {config.readOnly ? <span className="label">read only · this page cannot change the ledger</span> : null}
           </div>
         </div>
@@ -148,9 +168,31 @@ function Console({ config }: { config: Config }) {
                 The entitlement schedule, as the executor sees it: every holder, every amount, and the state of each
                 leg. Sort by any column. This is the one view in the page that one party alone is entitled to.
               </p>
+              <p className="grid-note">
+                Amounts are{" "}
+                <strong>
+                  {state.schedule.amountPerUnit.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 10 })}
+                </strong>{" "}
+                per unit, which is finer than a cent.{" "}
+                {roundedUp + roundedDown > 0 ? (
+                  <>
+                    {roundedUp + roundedDown} of {entries.length} holders land between cents, so{" "}
+                    <strong>{state.schedule.policy}</strong> rounds {roundedUp} up and {roundedDown} down — marked in the
+                    table — and the parts still sum to the total exactly, with no cent invented or lost.
+                  </>
+                ) : (
+                  <>Every holder lands on a whole cent here, so <strong>{state.schedule.policy}</strong> had nothing to do.</>
+                )}
+              </p>
               <LegTable
                 currency={currency}
-                rows={rows.map((r) => ({ who: r.name, units: r.units, amount: r.due, status: r.status }))}
+                rows={rows.map((r) => ({
+                  who: r.name,
+                  units: r.units,
+                  amount: r.due,
+                  status: r.status,
+                  note: r.due > r.exact ? "rounded up" : r.due < r.exact ? "rounded down" : undefined,
+                }))}
               />
             </div>
           ) : (

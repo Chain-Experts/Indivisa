@@ -4,16 +4,32 @@ Two networks, one layout. LocalNet is what the proofs and benchmarks run on
 today. DevNet is the evidence run for the submission and is handed to DevOps;
 this page is written so that handover needs no Daml knowledge.
 
+A third way to run the whole thing needs none of this: `judge/` packages the
+network, the seat and the console into `docker compose up`. It is for
+someone who wants to see it work, not for development or for evidence —
+LocalNet is faster to iterate on and DevNet is what a judge will believe.
+
 ```
 infra/
 ├── demo.ps1                        seat / prepare / attempt   -Network localnet|devnet
 ├── participants-with-parties.ps1   regenerates the runner's party map        -Network
 ├── settle.ps1                      the benchmark client: prepare N legs, settle over the JSON API, time it
 ├── govern.ps1                      the governed settlement against BitSafe's DecMan (admit, propose, confirm, execute, audit)
+├── publish-ui.ps1                  build the console and gather the read-only public deployment into one folder
 ├── localnet/   participants.json, ui.json, localnet.conf, bootstrap.canton, up.ps1, proofs.ps1
 ├── devnet/     participants.example.json, ui.example.json   (copy, fill in, keep out of git)
+│            nginx.conf.example   the read-only public deployment for judges
 └── bitsafe/    BitSafe's sandbox as a network: participants.json, ui.json (its public dev token), distribute.ps1
 ```
+
+**Uploading the packages from CI.** `.github/workflows/actions.yml` is the
+DevOps path: run it by hand from the Actions tab, pick the network, and it
+takes a token from Keycloak and POSTs each DAR to that network's participant
+at `/v2/dars` (a real route on the JSON Ledger API; the participant ignores
+the content type). It uploads the ten Splice DARs and BitSafe's two. It does
+**not** upload ours — `indivisa-0.4.0.dar` is committed at
+`daml/indivisa/indivisa-0.4.0.dar` for exactly this, but no step references
+it, and nothing settles without it. See step 2 below.
 
 Every network is a directory with two files:
 
@@ -40,7 +56,7 @@ can host parties and accept DAR uploads, connected to a synchronizer.
 | Need | Value |
 |---|---|
 | Canton | 3.5.x participant (LocalNet uses 3.5.17). LF 2.1 packages. |
-| Splice (validator) | whatever DevNet mandates today (0.8.x), never below 0.6.11 (first release with Token Standard V2). Built and tested against 0.8.1; the V2 DARs are byte-identical through 0.8.3 (Canton 3.5.18), checked 18 Sep. |
+| Splice (validator) | whatever DevNet mandates today (0.8.x), never below 0.6.11 (first release with Token Standard V2). Built and tested against 0.8.1; the V2 DARs are byte-identical through 0.8.3 (Canton 3.5.18), checked 18 Sep. DevNet's JSON API reports Canton **3.5.17** (measured 23 Sep at `https://<json-api-host>/v2/version`), so the paged active-contracts endpoint is available there. |
 | Packages to upload | the ten DARs in `daml/dars/` (Token Standard V2 from Splice 0.8.1, plus `splice-test-token-v2`, the reference cash) and `daml/indivisa/.daml/dist/indivisa-<version>.dar` |
 | Parties | one cash registry, one paying agent, N holders; the scripts create them. Privacy needs holders on a participant **other than** the agent's. |
 | Ledger API | gRPC, one per participant, for Daml Script. JSON Ledger API for the UI. |
@@ -175,16 +191,42 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
 
 1. **A validator node on DevNet**, the standard Splice validator deployment
    (Docker Compose or Helm), with its Ledger API (gRPC) and JSON Ledger API
-   reachable from the machine that will run the scripts. Two validators if
-   the privacy claim is to be shown on DevNet (holders on the second one);
-   one is enough for the evidence run.
-2. **Upload the DARs**: the ten in `daml/dars/` and
-   `daml/indivisa/.daml/dist/indivisa-<version>.dar` (built with
-   `dpm build --all` from the repo root; current version in
-   `daml/indivisa/daml.yaml`). Either through the validator's console
-   (`participant.dars.upload`, as `localnet/bootstrap.canton` does) or over
-   the JSON Ledger API, `POST <jsonApi>/v2/packages` with the DAR as
-   `application/octet-stream` and the bearer token. Repeat on every validator.
+   reachable from the machine that will run the scripts.
+
+   **There is one validator, and that is settled** (23 Sep): Chain-Experts
+   runs DevNet, TestNet and MainNet, each on a different version and for a
+   different purpose, not several validators on one network. So all five
+   participant names point at the same node, which the scripts have always
+   allowed. What it costs is the strong form of the privacy claim: on one
+   node the ledger declines to hand one party another party's contracts,
+   which is real and enforced by Canton, but it is not "the data never
+   arrived". The console reads each participant's own id from
+   `/v2/parties/participant-id` and says whichever of the two is true, so
+   nothing has to be remembered at demo time. The strong claim stays where
+   it is honest: the local run and `judge/`, both with five participants.
+2. **Upload the DARs**: the ten in `daml/dars/` **and ours**,
+   `daml/indivisa/indivisa-0.4.0.dar` (committed; identical to
+   `daml/indivisa/.daml/dist/`, which `dpm build --all` produces. The
+   current version is in `daml/indivisa/daml.yaml`). Either through the
+   validator's console (`participant.dars.upload`, as
+   `localnet/bootstrap.canton` does) or over the JSON Ledger API,
+   `POST <jsonApi>/v2/packages` or `/v2/dars` with the bearer token — both
+   routes work on Canton 3.5. Repeat on every validator.
+
+   The CI workflow does the twelve third-party DARs and stops there, so
+   **add a step for ours** or the run fails with PACKAGE_SELECTION_FAILED at
+   the first command:
+
+   ```yaml
+   - name: deploy dar indivisa
+     run: |
+       curl -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @daml/indivisa/indivisa-0.4.0.dar --expand-url "http://participant.${{ github.event.inputs.net_name }}.svc.cluster.local:7575/v2/dars"
+   ```
+
+   The BitSafe challenge needs two more on top —
+   `indivisa-governance-v0-0.1.0.dar` and `governance-settlement-v0-0.1.0.dar`
+   from `daml/*/.daml/dist/`. Neither is committed yet, so commit them the
+   same way before adding their steps.
 3. **A ledger user** on each validator with `ParticipantAdmin`, so the
    scripts can allocate parties; the runner grants that user act-as rights
    on each party it allocates (that is what `user_id` in `participants.json`

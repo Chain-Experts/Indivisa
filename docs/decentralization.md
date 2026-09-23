@@ -87,7 +87,7 @@ panes rely on.
 
 ## 4. The members, and which are independent
 
-| | Sandbox (contribution pool) | DevNet (Gold, planned) |
+| | Sandbox (contribution pool) | DevNet (Gold, agreed with BitSafe 23 Sep) |
 |---|---|---|
 | Decentralised party | `demo-party`, seeded by BitSafe's `seed.sh` | onboarded through DecMan across two nodes |
 | Members | three, one per participant | two: one ours, one BitSafe's |
@@ -172,9 +172,12 @@ allocate, as the sandbox's own seed script does.
   asset, with our own registry party); the holders; and, in the sandbox,
   operator independence, as section 4 says.
 - **Unfinished:** the DevNet deployment with BitSafe as the second
-  operator (the ask is with our DevOps engineer); showing the governed run
-  in the console (it shows the settled state today, not the vote);
-  a `Governed` variant of the recording.
+  operator. Agreed with BitSafe on 23 September — two nodes, a 2-of-2
+  party, their node operated by them — so what is left is ours: a
+  Decentralization Manager instance beside our DevNet validator with its
+  Noise port reachable by theirs. Also unfinished: showing the governed run
+  in the console (it shows the settled state today, not the vote), and a
+  `Governed` variant of the recording.
 
 ## 8. What comes next
 

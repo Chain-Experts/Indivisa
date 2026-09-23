@@ -10,7 +10,6 @@ import type { Party } from "../ledger/client";
  * moment it would leak if it were going to.
  */
 export function Privacy({ config, currency, byNode }: { config: Config; currency: string; byNode: Map<string, Party[]> }) {
-  const agentNode = config.participantOf(config.seat.payingAgent);
   return (
     <div className="privacy">
       <p className="grid-note">
@@ -18,9 +17,17 @@ export function Privacy({ config, currency, byNode }: { config: Config; currency
         that is the standard's design, not a leak. What must not happen is a holder's node learning another holder's
         position, and these are the counts that would show it.
       </p>
+      {config.distinctNodes === 1 ? (
+        <p className="grid-note warn-note">
+          On this network every participant name resolves to the <strong>same node</strong>, so what follows is the
+          ledger declining to hand one party another party's contracts — real, and enforced by Canton, but weaker than
+          the data never arriving. For that stronger claim the holders must sit on nodes somebody else operates; the
+          local run does exactly that, with five participants.
+        </p>
+      ) : null}
       <div className="nodes">
         {[...byNode.entries()].map(([node, parties]) => (
-          <NodeCard key={node} config={config} currency={currency} node={node} parties={parties} agentNode={agentNode} />
+          <NodeCard key={node} config={config} currency={currency} node={node} parties={parties} />
         ))}
       </div>
     </div>
@@ -28,9 +35,9 @@ export function Privacy({ config, currency, byNode }: { config: Config; currency
 }
 
 function NodeCard({
-  config, currency, node, parties, agentNode,
+  config, currency, node, parties,
 }: {
-  config: Config; currency: string; node: string; parties: Party[]; agentNode: string;
+  config: Config; currency: string; node: string; parties: Party[];
 }) {
   // One holder speaks for the node: the answer is a property of what this
   // participant was sent, and every holder on it gets the same one. Any
@@ -50,7 +57,7 @@ function NodeCard({
       <div className="node-asked">
         asked as <strong>{displayName(parties[0], config.seat.tag)}</strong>
       </div>
-      <NodeAnswer probe={probe} sharesAgentNode={node === agentNode} />
+      <NodeAnswer probe={probe} sharing={config.sharingWithAgent(node)} />
     </section>
   );
 }

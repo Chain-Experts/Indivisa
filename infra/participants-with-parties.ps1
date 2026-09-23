@@ -24,6 +24,14 @@ if (-not $Out) { $Out = Join-Path $netDir "participants-with-parties.json" }
 $base = Get-Content (Join-Path $netDir "participants.json") -Raw | ConvertFrom-Json
 $ui = Get-Content (Join-Path $netDir "ui.json") -Raw | ConvertFrom-Json
 
+# One fresh token for this run. It is used for the reads below and written
+# into every participant of the output, which is the file the Daml Script
+# runner reads - so the runner always starts with a token minted seconds
+# ago rather than whatever was in participants.json. DevNet's live for 300
+# seconds; see infra/token.ps1.
+$fresh = & (Join-Path $PSScriptRoot "token.ps1") -Network $Network
+if ($fresh) { Write-Host "minted a ledger token for '$Network'" }
+
 # Every name whose node hosts the party is a valid route. When several names
 # share one node (a one-validator DevNet, BitSafe's sandbox) the name chosen
 # is also the label the console shows, so pick by the party's role: the cash
@@ -36,7 +44,8 @@ foreach ($name in $base.participants.PSObject.Properties.Name) {
   if (-not $u) { Write-Warning "ui.json has no JSON API for '$name'; skipping"; continue }
   $url = $u.jsonApi.TrimEnd("/") + "/v2/parties"
   $headers = @{}
-  if ($u.token) { $headers["Authorization"] = "Bearer " + $u.token }
+  $bearer = if ($fresh) { $fresh } else { $u.token }
+  if ($bearer) { $headers["Authorization"] = "Bearer " + $bearer }
   try {
     $resp = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -TimeoutSec 30 -SkipCertificateCheck:([bool]$ui.insecureTls)
   } catch {
@@ -61,6 +70,17 @@ foreach ($party in $candidates.Keys) {
   else { $pick = $names | Where-Object { $_ -notin @("registry", "agent") } | Select-Object -First 1 }
   if (-not $pick) { $pick = $names[0] }
   $map[$party] = $pick
+}
+
+# Stamp the fresh token onto every participant, and onto the default, so
+# the runner never reads a stale access_token out of participants.json.
+if ($fresh) {
+  foreach ($name in $base.participants.PSObject.Properties.Name) {
+    $base.participants.$name | Add-Member -NotePropertyName access_token -NotePropertyValue $fresh -Force
+  }
+  if ($base.default_participant) {
+    $base.default_participant | Add-Member -NotePropertyName access_token -NotePropertyValue $fresh -Force
+  }
 }
 
 $cfg = [ordered]@{

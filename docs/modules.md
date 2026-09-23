@@ -7,6 +7,7 @@ For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
 Indivisa/
 ├── README.md                      public front door
 ├── TASKS.md                       order of work
+├── .github/workflows/actions.yml  DevOps: upload the DARs to a network's participant (manual, pick the network)
 ├── LICENSE                        Apache-2.0, verbatim
 ├── NOTICE                         our copyright; attribution for the vendored Splice DARs
 ├── multi-package.yaml
@@ -43,6 +44,7 @@ Indivisa/
 │   │   └── daml/Governance/Settlement/BatchSettlement.daml     governed action; no Indivisa in it (for BitSafe's repo)
 │   ├── indivisa-governance/       package `indivisa-governance-v0`: SettleRunProposal over Run_Settle
 │   │   └── daml/Indivisa/Governance/SettleRunProposal.daml
+│   ├── indivisa/indivisa-0.4.0.dar   a copy of the build output, committed so CI can upload it with no Daml toolchain
 │   └── indivisa-governance-test/  the governance proofs (IDE ledger) and the propose script
 │       ├── Indivisa/Test/Governance.daml          1 of 3 refused, agent alone refused, 2 of 3 settles
 │       ├── Indivisa/Governance/Demo.daml         govern_propose, driven by infra/govern.ps1
@@ -53,27 +55,50 @@ Indivisa/
 │   ├── package.json
 │   ├── vite.config.ts             proxy per participant (ui.json), serves the seat and the map
 │   ├── index.html
+│   ├── public/indivisa-logo.png   the mark, in the dark header bar and as the favicon
 │   ├── scripts/settle.ts          the button's settle, from Node, for the benchmark
 │   └── src/
 │       ├── main.tsx
-│       ├── App.tsx
+│       ├── App.tsx                the shell: header, outcome strip, four tabs, leg state per holder
 │       ├── config.ts
+│       ├── styles.css
 │       ├── ledger/
-│       │   ├── client.ts
-│       │   └── queries.ts
+│       │   ├── client.ts          one connection per party; reading(parties) for several at once
+│       │   └── queries.ts         agentState, holderState (one party), nodeHolders (one node), settle
+│       ├── state/
+│       │   ├── useAgent.ts        the executor's poll and the one command
+│       │   └── useHolders.ts      the grid's poll, one request set per node, and useNodeProbe
 │       ├── panes/
-│       │   ├── PayingAgent.tsx    every leg, the button, the outcome
-│       │   └── Holder.tsx         one component, three holders
+│       │   ├── RunBar.tsx         instrument, totals, the allocations meter, the button
+│       │   ├── Holders.tsx        a card per holder, search / filter / sort, and the drawer
+│       │   ├── Privacy.tsx        the per-party check, once per participant
+│       │   └── Activity.tsx       the settlement and every refusal, as contracts
 │       └── components/
-│           ├── Money.tsx
-│           ├── LegTable.tsx
+│           ├── Money.tsx          tabular figures; rates keep their extra decimals
+│           ├── LegTable.tsx       the schedule, sortable, each leg waiting / ready / paid
+│           ├── NodeAnswer.tsx     the six counts and the verdict
+│           ├── Tabs.tsx
+│           ├── CopyId.tsx         an update id or party id, shortened, copied in full on click
 │           └── StatusPill.tsx
+│
+├── judge/                         one command, for anyone who wants to run it
+│   ├── README.md                  when it is ready, what to press, what is real
+│   ├── docker-compose.yml         canton + a one-shot seed + web; prepare behind a profile
+│   ├── canton.Dockerfile          the public Canton image, our topology, our DARs
+│   ├── canton.conf                5 participants and a synchronizer, every API on 0.0.0.0
+│   ├── bootstrap.canton           connect, upload nine DARs, then write /indivisa/ready last
+│   ├── seed.Dockerfile            the Daml Script runner, fetched from DA's public registry
+│   ├── seed.sh                    seat / prepare; fingerprints the ledger and re-seats if it changed
+│   ├── participants.json          the five JSON APIs inside the compose network
+│   ├── web.Dockerfile             the built console on nginx
+│   └── nginx.conf                 serves the page, proxies /api/<participant>/ to the five nodes
 │
 ├── infra/
 │   ├── README.md                  what any network needs; LocalNet; DevNet handover
 │   ├── demo.ps1                   seat / prepare / attempt, the demo from a shell (-Network)
 │   ├── participants-with-parties.ps1   adds every existing party to the runner's map
 │   ├── settle.ps1                 prepare N legs by script, settle over the JSON API from Node, time it
+│   ├── publish-ui.ps1             build the console and gather the read-only deployment into one folder
 │   ├── govern.ps1                 the governed settlement against BitSafe's DecMan: admit, propose, confirm, execute, audit
 │   ├── localnet/
 │   │   ├── localnet.conf          1 synchronizer, 5 participants, in memory
@@ -84,7 +109,8 @@ Indivisa/
 │   │   └── proofs.ps1             the six proofs and the coupon, one line each
 │   ├── devnet/
 │   │   ├── participants.example.json   same shape plus access_token, user_id per participant
-│   │   └── ui.example.json        same shape plus token; the real files are git-ignored
+│   │   ├── ui.example.json        same shape plus token; the real files are git-ignored
+│   │   └── nginx.conf.example     the read-only public deployment: TLS, the page, read-only proxying
 │   └── bitsafe/                   BitSafe's sandbox as a network: config with its public dev token,
 │       └── distribute.ps1         and the DAR distribution through DecMan
 │
@@ -188,4 +214,4 @@ same scripts the proofs run.
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-About 600 lines of Daml in the model, 150 in the two governance packages and 2,250 in scripts; 950 of TypeScript; 800 of PowerShell, Canton config and CSS (22 Sep).
+About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 1,770 of TypeScript and 310 of CSS; 1,340 of PowerShell, Canton config, shell and Docker (23 Sep).

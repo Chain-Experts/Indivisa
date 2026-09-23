@@ -28,6 +28,15 @@ export interface ParticipantMap {
   readOnly?: boolean;
 }
 
+/**
+ * Whether a holder's node is a different machine from the paying agent's.
+ * It decides what the page is allowed to say about the zeros, so it is read
+ * from the ledger and never inferred from the config's names: a network may
+ * point every participant name at one validator, and then "never delivered"
+ * would be false.
+ */
+export type NodeSharing = "separate" | "shared" | "unknown";
+
 export interface Config {
   network: string;
   readOnly: boolean;
@@ -36,6 +45,12 @@ export interface Config {
   baseOf: (participant: string) => string;
   /** party -> participant name */
   participantOf: (party: Party) => string;
+  /** participant name -> the id the node reports for itself, where it answered */
+  nodeIdOf: (participant: string) => string | null;
+  /** How this participant relates to the one hosting the paying agent. */
+  sharingWithAgent: (participant: string) => NodeSharing;
+  /** Distinct nodes behind the participant names, or null if they could not be read. */
+  distinctNodes: number | null;
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -49,7 +64,46 @@ export async function loadConfig(): Promise<Config> {
     if (!p) throw new Error(`no participant known for ${party}; regenerate participants-with-parties.json`);
     return p;
   };
-  return { network: map.network, readOnly: map.readOnly === true, seat, participantOf, baseOf: (participant) => `/api/${participant}` };
+  const baseOf = (participant: string) => `/api/${participant}`;
+
+  // Ask each named participant who it is. Two names that answer with the
+  // same id are one machine, whatever the config calls them.
+  const names = [...new Set(Object.values(map.party_participants))];
+  const ids = new Map<string, string | null>();
+  await Promise.all(
+    names.map(async (name) => {
+      try {
+        const r = await fetch(`${baseOf(name)}/v2/parties/participant-id`);
+        ids.set(name, r.ok ? (((await r.json()) as { participantId?: string }).participantId ?? null) : null);
+      } catch {
+        // A node that will not say is not a node we may make claims about.
+        ids.set(name, null);
+      }
+    }),
+  );
+
+  const nodeIdOf = (participant: string) => ids.get(participant) ?? null;
+  const agentNode = participantOf(seat.payingAgent);
+  const sharingWithAgent = (participant: string): NodeSharing => {
+    if (participant === agentNode) return "shared";
+    const mine = nodeIdOf(participant);
+    const theirs = nodeIdOf(agentNode);
+    if (!mine || !theirs) return "unknown";
+    return mine === theirs ? "shared" : "separate";
+  };
+  const answered = [...ids.values()].filter(Boolean) as string[];
+  const distinctNodes = answered.length === names.length ? new Set(answered).size : null;
+
+  return {
+    network: map.network,
+    readOnly: map.readOnly === true,
+    seat,
+    participantOf,
+    baseOf,
+    nodeIdOf,
+    sharingWithAgent,
+    distinctNodes,
+  };
 }
 
 /** "Meridian-Paying-Agent-sep18-20260918...-4f1df03a::1220..." -> "Meridian Paying Agent" */

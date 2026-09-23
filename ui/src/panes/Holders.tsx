@@ -16,6 +16,8 @@ export interface HolderRow {
   node: string;
   units: number;
   due: number;
+  /** The entitlement before rounding to the cent; `due` is what is paid. */
+  exact: number;
   facts: HolderFacts | undefined;
   status: LegStatus;
 }
@@ -183,7 +185,8 @@ export function Holders({
 
 function HolderDrawer({ config, run, row, onClose }: { config: Config; run: RunSummary; row: HolderRow; onClose: () => void }) {
   const probe = useNodeProbe(config, run.currency, row.party, true);
-  const sharesAgentNode = row.node === config.participantOf(config.seat.payingAgent);
+  // Read from the ledger, not inferred from the names in the config.
+  const sharing = config.sharingWithAgent(row.node);
 
   return (
     <aside className="drawer" role="dialog" aria-label={`${row.name}, as its own participant sees it`}>
@@ -227,7 +230,7 @@ function HolderDrawer({ config, run, row, onClose }: { config: Config; run: RunS
       </dl>
 
       <h3>What this node holds about other holders</h3>
-      <NodeAnswer probe={probe} sharesAgentNode={sharesAgentNode} />
+      <NodeAnswer probe={probe} sharing={sharing} />
     </aside>
   );
 }

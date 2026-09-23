@@ -160,10 +160,10 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
 .sort select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink); }
 
 .holders.with-drawer { padding-right: 412px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; align-items: start; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 10px; align-items: start; }
 .hcard {
   text-align: left; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line);
-  border-radius: var(--radius); padding: 11px 13px 10px; display: grid; gap: 7px; cursor: pointer;
+  border-radius: var(--radius); padding: 11px 13px 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; cursor: pointer;
   box-shadow: var(--shadow); min-width: 0;
   transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease, transform 120ms ease;
 }
@@ -181,13 +181,15 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
 }
 @media (prefers-reduced-motion: reduce) { .hcard { transition: none; } }
 
+.hcard > * { min-width: 0; }
 .hcard-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.hcard-name { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hcard-node { font-size: 0.72rem; color: var(--muted); }
-.hcard-figs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hcard-top .pill { flex: none; }
+.hcard-name { font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hcard-node { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hcard-figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .fig { display: grid; gap: 1px; min-width: 0; }
 .fig-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
-.fig-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.fig-value { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fig-value .ccy { display: none; }
 .fig-value.paid { color: var(--ledger); }
 .hcard-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.7rem; color: var(--muted); border-top: 1px solid var(--line-soft); padding-top: 6px; }
