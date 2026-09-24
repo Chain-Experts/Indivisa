@@ -34,6 +34,9 @@ CLAUDE.local.md
 
 # The 18 September backup of the working context; the live file is CLAUDE.md.
 CLAUDE-backup.md
+# A local TLS-interception root (Norton on this machine), exported so the
+# Java gRPC client will trust the proxied certificate. Machine-specific.
+infra/*/ca.pem
 infra/*/public/
 ui/dist/
 judge/.cache/
