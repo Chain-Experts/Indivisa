@@ -1,7 +1,12 @@
 # Run Indivisa yourself
 
-One command, one page, about five minutes. Nothing to install but Docker,
-nothing to configure, no account anywhere.
+One command, one page. Nothing to install but Docker, nothing to configure,
+no account anywhere.
+
+Budget **about fifteen minutes for the first run** and a couple for later
+ones. Most of that first run is the machine working while you wait: building
+a Canton network, vetting thirteen packages on five participants, and
+creating twenty holders one at a time.
 
 ```bash
 docker compose up
@@ -11,11 +16,9 @@ Wait for `Ready. Open http://localhost:8080` in the terminal (see **When is
 it ready?** just below — the first run takes a few minutes, most of it
 seating the holders), then open that page.
 
-You will need Docker with Compose v2, about **6 GB of memory** given to it (the
-governed path below adds only ~0.5 GB, so 6 GB covers both)
-(Docker Desktop: Settings → Resources), and ~2 GB of disk. The first run
-downloads the images and builds two small ones; later runs start in about
-a minute.
+You will need Docker with Compose v2, **6 GB of memory** given to it
+(Docker Desktop: Settings → Resources) and ~2 GB of disk. The optional
+governed run at the end adds about 0.5 GB, so 6 GB covers everything here.
 
 If `docker compose up` is not available as one word on your system, use
 `docker-compose up`; everything else is the same.
@@ -33,14 +36,19 @@ indivisa-seed exited with code 0
 That is the moment to switch to the browser. Opening the page earlier is
 harmless — it will say *No seat file* — just reload once those lines appear.
 
+**If it seems stuck, it probably is not.** Canton prints nothing for minutes
+at a time while it vets packages. `docker compose ps` will show
+`indivisa-canton` as `starting` or `healthy`; as long as it is not
+`unhealthy` or restarting, leave it alone.
+
 What you see before them, so you can tell progress from a stall:
 
 | In the terminal | What is happening | Roughly |
 |---|---|---|
-| many Canton lines, ending `Indivisa LocalNet is up` | five participants started, thirteen DARs vetted | 2 min |
+| many Canton lines, ending `Indivisa LocalNet is up` | five participants started, thirteen DARs vetted on each | 4–8 min, and it prints nothing for long stretches |
 | `Container indivisa-canton Healthy` | the network is ready for a client | |
 | `==> Waiting for the ledger` … `all five participants are answering` | | seconds |
-| `==> Seating N holders` | **the long step.** Each holder is a party, and a party takes a few seconds. Nothing prints while it works | 2 min for 8, 4 min for 20 |
+| `==> Seating N holders` | each holder is a party, and a party takes a few seconds. Nothing prints while it works | 2 min for 8, 4 min for 20 |
 | `seated N holders; schedule total …` | the bond, the register, the onboarding and the payment schedule exist | |
 | `==> Preparing the run, with one holder deliberately left out` | the cash is set aside and the receipts are made ready | ~20 s |
 | `withholding the receipt allocation of '…'` | **the holder that will block the first attempt.** Note the name; you will see it again in the refusal | |
@@ -114,27 +122,6 @@ To start over: `docker compose down && docker compose up`. The demo is
 seated again from scratch, so it takes as long as the first run. (`down`
 leaves a small volume behind; `docker compose down -v` removes that too.)
 
-## What is real and what is not
-
-**Real:** the ledger (Canton 3.5, five participants, one synchronizer), the
-Daml contracts, the settlement, the refusal, the privacy, every number on
-screen. The transaction is a genuine Token Standard V2
-`SettlementFactory_SettleBatch`.
-
-**Simulated:** the cash is `TestTokenV2`, the standard's own reference
-token, with our registry party — not Canton Coin. The holders, their names
-and their positions are generated. This network is five participants in one
-container on your machine, not five companies.
-
-## If something goes wrong
-
-| What you see | What to do |
-|---|---|
-| `canton` keeps restarting, or the page never loads | Docker has too little memory. Give it 6 GB and `docker compose down && docker compose up`. |
-| The page says "No seat file" | The seed has not finished. Wait for `Ready. Open http://localhost:8080` in the terminal, then reload. To watch just that container: `docker compose logs -f seed`. |
-| Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
-| The button says "Prepare the run first" | The seed did not finish; see above. |
-
 ## Optional: make it need more than one signature
 
 Everything above settles on the paying agent pressing one button. A coupon
@@ -183,6 +170,18 @@ three approver nodes on one machine are not three independent operators. The
 threshold is real; the independence is simulated. On DevNet the second node
 is run by BitSafe, which is the version that counts.
 
+## What is real and what is not
+
+**Real:** the ledger (Canton 3.5, five participants, one synchronizer), the
+Daml contracts, the settlement, the refusal, the privacy, every number on
+screen. The transaction is a genuine Token Standard V2
+`SettlementFactory_SettleBatch`.
+
+**Simulated:** the cash is `TestTokenV2`, the standard's own reference
+token, with our registry party — not Canton Coin. The holders, their names
+and their positions are generated. This network is five participants in one
+container on your machine, not five companies.
+
 ## What this does not show
 
 This is a local network, so it proves the mechanism, not a deployment. The
@@ -191,3 +190,12 @@ id as evidence. And the holder base here is small (twenty by default,
 `INDIVISA_HOLDERS` to change it) because creating parties takes a few
 seconds each; the measured limits are in `docs/benchmark.md` — 13,000
 payment legs in one transaction, and where that stops.
+
+## If something goes wrong
+
+| What you see | What to do |
+|---|---|
+| `canton` keeps restarting, or the page never loads | Docker has too little memory. Give it 6 GB and `docker compose down && docker compose up`. |
+| The page says "No seat file" | The seed has not finished. Wait for `Ready. Open http://localhost:8080` in the terminal, then reload. To watch just that container: `docker compose logs -f seed`. |
+| Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
+| The button says "Prepare the run first" | The seed did not finish; see above. |

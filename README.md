@@ -14,7 +14,11 @@ Built by Chain-Experts for HackCanton Season 3.
   http://localhost:8080. A real five-participant Canton network, the real
   contracts, a coupon that is refused until every holder is ready. Nothing to
   install but Docker, about five minutes: [`judge/README.md`](judge/README.md).
-- **The recording** — *coming soon* (60–90 seconds: one coupon run settled, then the same run refused with one holder not ready, then settled after the fix).
+- **It runs on the real network.** A coupon settled on Canton DevNet on
+  24 September 2026, five holders in one transaction, update id
+  `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
+  — [`docs/devnet-run.md`](docs/devnet-run.md) has the whole record.
+- **The recording** — *coming soon* (under two minutes: a coupon settled, the same run refused with one holder not ready, then a run that needs two of three approvers before it may move at all).
 - **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
 - **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
 
@@ -180,11 +184,13 @@ module for any Token Standard V2 batch settlement (`governance-settlement-v0`)
 that has no Indivisa in it. Proven on the IDE ledger and in BitSafe's
 three-node sandbox; see `docs/decentralization.md`.
 
-Still to come: the DevNet evidence run (configuration only; handover in
-`infra/README.md`), the recording (`docs/demo-script.md`), the deck. And one
-clean `docker compose up` on a machine other than the one it was built on —
-this one intercepts TLS, so `judge/`'s two download paths could not be
-exercised here.
+**The DevNet run is done** (24 Sep): five holders, one transaction, update id
+`1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
+with the deliberate failure refused first. See [`docs/devnet-run.md`](docs/devnet-run.md).
+
+Still to come: the recording (`docs/demo-script.md`), the deck, and one clean
+`docker compose up` on a machine other than the one it was built on — this one
+intercepts TLS, so `judge/`'s two download paths could not be exercised here.
 
 ---
 
@@ -256,6 +262,7 @@ Worth saying before anyone else says it.
 | `docs/architecture.md` | Components, settlement flow, boundaries, settled and open questions |
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
+| `docs/devnet-run.md` | The DevNet evidence: update id, what it proves and what it does not |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |

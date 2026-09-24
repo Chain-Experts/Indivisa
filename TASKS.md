@@ -404,8 +404,11 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 - [x] Handover checklist in `infra/README.md`: eight steps, what to send
       back (seat file, both attempt files, the update id).
 - [x] `docs/demo-script.md`: shot list, captions, what each caption may claim.
-- [ ] **One DevNet run** (DevOps). Deploy, execute a real distribution, capture
-      the update id and ledger receipt. **One validator, confirmed 23 Sep**:
+- [x] **One DevNet run — done 24 Sep.** Five holders paid in one transaction
+      on Chain-Experts' DevNet validator, update id
+      `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
+      8,421.88 USD, and the deliberate failure refused first. Full record in
+      `docs/devnet-run.md`. **One validator, confirmed 23 Sep**:
       all five participant names resolve to the same node, so this run is
       evidence that the real network vets our packages and commits a real
       `SettlementFactory_SettleBatch` — not evidence of cross-operator

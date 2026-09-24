@@ -171,6 +171,12 @@ allocate, as the sandbox's own seed script does.
 - **Simulated:** the cash (`TestTokenV2`, the reference Token Standard V2
   asset, with our own registry party); the holders; and, in the sandbox,
   operator independence, as section 4 says.
+- **Runnable by anyone, since 24 Sep:** the governed settlement is in the
+  judge package. `INDIVISA_GOVERNED=1 docker compose --profile govern up -d`
+  brings up three Decentralization Manager nodes beside the ledger, and
+  `govern confirm` / `govern execute` hold the vote. One confirmation is
+  refused by the ledger; two settle. No account, no toolchain, no sandbox
+  of ours to trust — see `judge/README.md`.
 - **Unfinished:** the DevNet deployment with BitSafe as the second
   operator. Agreed with BitSafe on 23 September — two nodes, a 2-of-2
   party, their node operated by them — so what is left is ours: a

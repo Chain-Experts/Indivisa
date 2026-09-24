@@ -120,6 +120,7 @@ Indivisa/
     ├── explainer.html             the story for a beginner, standalone page
     ├── Indivisia Logo.png         the logo
     ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
+    ├── devnet-run.md              the DevNet evidence: update id, network, what it proves
     ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
     ├── demo-script.md             the recording, step by step, for someone who has never seen the project
     ├── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce
@@ -216,4 +217,4 @@ same scripts the proofs run.
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 1,770 of TypeScript and 310 of CSS; 1,340 of PowerShell, Canton config, shell and Docker (23 Sep).
+About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 1,770 of TypeScript and 310 of CSS; 2,060 of PowerShell, Canton config, shell and Docker, the judge package included (24 Sep).

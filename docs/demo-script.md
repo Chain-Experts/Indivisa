@@ -202,7 +202,7 @@ art, no animations.
 | 4 | **Now the same run, with one holder not ready.** / This is the atomicity test. If any leg cannot settle, nothing moves. |
 | 5 | **A coupon this size should not move on one signature.** / The run can name an approver: a party no single company controls. / *(small, 20 pt)* Governed through BitSafe's Decentralization Manager. Three approver nodes, threshold two. |
 | 6 | **Below the threshold, the ledger refuses.** / One approval is not enough. Nothing moves. |
-| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / Built on Token Standard V2 (CIP-0112, approved June 2026) / github.com/Chain-Experts/Indivisa |
+| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026** — update id `1220652e…f466b` / **Run it yourself:** `cd judge && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
 (create the folder in the dialog if it does not exist).
@@ -371,6 +371,21 @@ Export: **Export** (top right) → 1080p → it renders and downloads to your
 Downloads folder → move it to `D:\Dev\ChainExperts\Indivisa-recording\`
 and rename to `Indivisa-HackCanton-S3.mp4`. Play it once end to end.
 
+## Part F2. What ships beside the video
+
+The film is one of four things a judge can look at. Do not try to get the
+other three into it; point at them instead.
+
+| | Where |
+|---|---|
+| **The DevNet run** | `docs/devnet-run.md` — update id `1220652e…f466b`, 24 Sep 2026 |
+| **Run it yourself** | `judge/` — `docker compose up`, no account, no toolchain. The same package also runs the governed settlement, so a judge can hold the vote themselves |
+| **The measured ceiling** | `docs/benchmark.md` — 13,000 legs in one transaction, and where it stops |
+| **The governed settlement** | `docs/decentralization.md` — the BitSafe integration, written up |
+
+Card 7 carries the first two. The README carries all four, and it is the
+first thing a judge opens after the video.
+
 ## Part G. What to say, if there is a voice-over
 
 One sentence per shot, spoken slowly; silence is fine between them.
@@ -389,8 +404,10 @@ One sentence per shot, spoken slowly; silence is fine between them.
 - Over the red box: "Refused by the ledger. Two hundred and fifty
   requested, zero executed. The refusal itself is recorded."
 - Over the retry: "The holder is made ready. Same button. Settled."
-- Over the closing card: "Indivisa. Corporate actions, settled in one
-  atomic batch, without exposing the register."
+- Over the closing card: "This ran on Canton DevNet on the twenty-fourth of
+  September; the update id is on screen. And you can run all of it yourself
+  in one command. Indivisa. Corporate actions, settled in one atomic batch,
+  without exposing the register."
 
 ## Part H. What a caption may and may not claim
 
@@ -408,8 +425,17 @@ One sentence per shot, spoken slowly; silence is fine between them.
 - The cash is `TestTokenV2`, the reference Token Standard V2 asset, not
   Canton Coin; the holders and their positions are generated. Both labels
   are in the page header throughout; keep the header in frame.
-- The timing line on card 5 is from `benchmark.md`; quote it as LocalNet
-  (five nodes on one machine), not as DevNet, until the DevNet run exists.
+- The timing line on card 7 is from `benchmark.md`; quote it as LocalNet
+  (five nodes on one machine). The DevNet line beside it is a different
+  claim and both are true: the numbers are LocalNet, the update id is
+  DevNet.
+- **The DevNet run is real and may be shown** (24 Sep 2026, five holders,
+  one transaction, update id `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
+  `docs/devnet-run.md`). What it proves is that the real network vets our
+  packages and commits a real `SettlementFactory_SettleBatch`. It does
+  **not** prove cross-operator privacy: Chain-Experts runs one validator, so
+  every party is on one node there. Say "settled on DevNet", never "each
+  holder on its own node on DevNet".
 - The 13,000-leg figure on card 5 is **legs, not holders**: 13,000 legs over
   250 holders, the run that found the ceiling. The holder figure is 1,000
   measured and about 6,400 derived. Saying "13,000 holders" would be false.
