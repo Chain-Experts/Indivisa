@@ -84,9 +84,9 @@ Indivisa/
 ├── judge/                         one command, for anyone who wants to run it
 │   ├── README.md                  when it is ready, what to press, what is real
 │   ├── docker-compose.yml         canton + a one-shot seed + web; prepare behind a profile
-│   ├── canton.Dockerfile          the public Canton image, our topology, our DARs
+│   ├── canton.Dockerfile          the public Canton image, our topology, all thirteen DARs
 │   ├── canton.conf                5 participants and a synchronizer, every API on 0.0.0.0
-│   ├── bootstrap.canton           connect, upload nine DARs, then write /indivisa/ready last
+│   ├── bootstrap.canton           connect, upload thirteen DARs, then write /indivisa/ready last
 │   ├── seed.Dockerfile            the Daml Script runner, fetched from DA's public registry
 │   ├── seed.sh                    seat / prepare; fingerprints the ledger and re-seats if it changed
 │   ├── participants.json          the five JSON APIs inside the compose network
@@ -200,12 +200,14 @@ same scripts the proofs run.
 | File | Does |
 |---|---|
 | `docker-compose.yml` | Three services: `canton`, a one-shot `seed`, `web`. `prepare` is a fourth, behind the `manual` profile, that reuses the seed image. The seed and the page share a `demo` volume. |
-| `canton.Dockerfile`, `canton.conf`, `bootstrap.canton` | Canton 3.5 on the public image, five participants and a synchronizer in one container, every API bound to `0.0.0.0`. The bootstrap uploads the nine DARs and writes `/indivisa/ready` **last**: the compose healthcheck waits for that file, because the API answers while the uploads are still running. |
+| `canton.Dockerfile`, `canton.conf`, `bootstrap.canton` | Canton 3.5 on the public image, five participants and a synchronizer in one container, every API bound to `0.0.0.0`. The bootstrap uploads all thirteen DARs — the ten Splice ones, `indivisa`, and the governance layer (BitSafe's two plus our `indivisa-governance-v0` and `governance-settlement-v0`), 57 packages once dependencies are counted — and writes `/indivisa/ready` **last**: the compose healthcheck waits for that file, because the API answers while the uploads are still running. |
 | `seed.Dockerfile`, `seed.sh` | The Daml Script runner (fetched at build time from Digital Asset's public registry as an OCI blob, or `--build-arg SCRIPT_SOURCE=local`) running `Indivisa.Test.Demo`. `seat` creates the parties, the bond, the onboarding and the schedule, then the allocations with one holder withheld; `prepare` creates the one that was withheld. The party map is rebuilt from the ledger each time, because the runner only routes parties it allocated itself. |
 | | The seat outlives the ledger — `docker compose down` keeps the volume — so the seed fingerprints the ledger with the agent participant id and re-seats when it does not match. Without that, a second `up` serves a seat whose parties no longer exist. |
 | `web.Dockerfile`, `nginx.conf` | The built page on nginx, which also proxies `/api/<participant>/` to the five JSON Ledger APIs. No token: this network has no auth. `--build-arg UI_SOURCE=prebuilt` takes `ui/dist` from the host instead of running npm in the container. |
 | `participants.json` | The five JSON API endpoints inside the compose network, before party routing is added. |
-| `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated. |
+| `govern.sh` | The governed settlement inside the package: `seat` builds the decentralised party (peer mesh, onboarding at threshold 2, member parties, governance rules, admitting the agent as proposer), then `prepare`, `propose`, `confirm N`, `execute N`, `status`. A port of BitSafe's `hackathon/seed.sh` and our `infra/govern.ps1` onto this topology; it skips their DAR-distribution step because `bootstrap.canton` has already vetted everything. |
+| three `decman-*` services | BitSafe's Decentralization Manager `v1.8.0`, unmodified, one per holding participant, all behind the `govern` compose profile so `docker compose up` is unchanged. About 150 MB each. |
+| `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated, and the optional governed run. |
 
 ## Not built, deliberately
 

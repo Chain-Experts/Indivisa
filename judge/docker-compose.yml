@@ -23,7 +23,10 @@ services:
       test: ["CMD-SHELL", "test -f /indivisa/ready"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      # Thirteen DARs on five participants: about four minutes on a warm
+      # machine, longer on a cold one. Generous on purpose - a judge who
+      # waits is fine, a judge who sees "unhealthy" gives up.
+      retries: 180
       start_period: 30s
     mem_limit: 4g
     restart: unless-stopped
@@ -40,6 +43,9 @@ services:
     environment:
       INDIVISA_HOLDERS: "${INDIVISA_HOLDERS:-20}"
       INDIVISA_PORT: "${INDIVISA_PORT:-8080}"
+      # Set for the governed demo: the seat stops after seating so that
+      # `govern prepare` can create the run with its approver named.
+      INDIVISA_GOVERNED: "${INDIVISA_GOVERNED:-}"
     volumes:
       - demo:/demo
     command: ["seat"]
@@ -58,6 +64,106 @@ services:
     profiles: ["manual"]
     restart: "no"
 
+  # ---- the governed settlement, opt-in -----------------------------------
+  #
+  # Nothing below starts with a plain `docker compose up`: every service
+  # carries the `govern` profile. The approver nodes are BitSafe's
+  # Decentralization Manager, unmodified, one per holding participant.
+  #
+  #   docker compose --profile govern up -d
+  #   docker compose run --rm govern-seed
+  #   docker compose run --rm govern prepare
+  #   docker compose run --rm govern propose
+  #   docker compose run --rm govern confirm 1
+  #   docker compose run --rm govern execute 2     refused, below threshold
+  #   docker compose run --rm govern confirm 2
+  #   docker compose run --rm govern execute 3     settles
+  #
+  # The UI ports stay on loopback: these nodes run with authentication
+  # disabled, so publishing them widely would hand anyone on the network
+  # admin control of the party.
+  decman-1: &decman
+    image: public.ecr.aws/dlc-link/decentralization-manager:v1.8.0
+    platform: linux/amd64
+    container_name: indivisa-decman-1
+    hostname: decman-1
+    profiles: ["govern"]
+    depends_on:
+      canton:
+        condition: service_healthy
+    ports: ["127.0.0.1:8081:8081"]
+    volumes: ["decman-1-data:/data"]
+    restart: unless-stopped
+    environment: &decman-env
+      DECPM_CANTON_ADMIN_HOST: canton
+      DECPM_CANTON_LEDGER_HOST: canton
+      DECPM_CANTON_NETWORK: devnet
+      DECPM_CANTON_SYNCHRONIZER: localnet
+      DECPM_INSECURE: "true"
+      # Canton takes the user id from the token's sub, and participant_admin
+      # is the one user it creates for itself. Secret and audience are
+      # DecMan's own defaults; they match judge/canton.conf.
+      DECPM_CANTON_HMAC_SUBJECT: participant_admin
+      RUST_LOG: dec_party_manager=info,tokio_noise=error,hyper_noise=error
+      DECPM_PORT: "8081"
+      DECPM_NOISE_PORT: "9001"
+      DECPM_PUBLIC_ADDRESS: decman-1
+      DECPM_CANTON_ADMIN_PORT: "5032"
+      DECPM_CANTON_LEDGER_PORT: "5031"
+
+  decman-2:
+    <<: *decman
+    container_name: indivisa-decman-2
+    hostname: decman-2
+    ports: ["127.0.0.1:8082:8082"]
+    volumes: ["decman-2-data:/data"]
+    environment:
+      <<: *decman-env
+      DECPM_PORT: "8082"
+      DECPM_NOISE_PORT: "9002"
+      DECPM_PUBLIC_ADDRESS: decman-2
+      DECPM_CANTON_ADMIN_PORT: "5042"
+      DECPM_CANTON_LEDGER_PORT: "5041"
+
+  decman-3:
+    <<: *decman
+    container_name: indivisa-decman-3
+    hostname: decman-3
+    ports: ["127.0.0.1:8083:8083"]
+    volumes: ["decman-3-data:/data"]
+    environment:
+      <<: *decman-env
+      DECPM_PORT: "8083"
+      DECPM_NOISE_PORT: "9003"
+      DECPM_PUBLIC_ADDRESS: decman-3
+      DECPM_CANTON_ADMIN_PORT: "5052"
+      DECPM_CANTON_LEDGER_PORT: "5051"
+
+  # One-time setup of the party, its members and its rules.
+  govern-seed:
+    image: indivisa-seed
+    depends_on:
+      canton:
+        condition: service_healthy
+    volumes:
+      - demo:/demo
+    entrypoint: ["/indivisa/govern.sh"]
+    command: ["seat"]
+    profiles: ["govern"]
+    restart: "no"
+
+  # prepare / propose / confirm N / execute N / status
+  govern:
+    image: indivisa-seed
+    depends_on:
+      canton:
+        condition: service_healthy
+    volumes:
+      - demo:/demo
+    entrypoint: ["/indivisa/govern.sh"]
+    profiles: ["govern"]
+    restart: "no"
+
   web:
     build:
       context: ..
@@ -74,3 +180,6 @@ services:
 
 volumes:
   demo:
+  decman-1-data:
+  decman-2-data:
+  decman-3-data:

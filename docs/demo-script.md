@@ -24,8 +24,16 @@ made at the first save.
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-rejected.mp4` | the deliberate failure |
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-settled.mp4` | the fix and the retry |
 | `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide5.PNG` | five title cards |
-| `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-HackCanton-S3.mp4` | the finished 60–90 second video |
-| `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-BitSafe-governed.mp4` | the separate 45–60 second BitSafe clip (Part I), recorded on another day |
+| `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-refused.mp4` | one approval is not enough (Part I) |
+| `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-settled.mp4` | two approvals, and it settles (Part I) |
+| `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide7.PNG` | seven title cards |
+| `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-HackCanton-S3.mp4` | **the finished video, one file, under 2 minutes** |
+
+**One submission, one video.** HackCanton allows a single entry to entre
+several challenges, so the governed settlement is not a separate film: it is
+the last third of the same one. Part I is a third recording session, on a
+different network, cut into the same timeline. The parts are recorded on
+different days only because the two networks do not fit in memory together.
 
 The `Indivisa-recording` folder sits **next to** the repo, not inside it, so
 video files never end up in git.
@@ -176,7 +184,7 @@ end. Do not record until both pages look right.
 The network and both pages can now sit for hours. Do the cards and the
 recorder setup next.
 
-## Part B. The five title cards in PowerPoint (≈ 20 minutes)
+## Part B. The seven title cards in PowerPoint (≈ 25 minutes)
 
 Open PowerPoint → Blank Presentation. Design → Slide Size → Widescreen
 (16:9) (it usually is already). Set every slide to a plain background:
@@ -192,7 +200,9 @@ art, no animations.
 | 2 | **A bond coupon. 250 holders. One paying agent.** / Every number you are about to see is read live from a Canton ledger. / *(small, 20 pt, at the bottom)* Real: the ledger, the settlement, the update id. Simulated: the cash (TestTokenV2, the reference Token Standard V2 asset) and the holders. |
 | 3 | **Each holder's node holds its own line.** / And nothing about anyone else. Not filtered: never delivered. |
 | 4 | **Now the same run, with one holder not ready.** / This is the atomicity test. If any leg cannot settle, nothing moves. |
-| 5 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / Built on Token Standard V2 (CIP-0112, approved June 2026) / github.com/Chain-Experts/Indivisa |
+| 5 | **A coupon this size should not move on one signature.** / The run can name an approver: a party no single company controls. / *(small, 20 pt)* Governed through BitSafe's Decentralization Manager. Three approver nodes, threshold two. |
+| 6 | **Below the threshold, the ledger refuses.** / One approval is not enough. Nothing moves. |
+| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / Built on Token Standard V2 (CIP-0112, approved June 2026) / github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
 (create the folder in the dialog if it does not exist).
@@ -201,7 +211,7 @@ Export as images: File → Export → Change File Type → PNG Portable Network
 Graphics → Save As → choose the folder `D:\Dev\ChainExperts\Indivisa-recording`,
 file name `cards` → Save → when asked "Which slides do you want to
 export?" click **All Slides**. PowerPoint creates a folder `cards` with
-`Slide1.PNG` … `Slide5.PNG`.
+`Slide1.PNG` … `Slide7.PNG`.
 
 ## Part C. Set up the screen and the recorder (≈ 15 minutes)
 
@@ -330,22 +340,27 @@ the three (or four) `.mp4` files from `Indivisa-recording\raw` and the five
 Drag items onto the timeline in this order, and set each card's duration
 by dragging its right edge (the default is 5 s; make cards **3 s**):
 
-| # | Item | Keep | Caption it carries |
+| # | Item | Keep | What it carries |
 |---|---|---|---|
 | 1 | Slide1.PNG | 3 s | title |
 | 2 | Slide2.PNG | 4 s | "A bond coupon. 250 holders…" |
-| 3 | take1.mp4, from the start to just before the click | ~16 s | the still page, the schedule scroll, the holders |
+| 3 | take1.mp4, from the start to just before the click | ~14 s | the still page, the schedule, the holders |
 | 4 | Slide3.PNG | 3 s | "Each holder's node holds its own line" |
-| 5 | take1.mp4, the click through the green box and the paid holders | ~12 s | the settle |
+| 5 | take1.mp4, the click through the green box and the paid cards | ~12 s | the settle |
 | 6 | Slide4.PNG | 4 s | "Now the same run, with one holder not ready…" |
-| 7 | take2-rejected.mp4, the click through the red box | ~12 s | the refusal |
-| 8 | take2-fix.mp4 (optional) | ~5 s | the one command |
-| 9 | take2-settled.mp4, the click through the green box | ~10 s | the retry |
-| 10 | Slide5.PNG | 6 s | closing |
+| 7 | take2-rejected.mp4, the click through the red box | ~11 s | the refusal |
+| 8 | take2-settled.mp4, the click through the green box | ~9 s | the retry |
+| 9 | Slide5.PNG | 4 s | "should not move on one signature" |
+| 10 | take3-governed-refused.mp4, the click through the red box | ~11 s | the agent alone, refused |
+| 11 | Slide6.PNG | 3 s | "below the threshold, the ledger refuses" |
+| 12 | take3-governed-settled.mp4, the second confirmation through the green box | ~11 s | two of three, and it settles |
+| 13 | Slide7.PNG | 6 s | closing |
 
 To cut a clip: click it on the timeline, move the playhead to the cut
 point, press **S** (split), click the piece you do not want, press
-Delete. Total should land between 70 and 80 seconds.
+Delete. **Total must be under 2 minutes** — that is HackCanton's hard
+limit. This order lands near 95 seconds, which leaves room; if it runs
+over, take it out of items 3 and 5 first, never out of 10 and 12.
 
 Do not add music, transitions or zoom effects; a straight cut is right for
 this. If you recorded voice, it is already in the clips. If not and you
@@ -401,16 +416,22 @@ One sentence per shot, spoken slowly; silence is fine between them.
 
 ## Part I. The BitSafe clip: the governed settlement (≈ 1.5 hours, separate sitting)
 
-A second, separate video for BitSafe's challenge, 45–60 seconds. It is **not**
-cut into the main video and it is recorded on a different network: BitSafe's
-own sandbox in Docker, not our LocalNet. The two do not fit in memory
-together, so record the main video first (its freeze date comes first), stop
-LocalNet (`pwsh infra\localnet\up.ps1 -Down`), and do this on another day.
+The third recording session. It is on a different network — BitSafe's own
+sandbox in Docker, not our LocalNet — and the two do not fit in memory
+together, so record Parts D and E first, stop LocalNet
+(`pwsh infra\localnet\up.ps1 -Down`), and do this on another day.
+
+**The footage goes into the same video**, as items 10 and 12 of the edit in
+Part F. One submission enters both the main competition and BitSafe's
+challenge, so there is one film, not two.
 
 What it shows, one shot per thing BitSafe scores: it runs from the
 instructions; below threshold the settlement is refused; at threshold it
 settles; only one action is governed; the module is reusable; and what is
 simulated is said out loud.
+
+Save the two clips as `take3-governed-refused.mp4` and
+`take3-governed-settled.mp4` in `Indivisa-recording\raw`.
 
 ### I1. Bring up the sandbox (≈ 40 minutes the first time, 5 after)
 

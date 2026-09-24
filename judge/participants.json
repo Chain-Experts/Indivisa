@@ -1,11 +1,41 @@
 {
-  "default_participant": { "host": "canton", "port": 5021 },
+  "default_participant": {
+    "host": "canton",
+    "port": 5021,
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+    "user_id": "participant_admin"
+  },
   "participants": {
-    "registry": { "host": "canton", "port": 5011 },
-    "agent":    { "host": "canton", "port": 5021 },
-    "alice":    { "host": "canton", "port": 5031 },
-    "bob":      { "host": "canton", "port": 5041 },
-    "charlie":  { "host": "canton", "port": 5051 }
+    "registry": {
+      "host": "canton",
+      "port": 5011,
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+      "user_id": "participant_admin"
+    },
+    "agent": {
+      "host": "canton",
+      "port": 5021,
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+      "user_id": "participant_admin"
+    },
+    "alice": {
+      "host": "canton",
+      "port": 5031,
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+      "user_id": "participant_admin"
+    },
+    "bob": {
+      "host": "canton",
+      "port": 5041,
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+      "user_id": "participant_admin"
+    },
+    "charlie": {
+      "host": "canton",
+      "port": 5051,
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08",
+      "user_id": "participant_admin"
+    }
   },
   "party_participants": {}
 }

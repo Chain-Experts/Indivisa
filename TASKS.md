@@ -557,7 +557,33 @@ Done:
       button pressed alone is the "agent refused" shot of the BitSafe clip.
       The vote itself stays in DecMan (its API; its Approvals page does not
       list custom proposals, checked 22 Sep, question for Richie).
-- [ ] Record the BitSafe clip: `docs/demo-script.md`, Part I.
+- [ ] Record the governed run: `docs/demo-script.md`, Part I. It is **not a
+      separate film** any more (24 Sep): one submission enters both the main
+      competition and BitSafe's challenge, so the footage is items 10 and 12
+      of the single under-two-minute video.
+- [x] **Judge package carries the whole product** (24 Sep, stage 1 of 2). The
+      judge Canton image now vets all thirteen DARs, governance included —
+      57 packages with dependencies — so an inspecting judge finds everything
+      we built in the running system. Verified: the five governance-relevant
+      packages all report vetted.
+- [x] **Judge package, stage 2: the vote inside Docker** (24 Sep, working end
+      to end and verified on the ledger: 8 legs, $14,371.88, settled only
+      after two of three approvers confirmed; one confirmation refused with
+      the ledger's own *'Enough confirmations to execute action' was not
+      met*). Three DecMan v1.8.0 containers behind the `govern` compose
+      profile, ~150 MB each, so a plain `docker compose up` is untouched and
+      6 GB still covers both paths. `judge/govern.sh` ports BitSafe's
+      `hackathon/seed.sh` and our `infra/govern.ps1` onto this topology.
+      ~~Original plan:~~ Three DecMan
+      containers against three of our five participants, plus a seeding step
+      that reproduces BitSafe's `hackathon/seed.sh` against our topology:
+      peer mesh, decentralised party at threshold 2, DAR distribution, member
+      parties, governance core. Their scripts are hardcoded to their own
+      container names and ports, so this is a port of roughly 250 lines, not
+      a configuration change. Raises the judge's memory requirement from 6 GB
+      to about 8 GB. **Do not let this destabilise the working package**:
+      keep it behind a compose profile so `docker compose up` stays exactly
+      as it is today.
 - [ ] Offer `governance-settlement-v0` to BitSafe's repository as a pull
       request (needs their `multi-package.yaml` entry and a `daml.yaml` at
       their SDK version).

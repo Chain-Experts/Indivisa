@@ -31,8 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-cert
 
 WORKDIR /indivisa
 COPY daml/indivisa-test/.daml/dist/indivisa-test-0.1.0.dar ./
-COPY judge/participants.json judge/seed.sh ./
-RUN chmod +x seed.sh
+COPY daml/indivisa-governance-test/.daml/dist/indivisa-governance-test-0.1.0.dar ./
+COPY judge/participants.json judge/seed.sh judge/govern.sh ./
+RUN chmod +x seed.sh govern.sh
 
 # A stack for the script runner's own recursion, a small heap: this is a
 # client, and a judge's laptop has other things to do.

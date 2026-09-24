@@ -11,7 +11,8 @@ Wait for `Ready. Open http://localhost:8080` in the terminal (see **When is
 it ready?** just below — the first run takes a few minutes, most of it
 seating the holders), then open that page.
 
-You will need Docker with Compose v2, about **6 GB of memory** given to it
+You will need Docker with Compose v2, about **6 GB of memory** given to it (the
+governed path below adds only ~0.5 GB, so 6 GB covers both)
 (Docker Desktop: Settings → Resources), and ~2 GB of disk. The first run
 downloads the images and builds two small ones; later runs start in about
 a minute.
@@ -36,7 +37,7 @@ What you see before them, so you can tell progress from a stall:
 
 | In the terminal | What is happening | Roughly |
 |---|---|---|
-| many Canton lines, ending `Indivisa LocalNet is up` | five participants started, nine packages vetted | 1 min |
+| many Canton lines, ending `Indivisa LocalNet is up` | five participants started, thirteen DARs vetted | 2 min |
 | `Container indivisa-canton Healthy` | the network is ready for a client | |
 | `==> Waiting for the ledger` … `all five participants are answering` | | seconds |
 | `==> Seating N holders` | **the long step.** Each holder is a party, and a party takes a few seconds. Nothing prints while it works | 2 min for 8, 4 min for 20 |
@@ -133,6 +134,54 @@ container on your machine, not five companies.
 | The page says "No seat file" | The seed has not finished. Wait for `Ready. Open http://localhost:8080` in the terminal, then reload. To watch just that container: `docker compose logs -f seed`. |
 | Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
 | The button says "Prepare the run first" | The seed did not finish; see above. |
+
+## Optional: make it need more than one signature
+
+Everything above settles on the paying agent pressing one button. A coupon
+worth millions should not. The package can also run the same settlement
+**governed**: a party that no single company controls, which acts only when
+two of its three members agree.
+
+This is BitSafe's Decentralization Manager, unmodified, running as three
+approver nodes beside the ledger. Nothing above changes — the governed path
+is opt-in and starts differently:
+
+```bash
+docker compose down -v                                   # start clean
+INDIVISA_GOVERNED=1 docker compose --profile govern up -d
+docker compose run --rm govern-seed                      # ~2 min, once
+docker compose run --rm govern prepare
+```
+
+Open http://localhost:8080. The button is there, and it is refused: the run
+names an approver, so the paying agent alone no longer has the authority.
+
+Then the vote:
+
+```bash
+docker compose run --rm govern propose      # the agent asks
+docker compose run --rm govern confirm 1    # one approver agrees
+docker compose run --rm govern execute 2    # REFUSED - one is not enough
+docker compose run --rm govern confirm 2    # a second agrees
+docker compose run --rm govern execute 3    # settles
+```
+
+The refusal is worth reading. It is not our code declining; it is the ledger:
+
+```
+The requirement 'Enough confirmations to execute action' was not met.
+```
+
+`docker compose run --rm govern status` shows where a vote stands at any
+point. The three approver nodes have their own web interfaces on
+http://localhost:8081, 8082 and 8083 if you want to see the invitations and
+confirmations from their side.
+
+**What is real here:** the governance engine is BitSafe's, unchanged; the
+threshold, the refusal and the settlement are the ledger's. **What is not:**
+three approver nodes on one machine are not three independent operators. The
+threshold is real; the independence is simulated. On DevNet the second node
+is run by BitSafe, which is the version that counts.
 
 ## What this does not show
 
