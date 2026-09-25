@@ -215,6 +215,21 @@ same scripts the proofs run.
 | three `decman-*` services | BitSafe's Decentralization Manager `v1.8.0`, unmodified, one per holding participant, all behind the `govern` compose profile so `docker compose up` is unchanged. About 150 MB each. |
 | `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated, and the optional governed run. |
 
+## `contrib/bitsafe/` — what we are giving back
+
+Two pull requests prepared for
+`github.com/DLC-link/decentralization-manager`, following their
+`docs/CONTRIBUTING.md`.
+
+| File | Does |
+|---|---|
+| `README.md` | Both PRs: branch names, where each file goes in their tree, and a draft description for each |
+| `INTEGRATING.md` | The documentation PR itself — six things not in their docs, each found the hard way while pointing DecMan at our own Canton |
+| `module/` | The code PR: `governance-settlement-v0`, its `daml.yaml` and its test, laid out as they would sit in their repo |
+
+The module is the copy that would be contributed; the one that builds is
+`daml/governance-settlement/`. Keep them in step if either changes.
+
 ## Not built, deliberately
 
 - **No Java.** An optional paying-agent daemon only if ahead of schedule; first to be cut.

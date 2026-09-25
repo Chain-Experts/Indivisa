@@ -630,7 +630,12 @@ Done:
       to about 8 GB. **Do not let this destabilise the working package**:
       keep it behind a compose profile so `docker compose up` stays exactly
       as it is today.
-- [ ] Offer `governance-settlement-v0` to BitSafe's repository as a pull
+- [x] **Both BitSafe contributions prepared** (25 Sep) in `contrib/bitsafe/`:
+      the reusable module as one PR, and `INTEGRATING.md` — six undocumented
+      things that each cost hours — as another. Branch names, commit types and
+      draft descriptions follow their `docs/CONTRIBUTING.md`. Send the docs
+      one first. **Still to do: open the two PRs.**
+- [ ] ~~Offer `governance-settlement-v0` to BitSafe's repository as a pull~~
       request (needs their `multi-package.yaml` entry and a `daml.yaml` at
       their SDK version).
 - [ ] **Gold: our half is done.** DecMan is on DevNet (25 Sep) and our node
