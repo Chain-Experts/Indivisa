@@ -6,8 +6,8 @@ occasion.
 
 Their conventions, from `docs/CONTRIBUTING.md`:
 
-| | |
-|---|---|
+| Convention | Shape |
+| --- | --- |
 | Commit | `<type>(<scope>): <subject>`, past tense |
 | Branch | `<type>/<scope>/<subject>` |
 | Types | `feat`, `fix`, `docs`, `style`, `refact`, `perf`, `test`, `chore` |
@@ -35,7 +35,7 @@ from our own `indivisa-governance-v0` precisely so it could be given away.
 **Files, and where they go:**
 
 | From here | To their repo |
-|---|---|
+| --- | --- |
 | `module/daml.yaml` | `daml/governance-settlement/daml.yaml` |
 | `module/daml/Governance/Settlement/BatchSettlement.daml` | `daml/governance-settlement/daml/Governance/Settlement/BatchSettlement.daml` |
 | `module/test/BatchSettlementTest.daml` | their test package, as `Governance/Settlement/Test/BatchSettlementTest.daml` |

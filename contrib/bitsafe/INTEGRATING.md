@@ -11,7 +11,7 @@ written down anywhere, and each has a one-line fix.
 
 A node with no `auth-services` at all will fail every vote:
 
-```
+```text
 INVALID_TOKEN(8): The submitted request is missing a user-id:
 Cannot default user_id field because claims do not specify an user-id.
 Is authentication turned on?
@@ -49,7 +49,7 @@ other and it is a natural mistake.
 
 Two different errors, one after the other:
 
-```
+```text
 Could not verify JWT token: token has no expiration time
 Could not verify JWT token: token lifetime (2099-01-01T00:00:00Z) too long
 ```
@@ -73,7 +73,7 @@ bootstrap console needs a token the console does not have, so it is a loop.
 Canton creates exactly one user for itself, `participant_admin`, with
 `ParticipantAdmin` rights. Name it in the token and the loop disappears:
 
-```
+```text
 DECPM_CANTON_HMAC_SUBJECT=participant_admin
 ```
 
@@ -87,7 +87,7 @@ This is the one that is hardest to guess from the API. To confirm or execute a
 request schema requires the field and ignores it for `core_domain` — and the
 real target goes in `proposal_cid`:
 
-```jsonc
+```http
 POST /governance/confirm
 {
   "party_id": "...",
@@ -100,7 +100,7 @@ POST /governance/confirm
 
 Sending your own action type instead gives:
 
-```
+```text
 Json deserialize error: unknown variant `execute_action`, expected one of
 `governance_add_member`, `governance_remove_member`, ...
 ```
@@ -112,7 +112,7 @@ Confirmations for it come back under `domain_actions`, matched on
 `proposal_cid` — not under `actions`, which is where the core self-governance
 confirmations are:
 
-```
+```text
 GET /governance/confirmations?party_id=...
   .domain_actions[] | select(.proposal_cid == $cid) | .confirmations[].contract_id
 ```
