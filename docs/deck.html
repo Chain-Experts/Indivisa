@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Indivisa — HackCanton Season 3</title>
+<style>
+  :root{
+    --ink:#0C1310; --panel:#141F1A; --panel2:#18241E; --line:#25342C;
+    --text:#E9EFEA; --muted:#8FA398; --dim:#63786C;
+    --accent:#58BE8A; --accent-dim:#2E6B4F; --amber:#D7A24B; --red:#E3705A;
+    --paper:#F3F5F1; --paper-panel:#E7EBE4; --paper-ink:#121B16; --paper-muted:#5A6B61;
+    --paper-line:#CBD5CB; --paper-accent:#175E43;
+    --display:"Lora","Bitstream Charter",Georgia,serif;
+    --sans:"Carlito","Liberation Sans",Arial,sans-serif;
+    --mono:"DejaVu Sans Mono","Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#333;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  .slide{
+    position:relative;width:1280px;height:720px;overflow:hidden;
+    background:var(--ink);color:var(--text);font-family:var(--sans);
+    padding:104px 84px 72px;display:flex;flex-direction:column;justify-content:center;
+    margin:0 auto 24px;
+  }
+  .slide.light{background:var(--paper);color:var(--paper-ink)}
+
+  /* running head */
+  .rh{position:absolute;top:34px;left:84px;right:84px;display:flex;
+      justify-content:space-between;align-items:baseline;
+      font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase}
+  .rh .act{color:var(--accent)}
+  .light .rh .act{color:var(--paper-accent)}
+  .rh .no{color:var(--dim)}
+  .light .rh .no{color:var(--paper-muted)}
+  .rule{position:absolute;top:58px;left:84px;right:84px;height:1px;background:var(--line)}
+  .light .rule{background:var(--paper-line)}
+
+  h1{font-family:var(--display);font-weight:700;font-size:70px;line-height:1.02;letter-spacing:-.02em}
+  h2{font-family:var(--display);font-weight:700;font-size:50px;line-height:1.08;letter-spacing:-.015em;max-width:20ch}
+  h2.wide{max-width:26ch}
+  h2.sm{font-size:42px;max-width:24ch}
+  .kicker{font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+  .light .kicker{color:var(--paper-accent)}
+  .lede{font-size:23px;line-height:1.45;color:var(--muted);max-width:62ch;margin-top:20px}
+  .light .lede{color:var(--paper-muted)}
+  .body{margin-top:auto}
+
+  .foot{position:absolute;left:84px;right:84px;bottom:30px;
+        font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--dim)}
+  .light .foot{color:var(--paper-muted)}
+
+  /* stat row */
+  .stats{display:flex;gap:56px;margin-top:38px}
+  .stat .n{font-family:var(--display);font-weight:700;font-size:50px;color:var(--accent);line-height:1}
+  .stat .l{font-family:var(--sans);font-size:14.5px;line-height:1.35;color:var(--muted);margin-top:10px;max-width:22ch}
+
+  /* list */
+  ul{list-style:none;display:flex;flex-direction:column;gap:16px;margin-top:30px}
+  li{position:relative;padding-left:30px;font-size:20.5px;line-height:1.4;max-width:60ch}
+  li::before{content:"";position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--accent)}
+  .light li::before{background:var(--paper-accent)}
+  li b{font-weight:700}
+
+  /* numbered steps */
+  ol{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px;margin-top:26px}
+  ol li{counter-increment:s;padding-left:52px;font-size:19px;line-height:1.38}
+  ol li::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:14px;
+    color:var(--accent);background:none;width:auto;height:auto;top:.15em;letter-spacing:.06em}
+
+  /* value cards */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:34px}
+  .card{background:var(--panel);border-top:2px solid var(--accent);padding:24px 22px 26px;display:flex;flex-direction:column;gap:12px}
+  .card .t{font-family:var(--display);font-weight:700;font-size:25px;line-height:1.15}
+  .card .d{font-size:16px;line-height:1.45;color:var(--muted)}
+
+  /* three columns honesty */
+  .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:30px}
+  .col .h{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .col .h.real{color:var(--accent);border-color:var(--accent-dim)}
+  .col .h.sim{color:var(--amber)}
+  .col .h.no{color:var(--dim)}
+  .col p{font-size:16px;line-height:1.48;color:var(--muted)}
+
+  /* table */
+  table{border-collapse:collapse;margin-top:26px;font-family:var(--mono);font-size:19px}
+  th{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-muted);
+     text-align:left;padding:0 42px 10px 0;border-bottom:1px solid var(--paper-line);font-weight:400}
+  td{padding:13px 42px 13px 0;border-bottom:1px solid var(--paper-line);font-variant-numeric:tabular-nums}
+  td.k{color:var(--paper-accent);font-weight:700}
+
+  /* mono blocks */
+  .cmd{font-family:var(--mono);font-size:27px;background:var(--paper-panel);
+       border-left:3px solid var(--paper-accent);padding:20px 26px;margin-top:26px;display:inline-block}
+  .hash{font-family:var(--mono);font-size:15.5px;word-break:break-all;color:var(--paper-accent);
+        background:var(--paper-panel);padding:14px 18px;margin-top:20px;line-height:1.5}
+
+  /* threshold rows */
+  .thr{display:flex;flex-direction:column;gap:14px;margin-top:30px;max-width:640px}
+  .thr div{display:flex;align-items:center;gap:20px;font-family:var(--mono);font-size:19px;
+           background:var(--panel);padding:16px 22px;border-left:3px solid var(--line)}
+  .thr .no{border-left-color:var(--red)} .thr .no span:last-child{color:var(--red)}
+  .thr .yes{border-left-color:var(--accent)} .thr .yes span:last-child{color:var(--accent)}
+  .thr .arrow{color:var(--dim)}
+
+  /* title slide */
+  .title{justify-content:center;align-items:flex-start;padding-left:110px;padding-top:0}
+  .title img{width:132px;margin-bottom:34px}
+  .title .sub{font-size:25px;color:var(--muted);margin-top:22px;line-height:1.35;max-width:32ch}
+  .title .badge{font-family:var(--mono);font-size:13.5px;letter-spacing:.09em;color:var(--accent);
+    margin-top:36px;border-top:1px solid var(--line);padding-top:20px}
+  .title .org{position:absolute;bottom:52px;left:110px;font-family:var(--mono);font-size:12.5px;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+
+  .big-quote{font-family:var(--display);font-size:33px;line-height:1.3;font-style:italic;color:var(--text);max-width:27ch}
+  .answer{font-family:var(--display);font-weight:700;font-size:72px;color:var(--accent);margin-top:26px;letter-spacing:-.02em}
+
+  @media print{ .slide{margin:0;page-break-after:always} }
+  @page{ size:1280px 720px; margin:0 }
+</style>
+</head>
+<body>
+
+<!-- 1 TITLE -->
+<section class="slide title">
+  <img src="logo.png" alt="">
+  <h1>Indivisa</h1>
+  <p class="sub">Corporate actions, settled in one atomic batch, without exposing the register.</p>
+  <p class="badge">Settled on Canton DevNet &nbsp;·&nbsp; run it yourself in one command</p>
+  <p class="org">Chain-Experts &nbsp;·&nbsp; HackCanton Season 3</p>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="rh"><span class="act">The problem</span><span class="no">02 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">A distribution is N separate payments.</h2>
+  <p class="lede">There is no moment at which the run is definitively finished. Some holders are paid, some are not, and the difference is worked by hand for days afterwards.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">$3.42m</div><div class="l">a year in asset-servicing errors, per market participant</div></div>
+    <div class="stat"><div class="n">3–10%</div><div class="l">error rates, described as routine</div></div>
+    <div class="stat"><div class="n">&lt;40%</div><div class="l">straight-through processing on voluntary events</div></div>
+    <div class="stat"><div class="n">+23%</div><div class="l">annual growth in asset-servicing costs</div></div>
+  </div>
+  <p class="foot">Source: Canton Network, Post-Trade Transformation (2025). Not our figures.</p>
+</section>
+
+<!-- 3 WHY STUCK -->
+<section class="slide">
+  <div class="rh"><span class="act">The problem</span><span class="no">03 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">And it cannot simply move onto a public chain.</h2>
+  <p class="lede">Paying a coupon publicly publishes the register. Every holder's position size becomes readable by every other holder, by their competitors, and by anyone else, at the moment the coupon pays.</p>
+  <ul>
+    <li>The register is confidential <b>by law</b> in most markets.</li>
+    <li>It is commercially sensitive in all of them — it is the client list.</li>
+    <li>That is why this workflow has not moved to a transparent ledger.</li>
+  </ul>
+</section>
+
+<!-- 4 WHAT IT DOES + DIAGRAM -->
+<section class="slide">
+  <div class="rh"><span class="act">What it does</span><span class="no">04 / 15</span></div><div class="rule"></div>
+  <h2 class="sm">One transaction. Every holder paid at the same instant, or nobody.</h2>
+  <svg viewBox="0 0 1110 300" style="margin-top:26px;width:1110px">
+    <text x="0" y="14" font-family="DejaVu Sans Mono" font-size="12" letter-spacing="3" fill="#63786C">TODAY</text>
+    <text x="620" y="14" font-family="DejaVu Sans Mono" font-size="12" letter-spacing="3" fill="#58BE8A">INDIVISA</text>
+    <line x1="0" y1="24" x2="500" y2="24" stroke="#25342C"/><line x1="620" y1="24" x2="1110" y2="24" stroke="#2E6B4F"/>
+    <g id="left"></g>
+    <g>
+      <rect x="620" y="96" width="120" height="44" fill="#141F1A" stroke="#2E6B4F"/>
+      <text x="680" y="123" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="12" fill="#E9EFEA">AGENT</text>
+      <path d="M744 118 L830 118" stroke="#58BE8A" stroke-width="3"/>
+      <polygon points="830,112 844,118 830,124" fill="#58BE8A"/>
+      <text x="787" y="106" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="11" fill="#58BE8A">ONE TX</text>
+      <g stroke="#58BE8A" stroke-width="1.6">
+        <line x1="852" y1="118" x2="880" y2="56"/><line x1="852" y1="118" x2="880" y2="87"/>
+        <line x1="852" y1="118" x2="880" y2="118"/><line x1="852" y1="118" x2="880" y2="149"/>
+        <line x1="852" y1="118" x2="880" y2="180"/>
+      </g>
+      <g fill="#18241E" stroke="#2E6B4F">
+        <rect x="880" y="46" width="200" height="20"/><rect x="880" y="77" width="200" height="20"/>
+        <rect x="880" y="108" width="200" height="20"/><rect x="880" y="139" width="200" height="20"/>
+        <rect x="880" y="170" width="200" height="20"/>
+      </g>
+      <g fill="#8FA398" font-family="DejaVu Sans Mono" font-size="11">
+        <text x="892" y="60">holder</text><text x="892" y="91">holder</text><text x="892" y="122">holder</text>
+        <text x="892" y="153">holder</text><text x="892" y="184">…and 245 more</text>
+      </g>
+      <text x="620" y="232" font-family="DejaVu Sans Mono" font-size="12.5" fill="#58BE8A">ALL PAID, OR NONE</text>
+      <text x="620" y="254" font-family="Carlito, Liberation Sans" font-size="15" fill="#8FA398">Nothing partial. Nothing to reconcile. No holder sees another.</text>
+    </g>
+  </svg>
+  <script>
+    (function(){
+      const g=document.getElementById('left');const fails=new Set([6,17,23,31]);let n=0;
+      for(let r=0;r<5;r++)for(let c=0;c<8;c++){
+        const x=c*62, y=44+r*34, bad=fails.has(n);
+        const col=bad?'#E3705A':'#4A5E53';
+        g.insertAdjacentHTML('beforeend',
+          `<line x1="${x}" y1="${y}" x2="${x+40}" y2="${y}" stroke="${col}" stroke-width="2"/>`+
+          `<polygon points="${x+40},${y-4} ${x+48},${y} ${x+40},${y+4}" fill="${col}"/>`+
+          (bad?`<text x="${x+34}" y="${y-8}" font-family="DejaVu Sans Mono" font-size="13" fill="#E3705A">×</text>`:''));
+        n++;
+      }
+      g.insertAdjacentHTML('beforeend',
+        `<text x="0" y="232" font-family="DejaVu Sans Mono" font-size="12.5" fill="#E3705A">250 PAYMENTS · SOME COME BACK</text>`+
+        `<text x="0" y="254" font-family="Carlito, Liberation Sans" font-size="15" fill="#8FA398">Chased by hand. Claims for weeks. Never definitively done.</text>`);
+    })();
+  </script>
+</section>
+
+<!-- 5 VALUE -->
+<section class="slide">
+  <div class="rh"><span class="act">What it does</span><span class="no">05 / 15</span></div><div class="rule"></div>
+  <p class="kicker">The value, in the operations manager's terms</p>
+  <h2 class="wide">The run is finished when the transaction commits.</h2>
+  <div class="cards">
+    <div class="card"><div class="t">The event closes the same day</div>
+      <div class="d">Not after three days of chasing returns and rejects. The transaction commits, and that is the answer.</div></div>
+    <div class="card"><div class="t">The exception queue is empty</div>
+      <div class="d">There is no partial state to work. The class of exception "some paid, some not" stops existing.</div></div>
+    <div class="card"><div class="t">Nothing to chase next week</div>
+      <div class="d">No claims tail, no reconciliation against four systems, no explaining to the issuer what happened.</div></div>
+  </div>
+  <p class="foot">And the register never leaves the paying agent.</p>
+</section>
+
+<!-- 6 HOW -->
+<section class="slide">
+  <div class="rh"><span class="act">What it does</span><span class="no">06 / 15</span></div><div class="rule"></div>
+  <h2 class="sm">Four steps, and only the last one moves money.</h2>
+  <ol>
+    <li><b>Once, at onboarding</b> — each holder signs one standing agreement with the paying agent.</li>
+    <li><b>Record date</b> — the register is snapshotted and entitlements calculated, rounded so the parts sum to the announced total exactly.</li>
+    <li><b>Before payment</b> — the agent sets aside the cash and prepares one allocation per holder.</li>
+    <li><b>Payment date</b> — one settlement. Every leg, or none.</li>
+  </ol>
+  <p class="foot">Holders authorise once, at onboarding. Never per coupon.</p>
+</section>
+
+<!-- 7 WHY NOW + PANES -->
+<section class="slide">
+  <div class="rh"><span class="act">Why now</span><span class="no">07 / 15</span></div><div class="rule"></div>
+  <h2 class="sm">Token Standard V2 made this possible in June.</h2>
+  <p class="lede" style="margin-top:14px">CIP-0112, approved 12 June 2026: multi-leg settlement where the executor sees every leg and each participant sees only its own. Its worked example is trading and netting. <b style="color:#E9EFEA">CIP-112 did not design this. It enabled it.</b></p>
+  <svg viewBox="0 0 1110 180" style="margin-top:22px;width:1110px">
+    <g font-family="DejaVu Sans Mono">
+      <g>
+        <rect x="0" y="0" width="340" height="150" fill="#141F1A" stroke="#25342C"/>
+        <rect x="0" y="0" width="340" height="30" fill="#18241E"/>
+        <text x="16" y="20" font-size="12" fill="#58BE8A" letter-spacing="2">HOLDER A</text>
+        <rect x="16" y="44" width="308" height="28" fill="#17332A" stroke="#2E6B4F"/>
+        <text x="28" y="63" font-size="13" fill="#E9EFEA">my coupon</text>
+        <text x="312" y="63" font-size="13" fill="#58BE8A" text-anchor="end">1,840.00</text>
+        <rect x="16" y="80" width="308" height="24" fill="#131C18"/><text x="28" y="97" font-size="11.5" fill="#4A5E53">nothing else here</text>
+        <rect x="16" y="110" width="308" height="24" fill="#131C18"/><text x="28" y="127" font-size="11.5" fill="#4A5E53">nothing else here</text>
+      </g>
+      <g transform="translate(385,0)">
+        <rect x="0" y="0" width="340" height="150" fill="#141F1A" stroke="#25342C"/>
+        <rect x="0" y="0" width="340" height="30" fill="#18241E"/>
+        <text x="16" y="20" font-size="12" fill="#58BE8A" letter-spacing="2">HOLDER B</text>
+        <rect x="16" y="44" width="308" height="24" fill="#131C18"/><text x="28" y="61" font-size="11.5" fill="#4A5E53">nothing else here</text>
+        <rect x="16" y="74" width="308" height="28" fill="#17332A" stroke="#2E6B4F"/>
+        <text x="28" y="93" font-size="13" fill="#E9EFEA">my coupon</text>
+        <text x="312" y="93" font-size="13" fill="#58BE8A" text-anchor="end">46,320.00</text>
+        <rect x="16" y="110" width="308" height="24" fill="#131C18"/><text x="28" y="127" font-size="11.5" fill="#4A5E53">nothing else here</text>
+      </g>
+      <g transform="translate(770,0)">
+        <rect x="0" y="0" width="340" height="150" fill="#141F1A" stroke="#25342C"/>
+        <rect x="0" y="0" width="340" height="30" fill="#18241E"/>
+        <text x="16" y="20" font-size="12" fill="#D7A24B" letter-spacing="2">PAYING AGENT · EXECUTOR</text>
+        <rect x="16" y="44" width="308" height="24" fill="#1D2A22"/><text x="28" y="61" font-size="11.5" fill="#B9CCC0">holder A · 1,840.00</text>
+        <rect x="16" y="74" width="308" height="24" fill="#1D2A22"/><text x="28" y="91" font-size="11.5" fill="#B9CCC0">holder B · 46,320.00</text>
+        <rect x="16" y="104" width="308" height="30" fill="#1D2A22"/><text x="28" y="123" font-size="11.5" fill="#B9CCC0">…and 248 more, every one</text>
+      </g>
+    </g>
+  </svg>
+  <p class="foot">The striped rows are not hidden. Those amounts were never delivered to that node.</p>
+</section>
+
+<!-- 8 DEVNET (light) -->
+<section class="slide light">
+  <div class="rh"><span class="act">The proof</span><span class="no">08 / 15</span></div><div class="rule"></div>
+  <p class="kicker">Canton DevNet · 24 September 2026</p>
+  <h2 class="wide">It ran on the real network.</h2>
+  <p class="lede" style="color:var(--paper-muted)">Five holders paid in a single transaction — 8,421.88 USD. The deliberate failure was run first and refused: one holder not ready, nobody paid.</p>
+  <div class="hash">1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b</div>
+  <p class="foot">That is a real update id on the public test network. Full record: docs/devnet-run.md</p>
+</section>
+
+<!-- 9 DEMO (light) -->
+<section class="slide light">
+  <div class="rh"><span class="act">The proof</span><span class="no">09 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">Don't take our word for it. Run it.</h2>
+  <div class="cmd">cd judge &amp;&amp; docker compose up</div>
+  <div style="display:flex;gap:56px;margin-top:30px;align-items:flex-start">
+    <ul style="margin-top:0;flex:1">
+      <li>A five-participant Canton network, the real contracts, twenty holders.</li>
+      <li>One holder deliberately left out. Press the button — refused, and the ledger names them.</li>
+      <li>Fix it, press again: settled.</li>
+      <li>Nothing to install but Docker. No account anywhere.</li>
+    </ul>
+    <svg viewBox="0 0 320 190" width="320">
+      <rect x="0" y="0" width="320" height="190" fill="#E7EBE4" stroke="#CBD5CB"/>
+      <text x="160" y="46" text-anchor="middle" font-family="Lora, Georgia" font-weight="700" font-size="58" fill="#B0402C">0</text>
+      <text x="160" y="72" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="12.5" letter-spacing="2" fill="#B0402C">OF 250 PAID</text>
+      <line x1="40" y1="92" x2="280" y2="92" stroke="#CBD5CB"/>
+      <text x="160" y="118" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="13" fill="#5A6B61">250 requested</text>
+      <text x="160" y="140" text-anchor="middle" font-family="DejaVu Sans Mono" font-size="13" fill="#5A6B61">0 executed</text>
+      <text x="160" y="168" text-anchor="middle" font-family="Lora, Georgia" font-weight="700" font-size="17" fill="#121B16">Not 249.</text>
+    </svg>
+  </div>
+</section>
+
+<!-- 10 SCALE (light) -->
+<section class="slide light">
+  <div class="rh"><span class="act">The proof</span><span class="no">10 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">Measured, not estimated.</h2>
+  <table>
+    <tr><th>Holders in one transaction</th><th>Settles in</th><th>Transaction size</th></tr>
+    <tr><td class="k">250</td><td>1.6 s</td><td>440 KB</td></tr>
+    <tr><td class="k">1,000</td><td>11.1 s</td><td>1.67 MB</td></tr>
+  </table>
+  <p class="lede" style="color:var(--paper-ink);font-size:24px;max-width:52ch;margin-top:28px">
+    A thousand holders: <b>days of reconciliation become 11.1 seconds</b> — and it is final.</p>
+  <p class="foot">A realistic run reaches Canton's 10 MB transaction budget near 6,400 holders. Method and the second ceiling: docs/benchmark.md</p>
+</section>
+
+<!-- 11 GOVERNANCE -->
+<section class="slide">
+  <div class="rh"><span class="act">Control</span><span class="no">11 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">In institutional systems, four-eyes authorisation is a requirement, not a feature.</h2>
+  <p class="lede" style="margin-top:16px">A run can name an approver: a decentralised party, through BitSafe's Decentralization Manager. One optional field — the product is unchanged without it.</p>
+  <div class="thr">
+    <div class="no"><span>One approval</span><span class="arrow">→</span><span>the ledger refuses</span></div>
+    <div class="yes"><span>Two of three</span><span class="arrow">→</span><span>settles</span></div>
+  </div>
+  <p class="foot">The threshold is enforced by the ledger, not by our code. In the local demo all three nodes are ours; on DevNet the second is BitSafe's.</p>
+</section>
+
+<!-- 12 HONESTY -->
+<section class="slide">
+  <div class="rh"><span class="act">Honest</span><span class="no">12 / 15</span></div><div class="rule"></div>
+  <h2 class="sm">What we are not claiming.</h2>
+  <div class="cols">
+    <div class="col"><div class="h real">Real</div><p>The ledger, the contracts, the settlement, the refusal, the privacy, the DevNet update id, the governance engine and its threshold. Every number on screen.</p></div>
+    <div class="col"><div class="h sim">Simulated</div><p>The cash is TestTokenV2, the standard's own reference asset, not Canton Coin. Holders and positions are generated. Three approver nodes on one machine are not three independent operators.</p></div>
+    <div class="col"><div class="h no">Not attempted</div><p>Corporate-action announcement data. Chainlink, with DTCC and Swift, is attacking that layer. We do the payment layer, and saying so makes the position sharper.</p></div>
+  </div>
+  <p class="foot">We would rather tell you this than have you find it.</p>
+</section>
+
+<!-- 13 NOT BUILT -->
+<section class="slide">
+  <div class="rh"><span class="act">Honest</span><span class="no">13 / 15</span></div><div class="rule"></div>
+  <p class="kicker">Known, designed, not yet built</p>
+  <h2 class="wide">Scoping a run is the first thing we build next.</h2>
+  <p class="lede" style="margin-top:16px">If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 into a second run. <b style="color:#E9EFEA">The batch stays all-or-nothing; its membership becomes a decision, not an accident.</b> The model supports it. The workflow, and the audit trail that says why five were held back, are not written.</p>
+  <ul style="margin-top:22px">
+    <li><b>Production onboarding</b> — holders sign through a real client, not a script.</li>
+    <li><b>The scheduled agent</b> — today a person presses the button; in production a daemon watches payment dates.</li>
+    <li><b>Real cash</b> — a production run settles Canton Coin or a registry's own token.</li>
+  </ul>
+</section>
+
+<!-- 14 NEXT -->
+<section class="slide">
+  <div class="rh"><span class="act">Next</span><span class="no">14 / 15</span></div><div class="rule"></div>
+  <h2 class="wide">The buyer is the independent debt paying agent and the corporate trustee, first.</h2>
+  <ul>
+    <li>A few hundred firms worldwide — <b>328 registered transfer agents in the US alone</b>. Small, named, and each running thousands of events a year.</li>
+    <li><b>Dividends and redemptions are the same engine</b> — the same run, a different event type.</li>
+    <li><b>It works against registers that already exist.</b> The bond is not tokenized; only the cash is a Token Standard V2 asset.</li>
+    <li><b>The benchmark is a contribution in its own right</b> — the first published figures for CIP-112 batch settlement, going to the Canton forum whatever happens here.</li>
+  </ul>
+</section>
+
+<!-- 15 CLOSE -->
+<section class="slide title">
+  <img src="logo.png" alt="">
+  <h1>Indivisa</h1>
+  <p class="sub">One transaction. Every holder paid at the same instant, or nobody. And no holder sees another.</p>
+  <p class="badge">Settled on Canton DevNet &nbsp;·&nbsp; 1220652e…f466b<br>Run it yourself: &nbsp;cd judge &amp;&amp; docker compose up</p>
+  <p class="org">github.com/Chain-Experts/Indivisa &nbsp;·&nbsp; Apache-2.0 &nbsp;·&nbsp; Chain-Experts</p>
+</section>
+
+</body>
+</html>

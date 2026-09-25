@@ -177,13 +177,16 @@ allocate, as the sandbox's own seed script does.
   `govern confirm` / `govern execute` hold the vote. One confirmation is
   refused by the ledger; two settle. No account, no toolchain, no sandbox
   of ours to trust — see `judge/README.md`.
-- **Unfinished:** the DevNet deployment with BitSafe as the second
-  operator. Agreed with BitSafe on 23 September — two nodes, a 2-of-2
-  party, their node operated by them — so what is left is ours: a
-  Decentralization Manager instance beside our DevNet validator with its
-  Noise port reachable by theirs. Also unfinished: showing the governed run
-  in the console (it shows the settled state today, not the vote), and a
-  `Governed` variant of the recording.
+- **In progress: DevNet, with BitSafe as the second operator.** Agreed with
+  them on 23 September — two nodes, a 2-of-2 party, their node run by them.
+  Our Decentralization Manager went up on 25 September at
+  `<decman-host>`, Noise listener on 9000, reachable from
+  outside; our node data is with BitSafe. What remains is peering, the
+  party itself, and one governed settlement there. That is the version
+  where the independence is real rather than simulated.
+- **Unfinished:** showing the governed run in the console — it shows the
+  settled state today, not the vote — and a `Governed` variant of the
+  recording.
 
 ## 8. What comes next
 

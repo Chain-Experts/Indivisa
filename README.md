@@ -263,6 +263,10 @@ Worth saying before anyone else says it.
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
 | `docs/devnet-run.md` | The DevNet evidence: update id, what it proves and what it does not |
+| `docs/pitch.md` | The pitch, slide by slide, with what to say over each one |
+| `docs/Indivisa-pitch.pptx` | The deck itself, generated from that content |
+| `docs/pitch.md` | The pitch, slide by slide, with what to say over each one |
+| `docs/Indivisa-pitch.pptx` | The deck itself, generated from that content |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |

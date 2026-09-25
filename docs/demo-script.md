@@ -358,9 +358,12 @@ by dragging its right edge (the default is 5 s; make cards **3 s**):
 
 To cut a clip: click it on the timeline, move the playhead to the cut
 point, press **S** (split), click the piece you do not want, press
-Delete. **Total must be under 2 minutes** — that is HackCanton's hard
-limit. This order lands near 95 seconds, which leaves room; if it runs
-over, take it out of items 3 and 5 first, never out of 10 and 12.
+Delete. **The organisers' limit is five minutes** (confirmed in the
+HackCanton channel, 24 Sep). This order lands near 95 seconds, and that is
+deliberate: judging is asynchronous and a judge watches many of these, so a
+tight film beats a long one. Treat two minutes as the target and five as the
+ceiling. If a shot feels rushed, let it breathe — there is room. If it runs
+long, take it out of items 3 and 5 first, never out of 10 and 12.
 
 Do not add music, transitions or zoom effects; a straight cut is right for
 this. If you recorded voice, it is already in the clips. If not and you

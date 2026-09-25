@@ -36,6 +36,7 @@ CLAUDE.local.md
 CLAUDE-backup.md
 # A local TLS-interception root (Norton on this machine), exported so the
 # Java gRPC client will trust the proxied certificate. Machine-specific.
+infra/pitch/node_modules/
 infra/*/ca.pem
 infra/*/public/
 ui/dist/
