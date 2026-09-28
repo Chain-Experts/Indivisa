@@ -74,14 +74,14 @@ The namespace already matches their layout (`daml/<package>/daml/Governance/<Are
 
 **Branch:** `docs/api/integrating-existing-canton`
 
-**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — six things that are not in
-their documentation and each of which cost hours. Suggested location:
+**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — eight things that are not
+in their documentation and each of which cost hours. Suggested location:
 `docs/INTEGRATING.md`, linked from `USER_GUIDE.md` after the Quick Start.
 
 This is arguably the more valuable of the two. The module helps teams doing
 what we did; this helps **every** team pointing DecMan at their own node.
 
-The six:
+The eight:
 
 1. Canton must have `auth-services` on, or every vote fails with a message
    that reads like a governance fault rather than a config one
@@ -93,11 +93,17 @@ The six:
    `action`, and its confirmations come back under `domain_actions`
 6. `execute` needs `disclosed_contracts` for anything `executeImpl` touches
    off-node
+7. `SelfAction_AddAdditionalProposer` exists in the Daml and the API but not
+   in the UI — and the obvious workaround, adding the party as a member,
+   silently changes what the threshold guarantees
+8. A peer needs every package the action touches, asset packages included;
+   the error names the package but not the node, and arrives at settlement
 
 **Draft description:**
 
-> While pointing Decentralization Manager at our own five-participant Canton we
-> hit six things that are not in the docs, each of which took a while to work
+> While pointing Decentralization Manager at our own Canton, and then at a
+> live DevNet party shared with your team, we hit eight things that are not in
+> the docs, each of which took a while to work
 > out and each of which has a one-line fix. This adds a page covering them.
 >
 > The one we would most like to have read is number 5: a domain action is

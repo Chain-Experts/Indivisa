@@ -638,6 +638,30 @@ Done:
 - [ ] ~~Offer `governance-settlement-v0` to BitSafe's repository as a pull~~
       request (needs their `multi-package.yaml` entry and a `daml.yaml` at
       their SDK version).
+> **Whether the two tiers are exclusive is unresolved, and it decides the
+> plan.** BitSafe own challenge page says *"Gold applicants are not eligible
+> for the contribution pool"*, and the organiser said the same. But BitSafe
+> have said on Telegram that **the page is wrong and they will correct it**,
+> and that a team may enter both. That is the rule author disowning their own
+> published text, not an unwritten claim contradicting it — so it very likely
+> stands. Being confirmed with them directly (26 Sep).
+>
+> Two more things in their wording. The contribution pool is *"for teams
+> without a node"* — we have had one since 24 September — and it is *"split
+> by two teams"*, so it is smaller per team than it reads.
+>
+> **The decision turns on that answer.** If both are open, apply for Gold
+> regardless — it costs nothing and the contribution work stands on its own.
+> If they are exclusive after all, apply for Gold only once the governed
+> settlement has actually run on DevNet, because applying on expectation and
+> not finishing would forfeit the pool and win nothing.
+>
+> Either way the fallback is strong and already built: the contribution pool asks for a reproducible LocalNet demo
+> of an integration, a custom module, or an open-source contribution, and we
+> have all four — `judge/` runs the governed flow in one command,
+> `governance-settlement-v0` is the module, and `contrib/bitsafe/` holds two
+> ready PRs.
+
 - [ ] **Gold: our half is done.** DecMan is on DevNet (25 Sep) and our node
       data is with BitSafe. What remains is theirs and then ours together:
       they add us as a peer, we create the 2-of-2 party, distribute the

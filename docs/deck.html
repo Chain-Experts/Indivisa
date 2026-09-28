@@ -115,6 +115,12 @@
   .big-quote{font-family:var(--display);font-size:33px;line-height:1.3;font-style:italic;color:var(--text);max-width:27ch}
   .answer{font-family:var(--display);font-weight:700;font-size:72px;color:var(--accent);margin-top:26px;letter-spacing:-.02em}
 
+.dense h2{font-size:40px}
+  .dense .lede{font-size:19px;line-height:1.36;margin-top:13px}
+  .dense ul{gap:10px;margin-top:16px}
+  .dense li{font-size:17px;line-height:1.33}
+  .dense .kicker{margin-bottom:11px;font-size:12px}
+  .dense .col p{font-size:15px;line-height:1.42}
   @media print{ .slide{margin:0;page-break-after:always} }
   @page{ size:1280px 720px; margin:0 }
 </style>
@@ -343,14 +349,14 @@
   <h2 class="sm">What we are not claiming.</h2>
   <div class="cols">
     <div class="col"><div class="h real">Real</div><p>The ledger, the contracts, the settlement, the refusal, the privacy, the DevNet update id, the governance engine and its threshold. Every number on screen.</p></div>
-    <div class="col"><div class="h sim">Simulated</div><p>The cash is TestTokenV2, the standard's own reference asset, not Canton Coin. Holders and positions are generated. Three approver nodes on one machine are not three independent operators.</p></div>
+    <div class="col"><div class="h sim">Simulated</div><p>The cash is TestTokenV2, the standard's own reference asset, not Canton Coin — chosen because it is signed by owner <i>and</i> admin, so it forces the same receiver-authorisation case. Holders and positions are generated. Three approver nodes on one machine are not three independent operators.</p></div>
     <div class="col"><div class="h no">Not attempted</div><p>Corporate-action announcement data. Chainlink, with DTCC and Swift, is attacking that layer. We do the payment layer, and saying so makes the position sharper.</p></div>
   </div>
   <p class="foot">We would rather tell you this than have you find it.</p>
 </section>
 
 <!-- 13 NOT BUILT -->
-<section class="slide">
+<section class="slide dense">
   <div class="rh"><span class="act">Honest</span><span class="no">13 / 15</span></div><div class="rule"></div>
   <p class="kicker">Known, designed, not yet built</p>
   <h2 class="wide">Scoping a run is the first thing we build next.</h2>
@@ -358,7 +364,8 @@
   <ul style="margin-top:22px">
     <li><b>Production onboarding</b> — holders sign through a real client, not a script.</li>
     <li><b>The scheduled agent</b> — today a person presses the button; in production a daemon watches payment dates.</li>
-    <li><b>Real cash</b> — a production run settles Canton Coin or a registry's own token.</li>
+    <li><b>Real cash</b> — a production run settles Canton Coin or a registry's own token. The model never names the asset, so this is a field and one registry adapter, not a rewrite.</li>
+    <li><b>MainNet</b> — the DevNet run proves the path; MainNet is a deployment decision, not a code change. We run validator infrastructure, and it is the first thing after submission.</li>
   </ul>
 </section>
 

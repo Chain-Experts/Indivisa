@@ -178,7 +178,13 @@ screen. The transaction is a genuine Token Standard V2
 `SettlementFactory_SettleBatch`.
 
 **Simulated:** the cash is `TestTokenV2`, the standard's own reference
-token, with our registry party — not Canton Coin. The holders, their names
+token, with our registry party — not Canton Coin. We chose it deliberately
+rather than for convenience: its `Token` is signed by owner **and** admin,
+so it forces the same receiver-authorisation path as Canton Coin. A
+single-signatory asset would have let us skip the problem this product
+exists to solve. What the asset would take to change is in
+[`../docs/canton-coin.md`](../docs/canton-coin.md) — the model names no
+asset, so it is one field and one registry adapter. The holders, their names
 and their positions are generated. This network is five participants in one
 container on your machine, not five companies.
 

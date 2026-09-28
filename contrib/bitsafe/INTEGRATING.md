@@ -134,6 +134,46 @@ and passed as:
 A note in the API reference saying "disclose whatever `executeImpl` touches
 off-node" would have saved the whole afternoon this took.
 
+## 7. `SelfAction_AddAdditionalProposer` is not in the UI
+
+`Governance.Rules` has it, and the API accepts
+`governance_add_additional_proposer`. The governance dialog offers only four
+self-actions: add member, remove member, set threshold, set timeout.
+
+So a party that must **propose but never confirm** — an application's own
+service party, say — cannot be admitted by clicking. Either call
+`/governance/confirm` directly, or work around it.
+
+The workaround, if you take it, has a trap. Adding that party as a **member**
+instead does let it propose, but it also lets it confirm, and it changes what
+the threshold means. With members `{app, you, peer}` at threshold 2, the app
+plus you can act without the peer — which may be exactly the property you
+were trying to guarantee. Raise the threshold in the same action: the
+add-member dialog takes a new threshold, so it costs one approval round
+rather than two.
+
+## 8. Peers need every package your action touches, not just yours
+
+Distributing your own DARs to a peer is not enough. Naming a decentralised
+party as an approver makes the peer's participant a stakeholder — and, if the
+party is also an executor, it must validate everything the action does.
+
+Ours settles a Token Standard V2 batch, so the peer needed the asset packages
+too. Without them:
+
+```text
+UNRESOLVED_PACKAGE_NAME(11): Interpretation error: Update failed due to a
+failed package name resolution: splice-test-token-v2
+```
+
+Package names resolve to a version vetted by **every** informee, so one node
+missing one package fails the whole submission. The error names the package
+but not the node, and it arrives at the settlement rather than at
+distribution — long after the step that caused it.
+
+Worth a line in the DAR-distribution docs: send the transitive set your
+`executeImpl` reaches, not only the package your action is defined in.
+
 ## A worked example
 
 `judge/govern.sh` in [Indivisa](https://github.com/Chain-Experts/Indivisa)
