@@ -18,7 +18,7 @@ Built by Chain-Experts for HackCanton Season 3.
   24 September 2026, five holders in one transaction, update id
   `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
   — [`docs/devnet-run.md`](docs/devnet-run.md) has the whole record.
-- **The recording** — *coming soon* (under two minutes: a coupon settled, the same run refused with one holder not ready, then a run that needs two of three approvers before it may move at all).
+- **The recording** — 1 minute 42 seconds: a coupon paid to 250 holders in one transaction, the same run refused when one holder is not ready, and the retry once she is. Every figure on screen is read live from a Canton ledger, and each was checked against the ledger afterwards.
 - **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
 - **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
 
@@ -236,8 +236,14 @@ Worth saying before anyone else says it.
   Swift and Euroclear, is attacking that layer. Indivisa is the payment layer.
 - **The cash is simulated.** It is `TestTokenV2`, the reference Token Standard
   V2 asset, with our own registry party; no paying agent settles on Canton
-  today, and the holders and their positions are generated. Every demo
-  component is labelled real, simulated or planned.
+  today, and the holders and their positions are generated. We chose it
+  deliberately rather than for convenience: its `Token` is signed by owner
+  **and** admin, so it forces the same receiver-authorisation case as Canton
+  Coin instead of skipping it. And because settlement goes through the Token
+  Standard interface — the model never names an asset — moving to Canton Coin
+  or a stablecoin is a configuration change, not a redesign;
+  [`docs/canton-coin.md`](docs/canton-coin.md) sets out exactly what changes.
+  Every demo component is labelled real, simulated or planned.
 - **Scale is measured on one machine, not on DevNet.** We pushed until it
   refused: 13,000 legs settled in 10.4 s, and 14,000 were refused by the
   Ledger API's gRPC message limit on the command that authorises them, not
@@ -263,10 +269,10 @@ Worth saying before anyone else says it.
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
 | `docs/devnet-run.md` | The DevNet evidence: update id, what it proves and what it does not |
-| `docs/pitch.md` | The pitch, slide by slide, with what to say over each one |
-| `docs/Indivisa-pitch.pptx` | The deck itself, generated from that content |
-| `docs/pitch.md` | The pitch, slide by slide, with what to say over each one |
-| `docs/Indivisa-pitch.pptx` | The deck itself, generated from that content |
+| `docs/deck.html` | **The pitch deck, 15 slides** - the source of truth for the deck |
+| `docs/Indivisa-pitch.pdf`, `.pptx` | The same deck exported; regenerate both whenever `deck.html` changes |
+| `docs/pitch.md` | The pitch slide by slide, with what to say over each one |
+| `docs/canton-coin.md` | Why the demo settles the standard's reference asset, and exactly what settling Canton Coin instead would take |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |

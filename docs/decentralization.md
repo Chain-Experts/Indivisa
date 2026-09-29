@@ -90,18 +90,23 @@ panes rely on.
 | | Sandbox (contribution pool) | DevNet (Gold, agreed with BitSafe 23 Sep) |
 |---|---|---|
 | Decentralised party | `demo-party`, seeded by BitSafe's `seed.sh` | onboarded through DecMan across two nodes |
-| Members | three, one per participant | two: one ours, one BitSafe's |
+| Members | three, one per participant | **three**: two ours, one BitSafe's |
 | Nodes | three participants **in one Canton container** on one workstation | our validator and BitSafe's validator |
-| Threshold | 2 of 3 | 2 of 2 |
+| Threshold | 2 of 3 | **3 of 3** |
 | Independent operators | **none**. Three DecMan nodes and three participants on one machine run by one person are not three operators. The hosting threshold is real; the independence is not. | two. Every settlement needs BitSafe's confirmation on BitSafe's node. |
 
 We say this because claiming operator independence from one laptop is on
 BitSafe's list of things that lose points, and because it is true.
 
 The threshold in the demo is 2 of 3: one confirmation is refused, two
-execute. On DevNet it is 2 of 2, which is stronger, not weaker: with two of
-three where we held two nodes, our organisation could settle without
-BitSafe and the shared control would be nominal.
+execute.
+
+**On DevNet it is 3 of 3, and the arithmetic is the reason.** The party ended
+up with three members, two of them ours. BitSafe suggested 2 of 3 for
+convenience. At 2 of 3 our two members alone reach the threshold, so we could
+settle **without BitSafe** and the shared control would be a label rather than
+a constraint. 3 of 3 is the only setting under which the claim on this page is
+true, so that is what we configured. The configuration is the claim.
 
 ## 5. The evidence
 
@@ -178,12 +183,18 @@ allocate, as the sandbox's own seed script does.
   refused by the ledger; two settle. No account, no toolchain, no sandbox
   of ours to trust — see `judge/README.md`.
 - **In progress: DevNet, with BitSafe as the second operator.** Agreed with
-  them on 23 September — two nodes, a 2-of-2 party, their node run by them.
-  Our Decentralization Manager went up on 25 September at
-  `<decman-host>`, Noise listener on 9000, reachable from
-  outside; our node data is with BitSafe. What remains is peering, the
-  party itself, and one governed settlement there. That is the version
-  where the independence is real rather than simulated.
+  them on 23 September. Our Decentralization Manager went up on 25 September
+  at `<decman-host>`; we peered with BitSafe, and the
+  decentralised party
+  `indivisa-approvers::1220099c...` is created and co-hosted, with
+  governance rules deployed and **three members at a threshold of three**.
+  What remains is one governed settlement there. It is blocked on a single
+  asset package, `splice-test-token-v2`, which BitSafe's node has not yet
+  vetted: package names resolve only to a version vetted by **every**
+  informee, and their participant validates the settlement because the
+  decentralised party is an executor. Until that clears, the DevNet column
+  above describes a party that exists and rules that are enforced, but not
+  a settlement that has run. **Say it that way.**
 - **Unfinished:** showing the governed run in the console — it shows the
   settled state today, not the vote — and a `Governed` variant of the
   recording.

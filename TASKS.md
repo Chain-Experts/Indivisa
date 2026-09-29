@@ -1,6 +1,6 @@
 # Tasks
 
-**25 September 2026. Submission 9 October. 14 days.**
+**29 September 2026. Submission 9 October. 10 days.**
 
 **Proofs 1, 3 and 4 run in Daml Script; proofs 2 and 5 run on LocalNet.** DevNet
 is used once, at the end, only to produce a real update id as evidence.
@@ -473,10 +473,24 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       eight holders**, which the evidence run does not need to exceed.
       `indivisa-governance-v0` and `governance-settlement-v0` are not
       vetted and not committed; they matter only for the BitSafe path.
-- [ ] **Record the video.** Organisers allow five minutes; the script targets
-      about two, because judging is asynchronous and a judge watches many.
-      Success run first, then the labelled failure, then the retry, then the
-      governed run. Script: `docs/demo-script.md`, Parts A–I.
+- [x] **The video is recorded, cut and exported** - 29 Sep,
+      `Indivisa-recording/ready/Indivisa-HackCanton-S3.mp4`, **1 m 42 s,
+      1920x1080**, inside the two-minute target and well inside the
+      five-minute limit. 250 holders on LocalNet: the success run, the
+      deliberate refusal, the fix, the retry. Every figure on screen was
+      checked against the ledger afterwards - a `DistributionReceipt` of
+      250 legs / 1,197,240.63 USD for each run, and a `SettlementRejected`
+      of 250 requested / 0 executed for the refusal.
+      Three things were learned and are now in the script: the post-settle
+      scroll through 250 green cards was the operator's idea and is better
+      than what was written; the terminal fix shot is **required**, because
+      without it the film cuts from a refusal to a settlement with nothing
+      explaining what changed; and an eighth title card was added to carry
+      that explanation. Part F was rewritten for **DaVinci Resolve** - the
+      script had assumed Clipchamp.
+      **Not in the film yet:** the governed settlement (Part I), which needs
+      the BitSafe DevNet path. The cut is deliberately complete without it;
+      four items slot in before the closing card if it lands.
 - [x] **A one-command local deployment for the judges** — `judge/`, built
       and verified 23 Sep, ahead of the DevNet run rather than after it
       (there was room, and it costs the recording nothing). `cd judge &&
@@ -662,23 +676,29 @@ Done:
 > `governance-settlement-v0` is the module, and `contrib/bitsafe/` holds two
 > ready PRs.
 
-- [ ] **Gold: our half is done.** DecMan is on DevNet (25 Sep) and our node
-      data is with BitSafe. What remains is theirs and then ours together:
-      they add us as a peer, we create the 2-of-2 party, distribute the
-      three DARs through DecMan, and run one governed settlement on DevNet.
-      **Apply by 4 October**, and applying forfeits the contribution pool —
-      so the 30 September checkpoint decides which we go for.
-
----
-
-## Phase 6 — Buffer (days 20–23)
-
-You will need it.
-
----
-
-## Optional, only if ahead
-
+- [ ] **Gold: everything is in place except one package and one run.**
+      Done since 25 Sep: peered with BitSafe; the decentralised party
+      `indivisa-approvers::1220099c...` created and co-hosted; governance
+      rules deployed; **3 members at threshold 3**. The threshold matters -
+      BitSafe offered 2 of 3, which with two member parties of ours would have
+      let us settle **without** BitSafe and made the shared control nominal.
+      3 of 3 is the honest configuration and we kept it.
+      **The blocker was one package.** Eight DARs were distributed through
+      DecMan on 27 Sep; seven vetted on both nodes, and
+      `splice-test-token-v2-1.0.1` sat at "Uploading DARs" for about a day.
+      The governed settlement fails without it:
+      `UNRESOLVED_PACKAGE_NAME(11) ... splice-test-token-v2`. BitSafe went out
+      of office; BitSafe put two colleagues on it and **Robert approved a
+      fresh request on 29 Sep**.
+      **Next, in order:** (1) run `infra/bitsafe/verify-packages.ps1` to
+      confirm from the ledger rather than from the DecMan UI, which reported
+      "uploading" for a day while nothing happened; (2) seat a small run with
+      `approver` set to the decentralised party; (3) propose, confirm on
+      both sides, execute; (4) record Part I and cut it into the film.
+      **Apply by 4 October.** Whether Gold and the contribution pool are
+      exclusive is still unresolved - the BitSafe challenge page says they
+      are, BitSafe say on Telegram that the page is a mistake. Get it in
+      writing before choosing.
 - [ ] Java paying-agent daemon — watches payment dates, fires the run without a
       human. The honest production component, invisible in the video. First to be
       cut.
@@ -690,10 +710,21 @@ You will need it.
 
 ## Open decisions
 
-- [ ] Which V2 cash instrument for the DevNet evidence run — `TestTokenV2` again,
-      or Canton Coin. If Canton Coin: check whether Amulet's V2 implementation
-      accepts receipt allocations created through a third-party agreement the
-      way `TestTokenV2` does, or only through its own `TransferPreapproval`.
+- [x] **Which V2 cash instrument: `TestTokenV2`, and the question is closed**
+      (29 Sep). Asked in the HackCanton channel and answered: there is **no
+      required cash asset**. Judges look at whether the settlement works,
+      whether it is genuinely on Canton, and whether we are clear about what
+      is a stand-in. Our reason was endorsed unprompted - the reference asset
+      is signed by owner and admin, so it keeps the receiver-authorisation
+      case instead of skipping it. The disclosure, and the "configuration
+      change, not a redesign" framing, are now in `README.md`,
+      `judge/README.md`, deck slides 12 and 13, and video card 2;
+      `docs/canton-coin.md` sets out what a switch would take (nothing in
+      the model - one field and one registry adapter).
+      Their caveat: **sponsor challenges set their own conditions**. The
+      Grofty bounty needs MainNet end to end, where a test token would not
+      count. BitSafe's Gold condition is a decentralised party on DevNet,
+      with no asset condition known - worth confirming.
 - [ ] One send allocation with N legs, or N send allocations. One works to
       2,000 legs; the comparison is optional now.
 - [x] What N the headline claims: **13,000 legs settled in one transaction**

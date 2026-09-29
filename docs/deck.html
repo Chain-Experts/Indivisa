@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Indivisa — HackCanton Season 3</title>
+<title>Indivisa · HackCanton Season 3</title>
 <style>
   :root{
     --ink:#0C1310; --panel:#141F1A; --panel2:#18241E; --line:#25342C;
@@ -58,7 +58,7 @@
   /* list */
   ul{list-style:none;display:flex;flex-direction:column;gap:16px;margin-top:30px}
   li{position:relative;padding-left:30px;font-size:20.5px;line-height:1.4;max-width:60ch}
-  li::before{content:"";position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--accent)}
+  li::before{content:"";position:absolute;left:3px;top:.56em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
   .light li::before{background:var(--paper-accent)}
   li b{font-weight:700}
 
@@ -156,8 +156,8 @@
   <h2 class="wide">And it cannot simply move onto a public chain.</h2>
   <p class="lede">Paying a coupon publicly publishes the register. Every holder's position size becomes readable by every other holder, by their competitors, and by anyone else, at the moment the coupon pays.</p>
   <ul>
-    <li>The register is confidential <b>by law</b> in most markets.</li>
-    <li>It is commercially sensitive in all of them — it is the client list.</li>
+    <li>A bondholder register is <b>not public information</b>, and in many markets is protected by data-protection or banking-secrecy rules.</li>
+    <li>It is commercially sensitive in all of them: it is the client list.</li>
     <li>That is why this workflow has not moved to a transparent ledger.</li>
   </ul>
 </section>
@@ -221,7 +221,7 @@
   <h2 class="wide">The run is finished when the transaction commits.</h2>
   <div class="cards">
     <div class="card"><div class="t">The event closes the same day</div>
-      <div class="d">Not after three days of chasing returns and rejects. The transaction commits, and that is the answer.</div></div>
+      <div class="d">Not after working the <b>29% of income events that do not go straight through</b>, on Canton&rsquo;s own published figures. The transaction commits, and that is the answer.</div></div>
     <div class="card"><div class="t">The exception queue is empty</div>
       <div class="d">There is no partial state to work. The class of exception "some paid, some not" stops existing.</div></div>
     <div class="card"><div class="t">Nothing to chase next week</div>
@@ -235,10 +235,10 @@
   <div class="rh"><span class="act">What it does</span><span class="no">06 / 15</span></div><div class="rule"></div>
   <h2 class="sm">Four steps, and only the last one moves money.</h2>
   <ol>
-    <li><b>Once, at onboarding</b> — each holder signs one standing agreement with the paying agent.</li>
-    <li><b>Record date</b> — the register is snapshotted and entitlements calculated, rounded so the parts sum to the announced total exactly.</li>
-    <li><b>Before payment</b> — the agent sets aside the cash and prepares one allocation per holder.</li>
-    <li><b>Payment date</b> — one settlement. Every leg, or none.</li>
+    <li><b>Once, at onboarding</b>: each holder signs one standing agreement with the paying agent.</li>
+    <li><b>Record date</b>: the register is snapshotted and entitlements calculated, rounded so the parts sum to the announced total exactly.</li>
+    <li><b>Before payment</b>: the agent sets aside the cash and prepares one allocation per holder.</li>
+    <li><b>Payment date</b>: one settlement. Every leg, or none.</li>
   </ol>
   <p class="foot">Holders authorise once, at onboarding. Never per coupon.</p>
 </section>
@@ -288,7 +288,7 @@
   <div class="rh"><span class="act">The proof</span><span class="no">08 / 15</span></div><div class="rule"></div>
   <p class="kicker">Canton DevNet · 24 September 2026</p>
   <h2 class="wide">It ran on the real network.</h2>
-  <p class="lede" style="color:var(--paper-muted)">Five holders paid in a single transaction — 8,421.88 USD. The deliberate failure was run first and refused: one holder not ready, nobody paid.</p>
+  <p class="lede" style="color:var(--paper-muted)">Five holders paid in a single transaction, 8,421.88 USD. The deliberate failure was run first and refused: one holder not ready, nobody paid.</p>
   <div class="hash">1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b</div>
   <p class="foot">That is a real update id on the public test network. Full record: docs/devnet-run.md</p>
 </section>
@@ -301,7 +301,7 @@
   <div style="display:flex;gap:56px;margin-top:30px;align-items:flex-start">
     <ul style="margin-top:0;flex:1">
       <li>A five-participant Canton network, the real contracts, twenty holders.</li>
-      <li>One holder deliberately left out. Press the button — refused, and the ledger names them.</li>
+      <li>One holder deliberately left out. Press the button: refused, and the ledger names them.</li>
       <li>Fix it, press again: settled.</li>
       <li>Nothing to install but Docker. No account anywhere.</li>
     </ul>
@@ -327,7 +327,7 @@
     <tr><td class="k">1,000</td><td>11.1 s</td><td>1.67 MB</td></tr>
   </table>
   <p class="lede" style="color:var(--paper-ink);font-size:24px;max-width:52ch;margin-top:28px">
-    A thousand holders: <b>days of reconciliation become 11.1 seconds</b> — and it is final.</p>
+    A thousand holders: <b>days of reconciliation become 11.1 seconds</b>, and it is final.</p>
   <p class="foot">A realistic run reaches Canton's 10 MB transaction budget near 6,400 holders. Method and the second ceiling: docs/benchmark.md</p>
 </section>
 
@@ -335,7 +335,7 @@
 <section class="slide">
   <div class="rh"><span class="act">Control</span><span class="no">11 / 15</span></div><div class="rule"></div>
   <h2 class="wide">In institutional systems, four-eyes authorisation is a requirement, not a feature.</h2>
-  <p class="lede" style="margin-top:16px">A run can name an approver: a decentralised party, through BitSafe's Decentralization Manager. One optional field — the product is unchanged without it.</p>
+  <p class="lede" style="margin-top:16px">A run can name an approver: a decentralised party, through BitSafe's Decentralization Manager. One optional field. The product is unchanged without it.</p>
   <div class="thr">
     <div class="no"><span>One approval</span><span class="arrow">→</span><span>the ledger refuses</span></div>
     <div class="yes"><span>Two of three</span><span class="arrow">→</span><span>settles</span></div>
@@ -349,7 +349,7 @@
   <h2 class="sm">What we are not claiming.</h2>
   <div class="cols">
     <div class="col"><div class="h real">Real</div><p>The ledger, the contracts, the settlement, the refusal, the privacy, the DevNet update id, the governance engine and its threshold. Every number on screen.</p></div>
-    <div class="col"><div class="h sim">Simulated</div><p>The cash is TestTokenV2, the standard's own reference asset, not Canton Coin — chosen because it is signed by owner <i>and</i> admin, so it forces the same receiver-authorisation case. Holders and positions are generated. Three approver nodes on one machine are not three independent operators.</p></div>
+    <div class="col"><div class="h sim">Simulated</div><p>The cash is TestTokenV2, the standard's own reference asset, not Canton Coin, chosen because it is signed by owner <i>and</i> admin, so it forces the same receiver-authorisation case. Holders and positions are generated. Three approver nodes on one machine are not three independent operators.</p></div>
     <div class="col"><div class="h no">Not attempted</div><p>Corporate-action announcement data. Chainlink, with DTCC and Swift, is attacking that layer. We do the payment layer, and saying so makes the position sharper.</p></div>
   </div>
   <p class="foot">We would rather tell you this than have you find it.</p>
@@ -362,10 +362,10 @@
   <h2 class="wide">Scoping a run is the first thing we build next.</h2>
   <p class="lede" style="margin-top:16px">If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 into a second run. <b style="color:#E9EFEA">The batch stays all-or-nothing; its membership becomes a decision, not an accident.</b> The model supports it. The workflow, and the audit trail that says why five were held back, are not written.</p>
   <ul style="margin-top:22px">
-    <li><b>Production onboarding</b> — holders sign through a real client, not a script.</li>
-    <li><b>The scheduled agent</b> — today a person presses the button; in production a daemon watches payment dates.</li>
-    <li><b>Real cash</b> — a production run settles Canton Coin or a registry's own token. The model never names the asset, so this is a field and one registry adapter, not a rewrite.</li>
-    <li><b>MainNet</b> — the DevNet run proves the path; MainNet is a deployment decision, not a code change. We run validator infrastructure, and it is the first thing after submission.</li>
+    <li><b>Production onboarding</b>: holders sign through a real client, not a script.</li>
+    <li><b>The scheduled agent</b>: today a person presses the button; in production a daemon watches payment dates.</li>
+    <li><b>Real cash</b>: a production run settles Canton Coin or a registry's own token. The model never names the asset, so this is a field and one registry adapter, not a rewrite.</li>
+    <li><b>MainNet</b>: the DevNet run proves the path; MainNet is a deployment decision, not a code change. We run validator infrastructure, and it is the first thing after submission.</li>
   </ul>
 </section>
 
@@ -374,10 +374,10 @@
   <div class="rh"><span class="act">Next</span><span class="no">14 / 15</span></div><div class="rule"></div>
   <h2 class="wide">The buyer is the independent debt paying agent and the corporate trustee, first.</h2>
   <ul>
-    <li>A few hundred firms worldwide — <b>328 registered transfer agents in the US alone</b>. Small, named, and each running thousands of events a year.</li>
-    <li><b>Dividends and redemptions are the same engine</b> — the same run, a different event type.</li>
+    <li>A few hundred firms worldwide: <b>independent debt paying agents, corporate trustees, and the issuer-services arms of custodian banks</b>. Small, named, and each running thousands of events a year.</li>
+    <li><b>Dividends and redemptions are the same engine</b>: the same run, a different event type.</li>
     <li><b>It works against registers that already exist.</b> The bond is not tokenized; only the cash is a Token Standard V2 asset.</li>
-    <li><b>The benchmark is a contribution in its own right</b> — the first published figures for CIP-112 batch settlement, going to the Canton forum whatever happens here.</li>
+    <li><b>The benchmark is a contribution in its own right</b>: the first published figures for CIP-112 batch settlement, going to the Canton forum whatever happens here.</li>
   </ul>
 </section>
 

@@ -23,10 +23,9 @@ made at the first save.
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take1.mp4` | the success run, one clip |
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-rejected.mp4` | the deliberate failure |
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-settled.mp4` | the fix and the retry |
-| `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide5.PNG` | five title cards |
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-refused.mp4` | one approval is not enough (Part I) |
 | `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-settled.mp4` | two approvals, and it settles (Part I) |
-| `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide7.PNG` | seven title cards |
+| `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide8.PNG` | eight title cards |
 | `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-HackCanton-S3.mp4` | **the finished video, one file, under 2 minutes** |
 
 **One submission, one video.** HackCanton allows a single entry to entre
@@ -46,9 +45,9 @@ video files never end up in git.
 - **OBS Studio** (free, obsproject.com) to record the screen. Install with
   defaults. Windows' own Game Bar (Win+Alt+R) also works but records only
   one window and gives you no control; OBS is worth the ten minutes.
-- **Clipchamp** to cut the clips together. It is built into Windows 11
-  (Start menu, type "Clipchamp").
-- **PowerPoint** for five title cards.
+- **DaVinci Resolve** to cut the clips together (free from
+  blackmagicdesign.com). Part F is written for it.
+- **PowerPoint** for eight title cards.
 - A quiet hour for the recording itself. Turn on Do Not Disturb (Windows
   Settings → System → Notifications → Do not disturb: On) so no toast pops
   into the video.
@@ -57,7 +56,7 @@ video files never end up in git.
   both "Never" for now. The network lives in memory; if the PC sleeps or
   restarts, everything seated is gone and Part A starts again.
 
-## Part A. Bring the network up and seat the two demos (≈ 1 hour, mostly waiting)
+## Part A. Bring the network up and seat the two demos (≈ 1¼ hours, mostly waiting)
 
 Open **PowerShell 7**: press the Windows key, type `pwsh`, Enter. A window
 with a `PS C:\Users\...>` prompt appears. Keep this window open for the
@@ -93,7 +92,7 @@ packages. It ends with a line containing **`LocalNet is up`**. If instead
 you see `Timed out` or `exited early`, run `pwsh infra\localnet\up.ps1
 -Down`, wait ten seconds, and run A3 again.
 
-**A4. Seat demo one** (the success run; 20 to 30 minutes).
+**A4. Seat demo one** (the success run; 30 to 35 minutes).
 
 ```
 pwsh infra\demo.ps1 seat -Holders 250 -Tag take1
@@ -104,10 +103,10 @@ one-time agreements, the coupon announcement and the payment schedule.
 Nothing prints for a long time; that is normal. It ends with one line:
 
 ```
-seat 'take1' on localnet: 250 holders in 1,2xxs -> D:\Dev\ChainExperts\Indivisa\infra\localnet\demo\seat-take1.json
+seat 'take1' on localnet: 250 holders in 2,0xxs -> D:\Dev\ChainExperts\Indivisa\infra\localnet\demo\seat-take1.json
 ```
 
-**A5. Seat demo two** (the failure run; another 20 to 30 minutes).
+**A5. Seat demo two** (the failure run; another 30 to 35 minutes).
 
 ```
 pwsh infra\demo.ps1 seat -Holders 250 -Tag take2
@@ -164,7 +163,7 @@ It shows `➜  Local:   http://localhost:5174/`. Window 3 serves demo two.
   cash is TestTokenV2, the holders are synthetic".
 - Under it a row of figures: INSTRUMENT *Northwind Rail 4.375% 2031
   XS2999912340 · coupon · record 2027-11-15 · pays 2027-12-01* · HOLDERS
-  *250* · PER UNIT *21.88 USD* · TOTAL DUE **1,197,240.63 USD** ·
+  *250* · PER UNIT *21.875 USD* (with *x 54,731 units = 1,197,240.625* beneath it; the rate keeps its decimals, it is not money) · TOTAL DUE **1,197,240.63 USD** ·
   ALLOCATIONS **251 / 251** with a full bar · RUN **PREPARED**.
 - A big green button **Settle 250 legs in one transaction** and the note
   "All or nothing. If any leg cannot settle, nothing moves."
@@ -184,7 +183,7 @@ end. Do not record until both pages look right.
 The network and both pages can now sit for hours. Do the cards and the
 recorder setup next.
 
-## Part B. The seven title cards in PowerPoint (≈ 25 minutes)
+## Part B. The eight title cards in PowerPoint (≈ 28 minutes)
 
 Open PowerPoint → Blank Presentation. Design → Slide Size → Widescreen
 (16:9) (it usually is already). Set every slide to a plain background:
@@ -202,6 +201,7 @@ art, no animations.
 | 4 | **Now the same run, with one holder not ready.** / This is the atomicity test. If any leg cannot settle, nothing moves. |
 | 5 | **A coupon this size should not move on one signature.** / The run can name an approver: a party no single company controls. / *(small, 20 pt)* Governed through BitSafe's Decentralization Manager. Three approver nodes, threshold two. |
 | 6 | **Below the threshold, the ledger refuses.** / One approval is not enough. Nothing moves. |
+| 8 | **The holder is made ready.** / Same run. Same button. Nothing else changes. *(used between the refusal and the fix, not at the end - add it as the LAST slide so the earlier numbers do not move)* |
 | 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026** — update id `1220652e…f466b` / **Run it yourself:** `cd judge && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
@@ -211,7 +211,7 @@ Export as images: File → Export → Change File Type → PNG Portable Network
 Graphics → Save As → choose the folder `D:\Dev\ChainExperts\Indivisa-recording`,
 file name `cards` → Save → when asked "Which slides do you want to
 export?" click **All Slides**. PowerPoint creates a folder `cards` with
-`Slide1.PNG` … `Slide7.PNG`.
+`Slide1.PNG` … `Slide8.PNG`.
 
 ## Part C. Set up the screen and the recorder (≈ 15 minutes)
 
@@ -273,7 +273,13 @@ Chrome is full screen on the **5173** tab (demo one). OBS is behind it.
    border, green tint, pill **PAID** — the CASH figure on each fills in, and
    the chips read **Paid 250**. Open any card again: the six zeros are
    unchanged.
-6. Let it sit for **ten seconds**. Then Alt+Tab to OBS, **Stop Recording**.
+6. Let it sit for **ten seconds**, so the green box can be read. Then scroll
+   slowly down through the grid a second time: every one of the 250 cards is
+   green, not only the ones that were on screen. This mirrors the scroll in
+   step 2 - 250 READY before, 250 PAID after - and is what makes "all or
+   nothing" visible rather than asserted. **End there.** Do not scroll back
+   to the top: the video cuts to a title card next, and a screen full of
+   green cards is the stronger last frame. Alt+Tab to OBS, **Stop Recording**.
 7. Rename the new file to `take1.mp4`.
 
 If step 5 shows a red box instead of green, something is wrong with the
@@ -312,11 +318,14 @@ pwsh infra\demo.ps1 prepare -Tag take2
 ```
 
 It ends with `prepare 'take2' (withhold 0): 1xs -> ...`. This creates the
-one allocation that was withheld. You may record this window for the
-video (a plain terminal, one command, one line back) or leave it out and
-let card 4's second line explain it. If you record it: Start Recording,
-type the command, wait for the line, Stop Recording, rename to
-`take2-fix.mp4`.
+one allocation that was withheld. **Record this window.** Card 4 sets up the
+failure and does not explain the fix, so without this shot the film cuts
+from a refusal straight to a settlement with nothing in between - which
+reads as the refusal having been random rather than a real constraint being
+cleared. A plain terminal, one command, one line back, is also the only
+moment in the film where a person visibly does something.
+Start Recording, type the command, wait for the line, Stop Recording, rename
+to `take2-fix.mp4`.
 
 **E3. The retry.** Back in Chrome on the 5174 tab, within a few seconds
 ALLOCATIONS reads **251 of 251**; the red box and the REJECTED pill are
@@ -331,48 +340,103 @@ still showing (that is correct: the refusal happened and is on record).
 Recording is finished. You can close OBS. Leave the network running until
 the edit is done in case a clip needs re-shooting.
 
-## Part F. The edit in Clipchamp (≈ 30 minutes)
+## Part F. The edit in DaVinci Resolve (≈ 45 minutes)
 
-Open Clipchamp → **Create a new video**. Click **Import media** and select
-the three (or four) `.mp4` files from `Indivisa-recording\raw` and the five
-`Slide*.PNG` files from `Indivisa-recording\cards`.
+Written for someone who has not used Resolve before. Menu paths rather than
+shortcuts, because the shortcuts differ between versions.
 
-Drag items onto the timeline in this order, and set each card's duration
-by dragging its right edge (the default is 5 s; make cards **3 s**):
+**F1. Set the project up.**
+
+Open DaVinci Resolve → **New Project**, call it `Indivisa`. Then
+**File → Project Settings → Master Settings**: Timeline Resolution
+**1920 x 1080**, Timeline Frame Rate **30**. These must match what OBS
+recorded or Resolve will letterbox or resample the footage.
+
+While you are there: **Preferences → User → Editing → Standard still
+duration** = **3 seconds**. That is roughly what a title card needs, and it
+saves changing each one by hand.
+
+**F2. Bring the files in.**
+
+Bottom of the window there is a row of pages: Media, Cut, Edit, Fusion,
+Color, Fairlight, Deliver. Click **Media**.
+
+Drag in every `.mp4` from `Indivisa-recording\raw` and every `Slide*.PNG`
+from `Indivisa-recording\cards`. They land in the **Media Pool**.
+
+Click **Edit**.
+
+**F3. Lay the timeline out.**
+
+Drag items onto the timeline in this order. The "keep" column is the part
+of the clip that survives trimming, not the length of the file.
 
 | # | Item | Keep | What it carries |
 |---|---|---|---|
-| 1 | Slide1.PNG | 3 s | title |
-| 2 | Slide2.PNG | 4 s | "A bond coupon. 250 holders…" |
-| 3 | take1.mp4, from the start to just before the click | ~14 s | the still page, the schedule, the holders |
-| 4 | Slide3.PNG | 3 s | "Each holder's node holds its own line" |
-| 5 | take1.mp4, the click through the green box and the paid cards | ~12 s | the settle |
-| 6 | Slide4.PNG | 4 s | "Now the same run, with one holder not ready…" |
-| 7 | take2-rejected.mp4, the click through the red box | ~11 s | the refusal |
-| 8 | take2-settled.mp4, the click through the green box | ~9 s | the retry |
-| 9 | Slide5.PNG | 4 s | "should not move on one signature" |
-| 10 | take3-governed-refused.mp4, the click through the red box | ~11 s | the agent alone, refused |
-| 11 | Slide6.PNG | 3 s | "below the threshold, the ledger refuses" |
-| 12 | take3-governed-settled.mp4, the second confirmation through the green box | ~11 s | two of three, and it settles |
-| 13 | Slide7.PNG | 6 s | closing |
+| 1 | `Slide1.PNG` | 3 s | title |
+| 2 | `Slide2.PNG` | 4 s | 250 holders, and what is real or simulated |
+| 3 | `take1.mp4`, from the start to just before the click | ~14 s | the page, the grid of 250, the two holder cards with their six zeros |
+| 4 | `Slide3.PNG` | 3 s | "Each holder's node holds its own line" |
+| 5 | `take1.mp4`, the click through the green box, the cards going green, and the scroll through them | ~16 s | the settlement |
+| 6 | `Slide4.PNG` | 4 s | "Now the same run, with one holder not ready" |
+| 7 | `take2-rejected.mp4`, the click through the red box and the unchanged grid | ~12 s | the refusal |
+| 7b | `Slide8.PNG` | 3 s | "The holder is made ready" - without this the terminal is unexplained |
+| 7a | `take2-fix.mp4`, the command and the line coming back | ~5 s | the one withheld allocation is created - this is what changed |
+| 8 | `take2-settled.mp4`, the click through the green box | ~9 s | the retry |
+| 9 | `Slide7.PNG` | 6 s | closing |
 
-To cut a clip: click it on the timeline, move the playhead to the cut
-point, press **S** (split), click the piece you do not want, press
-Delete. **The organisers' limit is five minutes** (confirmed in the
-HackCanton channel, 24 Sep). This order lands near 95 seconds, and that is
-deliberate: judging is asynchronous and a judge watches many of these, so a
-tight film beats a long one. Treat two minutes as the target and five as the
-ceiling. If a shot feels rushed, let it breathe — there is room. If it runs
-long, take it out of items 3 and 5 first, never out of 10 and 12.
+That lands near **79 seconds**. Note the order: item **7b** (the card) comes
+before **7a** (the terminal). There is deliberately no card between 7a and
+8 - the fix and the retry are one thought, and a card there would cut it in
+half. The organisers allow five minutes; two is
+the target, because judging is asynchronous and a judge watches many.
 
-Do not add music, transitions or zoom effects; a straight cut is right for
-this. If you recorded voice, it is already in the clips. If not and you
-want a voice-over, Clipchamp's **Record & create → Audio** lets you record
-over the timeline; the lines to say are in Part G.
+**Trimming.** The quickest way in Resolve is to drag a clip's left or right
+edge inwards; the clip shortens and a gap opens. Then right-click the gap
+and choose **Delete Gap** (or select the piece you do not want and
+right-click → **Ripple Delete**, which removes it and closes up in one
+move). To cut a clip in two first, park the playhead and use
+**Timeline → Blade** (Ctrl+B on most builds).
 
-Export: **Export** (top right) → 1080p → it renders and downloads to your
-Downloads folder → move it to `D:\Dev\ChainExperts\Indivisa-recording\`
-and rename to `Indivisa-HackCanton-S3.mp4`. Play it once end to end.
+**Do not add music, transitions or zoom effects.** A straight cut is right
+for this, and effects read as padding.
+
+**F4. When the governed clips exist.**
+
+Part I produces `take3-governed-refused.mp4` and
+`take3-governed-settled.mp4`. When they do, insert four items between 8 and
+9 above, and nothing else changes:
+
+| # | Item | Keep |
+|---|---|---|
+| 8a | `Slide5.PNG` | 4 s |
+| 8b | `take3-governed-refused.mp4`, the click through the red box | ~11 s |
+| 8c | `Slide6.PNG` | 3 s |
+| 8d | `take3-governed-settled.mp4`, the second confirmation through the green box | ~11 s |
+
+That takes the film to about **108 seconds**, still inside the target.
+**Cut and keep the shorter version first.** A finished 79-second film in
+hand beats a 100-second one that depends on a network you do not control.
+
+**F5. Voice-over, if you want one.**
+
+The lines are in Part G, one sentence per shot. In Resolve, add an audio
+track (right-click the track header → **Add Track**), then use the
+**Fairlight** page to record onto it while the timeline plays. Because the
+picture is already cut, you can redo the voice as often as you like.
+
+Silence with good title cards is a perfectly respectable submission. Decide
+after you have watched the cut once.
+
+**F6. Export.**
+
+**Deliver** page → preset **H.264 Master** → Format MP4, Codec H.264,
+Resolution 1920x1080, Frame rate 30 → set the filename to
+`Indivisa-HackCanton-S3` and the location to
+`D:\Dev\ChainExperts\Indivisa-recording\` → **Add to Render Queue** →
+**Render All**.
+
+Play it once, end to end, before you call it done.
 
 ## Part F2. What ships beside the video
 
@@ -553,7 +617,7 @@ size 18) and Alt+Tab between them; a split screen is harder to read.
 
 Record it as one continuous clip if you can (there is no waiting in it: the
 refusal and the settle each take a second or two); otherwise stop and start
-between shots 3 and 4 and cut in Clipchamp as in Part F. The two cards are
+between shots 3 and 4 and cut in Resolve as in Part F. The two cards are
 made in PowerPoint exactly as in Part B (`cards-bitsafe.pptx`, two slides).
 
 If shot 3 shows a green box instead of a red one, the run was prepared
