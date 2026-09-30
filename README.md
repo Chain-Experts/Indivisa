@@ -177,16 +177,27 @@ On top of the proofs, built and running on LocalNet (18 Sep):
 And, since 22 September, **governed settlement**: a run may name an
 approver, a decentralised party managed by BitSafe's Decentralization
 Manager, and then the paying agent alone can no longer settle. It proposes;
-two of three approvers confirm; the engine executes `Run_Settle`. Below
+a threshold of approvers confirms; the engine executes `Run_Settle`. Below
 threshold the ledger refuses and nothing moves. One optional field on the
 run (`indivisa` 0.4.0), a forty-line proposal template, and a generic
 module for any Token Standard V2 batch settlement (`governance-settlement-v0`)
-that has no Indivisa in it. Proven on the IDE ledger and in BitSafe's
-three-node sandbox; see `docs/decentralization.md`.
+that has no Indivisa in it. Proven on the IDE ledger, in BitSafe's
+three-node sandbox, and **on DevNet with BitSafe themselves as the second
+approver**; see [`docs/decentralization.md`](docs/decentralization.md).
 
-**The DevNet run is done** (24 Sep): five holders, one transaction, update id
-`1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
-with the deliberate failure refused first. See [`docs/devnet-run.md`](docs/devnet-run.md).
+**Two runs on DevNet**, both in [`docs/devnet-run.md`](docs/devnet-run.md):
+
+- **24 Sep** - five holders, one transaction, update id
+  `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
+  with the deliberate failure refused first. Indivisa settles on the real
+  network.
+- **29 Sep, governed** - the same coupon through a decentralised party at
+  **2 of 2**, one member ours and one BitSafe's, on BitSafe's own node.
+  Update id
+  `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+  Chain-Experts could not have produced that transaction alone, which is
+  the difference between a threshold that exists and one that constrains
+  anybody.
 
 Still to come: the recording (`docs/demo-script.md`), the deck, and one clean
 `docker compose up` on a machine other than the one it was built on — this one

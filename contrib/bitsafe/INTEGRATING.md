@@ -174,6 +174,40 @@ distribution — long after the step that caused it.
 Worth a line in the DAR-distribution docs: send the transitive set your
 `executeImpl` reaches, not only the package your action is defined in.
 
+## 9. A member with no node can lock the party out of its own rules
+
+The one that cost a day. Adding a governance member is a single dialog, and
+its failure mode is a party that can no longer govern itself.
+
+We added a party as a member that had no Decentralization Manager of its
+own - it was a leftover application party, added in error. A member that
+cannot confirm still counts towards the threshold. With three members at a
+threshold of three, two confirmations were reachable and three were
+required, so **every** action was stuck, including the remove-member action
+that would have fixed it.
+
+Two things make this sharper than it sounds:
+
+- `get_member_party_id` resolves the confirming member from the node's
+  stored credentials, taking the **first** whose `dec_party_id` matches. So
+  one node casts exactly one confirmation, and adding a second credential
+  for the same decentralised party does not give you a second vote.
+- The UI does not let you edit **Member Party ID** once saved.
+
+The way out is `PUT /party-config`, which accepts `member_party_id` and
+treats absent credential fields as "keep existing". Point the node at the
+stranded member, confirm, point it back:
+
+```text
+PUT /party-config   { dec_party_id, member_party_id: <stranded>, user_id, ... }
+POST /governance/confirm
+PUT /party-config   { dec_party_id, member_party_id: <original>, user_id, ... }
+```
+
+Worth a warning in the add-member dialog: **a member that cannot confirm
+still counts towards the threshold.** Worth a line in the docs too, that
+`PUT /party-config` is the escape hatch when it happens.
+
 ## A worked example
 
 `judge/govern.sh` in [Indivisa](https://github.com/Chain-Experts/Indivisa)

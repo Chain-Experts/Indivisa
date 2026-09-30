@@ -167,8 +167,15 @@ confirmations from their side.
 **What is real here:** the governance engine is BitSafe's, unchanged; the
 threshold, the refusal and the settlement are the ledger's. **What is not:**
 three approver nodes on one machine are not three independent operators. The
-threshold is real; the independence is simulated. On DevNet the second node
-is run by BitSafe, which is the version that counts.
+threshold is real; the independence is simulated.
+
+**The independent version has run.** On 29 September a coupon settled on
+Canton DevNet through a decentralised party at **2 of 2**: our confirmation
+and BitSafe's, on BitSafe's own node. 5 legs, 8,421.88 USD, update id
+`122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+Chain-Experts could not have produced that transaction alone. What you run
+here proves the mechanism offline and on your own machine; that run proves
+the independence. Both are in [`../docs/decentralization.md`](../docs/decentralization.md).
 
 ## What is real and what is not
 

@@ -17,6 +17,47 @@ Run on **24 September 2026** against Chain-Experts' Canton DevNet validator.
 | Run id | `XS2999912340/Coupon/2027-12-01` |
 | Receipt contract | `003927440c945124a76132c2f034c777a3ac14d9149d7a364849d5b9f90dddd7d4ca1212208a076bfb83337dd8cc6afe704873a066a65762b5b0042a90d0005de764905cd5` |
 
+## The second run: governed, with an independent second operator (29 Sep)
+
+The 24 September run above is Indivisa settling on the real network. This one
+is Indivisa settling on the real network **when one company cannot do it
+alone**.
+
+| | |
+|---|---|
+| **Update id** | `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c` |
+| Ledger offset | 3683282 |
+| Holders paid | 5, in one transaction |
+| Total | 8,421.88 USD |
+| Run id | `XS2999912340/Coupon/2027-12-01` |
+| Receipt contract | `00d4d24b0c908d907c84e2294876ce2cc2aa137a0f4d971a70516640a8cc0e9bc3ca1212208e84716733ca79f77f191c44d16911947256a3aa0e26f95d58bcf648fa859a8e` |
+| Approver | `indivisa-approvers::1220099c...` |
+| Threshold | **2 of 2**: Chain-Experts and BitSafe |
+
+The run named a **decentralised party** as its approver, so
+`SettlementFactory_SettleBatch` required that party's authority as well as the
+paying agent's. That party acts only when both of its members have confirmed
+through BitSafe's Decentralization Manager, and one of those members is
+BitSafe's, on BitSafe's node.
+
+So this transaction could not have been produced by Chain-Experts alone. An
+independent operator had to agree, and did. That is the difference between a
+threshold that exists and a threshold that constrains anyone.
+
+The paying agent proposes and never confirms: it is admitted to the
+governance rules as an *additional proposer*, which lets it file a
+`SettleRunProposal` and gives it no vote on its own proposal.
+
+Read it back:
+
+```powershell
+$env:INDIVISA_CLIENT_SECRET = "..."
+pwsh infra/bitsafe/govern-devnet.ps1 evidence
+```
+
+The full write-up, including what is simulated, is
+[`decentralization.md`](decentralization.md).
+
 ## The network
 
 | | |

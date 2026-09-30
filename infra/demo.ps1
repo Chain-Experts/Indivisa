@@ -51,6 +51,26 @@ $approverJson = if ($Approver) { '"' + $Approver + '"' } else { "null" }
 $userJson = if ($User) { '"' + $User + '"' } else { "null" }
 
 $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
+# On a machine that intercepts TLS (Norton here), the JVM has its own
+# truststore and does not see the interception root that Windows, curl and
+# every browser already trust. `--cacrt` is meant to cover that, and stopped
+# taking effect on 29 Sep: the failure stack shows the JDK's DEFAULT
+# X509TrustManagerImpl, not one built from the file. WINDOWS-ROOT points the
+# default trust manager at the Windows store instead, which needs no exported
+# file and survives the interception root being reissued.
+if ($Tls) {
+  # Build it with infra/trust-store.ps1: the JDK's own cacerts plus this
+  # machine's TLS-interception root. It must be made by keytool - a PKCS12
+  # written by .NET loads as zero trust anchors, because Java only treats a
+  # certificate in a PKCS12 as trusted when it carries Oracle's
+  # trusted-key-usage attribute, which keytool writes and .NET does not.
+  # The symptom is a PKIX failure that looks exactly like no truststore.
+  $ts = Join-Path $netDir "truststore.jks"
+  if (Test-Path $ts) {
+    $env:JAVA_TOOL_OPTIONS += " -Djavax.net.ssl.trustStore=$ts -Djavax.net.ssl.trustStorePassword=changeit"
+  }
+  # No truststore: fall back to --cacrt, which demo.ps1's caller passes.
+}
 Set-Location $testDir
 try {
   switch ($Command) {
@@ -62,6 +82,14 @@ try {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_seat" `
           --input-file $argsFile --output-file $seatFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "seat-$Tag.log") | Select-String -Pattern "seated|FailedCmd|Exception" | ForEach-Object { $_.Line }
+      }
+      # The runner's exit code is lost to the pipeline (Tee-Object and
+      # Select-String run last), so the output file is the only honest
+      # signal. Without this check a TLS or auth failure printed a success
+      # line naming a file that was never written - 29 Sep.
+      if (-not (Test-Path $seatFile)) {
+        throw ("seat '{0}' FAILED: no {1}. The runner's error is in {2}" -f
+          $Tag, $seatFile, (Join-Path $demoDir "seat-$Tag.log"))
       }
       Write-Host ("seat '{0}' on {1}: {2} holders in {3:N0}s -> {4}" -f $Tag, $Network, $Holders, $t.TotalSeconds, $seatFile)
     }
@@ -77,6 +105,10 @@ try {
           --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "prepare-$Tag.log") | Select-String -Pattern "withholding|FailedCmd|Exception" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
       }
+      if (-not (Test-Path $outFile)) {
+        throw ("prepare '{0}' FAILED: no {1}. The runner's error is in {2}" -f
+          $Tag, $outFile, (Join-Path $demoDir "prepare-$Tag.log"))
+      }
       Write-Host ("prepare '{0}' (withhold {1}): {2:N0}s -> {3}" -f $Tag, $Withhold, $t.TotalSeconds, $outFile)
     }
     "attempt" {
@@ -91,6 +123,10 @@ try {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_attempt" `
           --input-file $argsFile --output-file $outFile --participant-config $mapFile @tlsArgs 2>&1 |
           Tee-Object -FilePath (Join-Path $demoDir "attempt-$Tag-$stamp.log") | Select-String -Pattern "SETTLED|REJECTED|withholding|FailedCmd|Exception" | ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
+      }
+      if (-not (Test-Path $outFile)) {
+        throw ("attempt '{0}' FAILED: no {1}. The runner's error is in {2}" -f
+          $Tag, $outFile, (Join-Path $demoDir "attempt-$Tag-$stamp.log"))
       }
       Write-Host ("attempt '{0}' (withhold {1}): {2:N0}s -> {3}" -f $Tag, $Withhold, $t.TotalSeconds, $outFile)
     }

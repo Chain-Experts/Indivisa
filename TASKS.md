@@ -2,6 +2,49 @@
 
 **29 September 2026. Submission 9 October. 10 days.**
 
+## Where we stand
+
+Everything a submission needs exists. What is left is paperwork with
+deadlines, one optional re-shoot, and going public.
+
+**Done and verifiable by someone else:**
+
+| | |
+| --- | --- |
+| The experiment | Five proofs, 17-22 Sep. Proof 5 measured to **13,000 legs in one transaction** (10.4 s, 1.52 MB), ceiling derived at 13,869 |
+| The product | Model, demo driver, settlement console; `indivisa` 0.4.0 |
+| Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
+| Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
+| **Governed, independently** | **DevNet, 29 Sep. 2 of 2 - ours and BitSafe's, on their node. Update id `122063f9...727c`.** Chain-Experts could not have produced that transaction alone |
+| The video | `Indivisa-HackCanton-S3.mp4`, **1 m 42 s**, 1920x1080. Every figure checked against the ledger afterwards |
+| The deck | 15 slides; `deck.html`, `.pdf` and `.pptx` in sync; three unsourced claims removed 29 Sep |
+| The cash-asset question | Asked in the channel and answered: no required asset, and our reason endorsed |
+
+**Missing, in deadline order:**
+
+1. ~~Gold application~~ - **applied 29 September, for both tiers.** BitSafe
+   confirmed the mechanism: applying is a message to NODERS in the Telegram
+   channel, not a form. Sent for Gold and for the contribution pool.
+   **Still not in writing: whether the two are exclusive.** BitSafe's
+   challenge page says Gold applicants are ineligible for the pool, in three
+   places; BitSafe say on Telegram the page is a mistake. We applied for both
+   on that basis. Worth asking NODERS to confirm receipt of both, so there is
+   a record if the page turns out to govern.
+2. **The two BitSafe pull requests.** Prepared in `contrib/bitsafe/` and not
+   opened. The challenge scores *merged* PRs, so prepared is worth nothing.
+3. **Part I re-shoot - optional.** The video has no governance section. It can
+   now be filmed against DevNet, where the second approver is genuinely
+   BitSafe rather than a container on this machine. Needs a 15-minute window
+   from them. Takes the film to about two minutes.
+4. **The repo goes public - last.** Branch protection requiring a PR before
+   anyone can push.
+
+**Housekeeping, none of it blocking:** commit; rotate the Keycloak client
+secret after DevNet; run the proof suite on 0.4.0; test the shipped Docker
+build paths (`SCRIPT_SOURCE=download`, `UI_SOURCE=build`) on a machine that
+does not intercept TLS.
+
+
 **Proofs 1, 3 and 4 run in Daml Script; proofs 2 and 5 run on LocalNet.** DevNet
 is used once, at the end, only to produce a real update id as evidence.
 Developing against DevNet would cost uptime we do not control, traffic we do
@@ -556,7 +599,9 @@ Outcome, and it confirms the plan rather than changing it:
 
 Next, by owner:
 
-- [ ] **Us**: send the Slack-associated email addresses to BitSafe (Telegram).
+- [x] **Us**: Slack addresses sent and the shared channel is live - we ran the
+      whole governed settlement through it on 29 Sep with BitSafe, BitSafe and
+      BitSafe.
 - [x] **Us (DevOps)**: DecMan beside the DevNet validator — **done 25 Sep**
       at `https://<decman-host>`, Noise listener on 9000.
       Verified from outside without credentials: 9000 open (93 ms), 8080
@@ -575,7 +620,7 @@ Next, by owner:
       participant id and public key are well formed, and all three of their
       A records accept TCP on 9000. One field to confirm with them, the
       `name`, which arrived as a truncated UI string.
-- [ ] **BitSafe**: create the shared channel (BitSafe).
+- [x] **BitSafe**: shared Slack channel created (BitSafe) and in daily use.
 - [x] **Protocol version: answered by the deployment itself** (25 Sep). The
       worry was that DecMan pins protocol version 35. It is now running
       against our DevNet participant and reading its identity from it — the
@@ -609,8 +654,11 @@ Done:
       rights on the parties it allocates; a participant's clock can be behind
       the runner's by enough to fail `offeredAt = now` (`requestedAt` is now
       five minutes in the past).
-- [ ] LocalNet regression of the six proofs and the main demo on 0.4.0
-      (LocalNet is down while the sandbox has the memory).
+- [ ] LocalNet regression of the six proofs on 0.4.0. The main demo itself
+      is regressed by the recording: 250 holders seated twice, settled,
+      refused and retried on 28-29 Sep, every figure checked against the
+      ledger afterwards. What is untested is `dpm test` across the proof
+      suite since the governance packages landed.
 - [x] The panes show the approver (22 Sep): an APPROVER line on the agent's
       pane, a note that the agent's own button is refused until the vote,
       and honest wording on a holder pane that shares the agent's node. The
@@ -649,9 +697,13 @@ Done:
       things that each cost hours — as another. Branch names, commit types and
       draft descriptions follow their `docs/CONTRIBUTING.md`. Send the docs
       one first. **Still to do: open the two PRs.**
-- [ ] ~~Offer `governance-settlement-v0` to BitSafe's repository as a pull~~
-      request (needs their `multi-package.yaml` entry and a `daml.yaml` at
-      their SDK version).
+- [ ] **Two pull requests to BitSafe, prepared and not yet opened.**
+      `contrib/bitsafe/`: the `governance-settlement-v0` module, and
+      `INTEGRATING.md`, now **nine** findings after the DevNet run added the
+      member-with-no-node lockout. Send the documentation one first - it is
+      useful to them whether or not they want the module. Ask which branch
+      (`main` or `hackathon`). A prepared PR is not a merged PR, and the
+      challenge scores merged ones.
 > **Whether the two tiers are exclusive is unresolved, and it decides the
 > plan.** BitSafe own challenge page says *"Gold applicants are not eligible
 > for the contribution pool"*, and the organiser said the same. But BitSafe
@@ -676,29 +728,28 @@ Done:
 > `governance-settlement-v0` is the module, and `contrib/bitsafe/` holds two
 > ready PRs.
 
-- [ ] **Gold: everything is in place except one package and one run.**
-      Done since 25 Sep: peered with BitSafe; the decentralised party
-      `indivisa-approvers::1220099c...` created and co-hosted; governance
-      rules deployed; **3 members at threshold 3**. The threshold matters -
-      BitSafe offered 2 of 3, which with two member parties of ours would have
-      let us settle **without** BitSafe and made the shared control nominal.
-      3 of 3 is the honest configuration and we kept it.
-      **The blocker was one package.** Eight DARs were distributed through
-      DecMan on 27 Sep; seven vetted on both nodes, and
-      `splice-test-token-v2-1.0.1` sat at "Uploading DARs" for about a day.
-      The governed settlement fails without it:
-      `UNRESOLVED_PACKAGE_NAME(11) ... splice-test-token-v2`. BitSafe went out
-      of office; BitSafe put two colleagues on it and **Robert approved a
-      fresh request on 29 Sep**.
-      **Next, in order:** (1) run `infra/bitsafe/verify-packages.ps1` to
-      confirm from the ledger rather than from the DecMan UI, which reported
-      "uploading" for a day while nothing happened; (2) seat a small run with
-      `approver` set to the decentralised party; (3) propose, confirm on
-      both sides, execute; (4) record Part I and cut it into the film.
-      **Apply by 4 October.** Whether Gold and the contribution pool are
-      exclusive is still unresolved - the BitSafe challenge page says they
-      are, BitSafe say on Telegram that the page is a mistake. Get it in
-      writing before choosing.
+- [x] **Gold: the governed settlement ran on DevNet - 29 September.**
+      A coupon settled through `indivisa-approvers` at **2 of 2**: our
+      confirmation and BitSafe's, on their own node. 5 legs, 8,421.88 USD,
+      update id
+      `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+      Read it back with `pwsh infra/bitsafe/govern-devnet.ps1 evidence`;
+      the record is `infra/devnet/demo/evidence-gov1.json`.
+      **Apply for Gold by 4 October.** Whether Gold and the contribution
+      pool are exclusive is still unresolved - get it in writing.
+      Four things cost the day, all now scripted or documented:
+      **the TLS truststore** (`infra/trust-store.ps1`: `--cacrt` silently
+      stopped working, and a PKCS12 written by .NET loads as zero trust
+      anchors because Java wants keytool's trusted-key-usage attribute);
+      **the missing asset package** on BitSafe's node
+      (`infra/bitsafe/verify-packages.ps1` asks the ledger rather than the
+      DecMan UI, which reported "uploading" for a day while nothing
+      happened); **the unauthorised proposer**
+      (`SelfAction_AddAdditionalProposer` is in their Daml and API but not
+      their UI - BitSafe are adding it); and **a self-inflicted lockout** -
+      a member with no node of its own still counts towards the threshold,
+      so the party could not reach its own threshold, and only
+      `PUT /party-config` could unpick it (`infra/bitsafe/confirm-as-member.ps1`).
 - [ ] Java paying-agent daemon — watches payment dates, fires the run without a
       human. The honest production component, invisible in the video. First to be
       cut.

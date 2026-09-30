@@ -39,8 +39,34 @@ from our own `indivisa-governance-v0` precisely so it could be given away.
 | `module/daml.yaml` | `daml/governance-settlement/daml.yaml` |
 | `module/daml/Governance/Settlement/BatchSettlement.daml` | `daml/governance-settlement/daml/Governance/Settlement/BatchSettlement.daml` |
 | `module/test/BatchSettlementTest.daml` | their test package, as `Governance/Settlement/Test/BatchSettlementTest.daml` |
+| `module/README.md` | `daml/governance-settlement/README.md` |
+
+The README is written for someone who has never seen Indivisa: who the
+module is for, what was missing that made us write it, how to adopt it, and
+what it deliberately does not do. It says nothing about our own use of it,
+because a reader of their repository has no reason to care - and the last
+section, "does not consume anything application-specific", is the honest
+answer to that question anyway, phrased as guidance rather than apology.
 
 The namespace already matches their layout (`daml/<package>/daml/Governance/<Area>/`).
+
+**Ask before opening this one.** Checked against their repo on 30 September:
+
+- Every package of theirs is `sdk-version: 3.4.11`; our copy said 3.5.10 and
+  now says 3.4.11. Their SDK supports this module's LF target -
+  `governance-action-v1` is itself 3.4.11 with `--target=2.2`.
+- `daml/multi-package.yaml` needs a `governance-settlement` entry.
+- **They vendor Token Standard V1 only.** `daml/dars/` has
+  `splice-api-token-holding-v1` and `splice-api-token-transfer-instruction-v1`
+  and no V2 package at all. This module data-depends on
+  `splice-api-token-holding-v2` and `splice-api-token-allocation-v2`, so the
+  PR would have to add two binaries to their repo.
+
+That last point is why this is a question and not a pull request. Adding
+Token Standard V2 to their dependencies is a decision about where their
+product goes, not a code review, and it should be theirs to make before we
+put it in a diff. BitSafe said "feel free to add as PR" before we knew it, so
+ask again with the specifics.
 
 **Two things to say in the PR description, because a reviewer will ask:**
 
@@ -74,14 +100,14 @@ The namespace already matches their layout (`daml/<package>/daml/Governance/<Are
 
 **Branch:** `docs/api/integrating-existing-canton`
 
-**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — eight things that are not
+**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — nine things that are not
 in their documentation and each of which cost hours. Suggested location:
 `docs/INTEGRATING.md`, linked from `USER_GUIDE.md` after the Quick Start.
 
 This is arguably the more valuable of the two. The module helps teams doing
 what we did; this helps **every** team pointing DecMan at their own node.
 
-The eight:
+The nine:
 
 1. Canton must have `auth-services` on, or every vote fails with a message
    that reads like a governance fault rather than a config one
@@ -98,11 +124,16 @@ The eight:
    silently changes what the threshold guarantees
 8. A peer needs every package the action touches, asset packages included;
    the error names the package but not the node, and arrives at settlement
+9. **A member with no node of its own can lock the party out of its own
+   rules** - it still counts towards the threshold, so the party cannot
+   reach the threshold that would remove it. `PUT /party-config` is the
+   only way back, because the UI will not edit Member Party ID
 
 **Draft description:**
 
 > While pointing Decentralization Manager at our own Canton, and then at a
-> live DevNet party shared with your team, we hit eight things that are not in
+> live DevNet party shared with your team through to a governed settlement,
+> we hit nine things that are not in
 > the docs, each of which took a while to work
 > out and each of which has a one-line fix. This adds a page covering them.
 >
@@ -116,6 +147,15 @@ The eight:
 > `auth-services` on the participant, onboarding and DAR distribution succeed
 > and the first confirmation fails with `INVALID_TOKEN ... missing a user-id`.
 > It looks like a governance problem and is not.
+>
+> Number 9 is the one we would most like to have been warned about. Adding a
+> governance member is a single dialog, and if that member has no
+> Decentralization Manager of its own it can never confirm - while still
+> counting towards the threshold. We did this by accident and the party could
+> no longer reach its own threshold, including for the action that would have
+> removed the member. `PUT /party-config` was the only way back, since the UI
+> will not edit Member Party ID. A warning line in the add-member dialog
+> would prevent it entirely.
 >
 > Happy to move it, split it, or reword anything that does not match how you
 > would put it.

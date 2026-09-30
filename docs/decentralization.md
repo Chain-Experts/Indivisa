@@ -1,9 +1,15 @@
 # Governed settlement: Indivisa on BitSafe's Decentralization Manager
 
 *We govern the batch payout, not the whole app: the paying agent sees the
-full coupon run, but two of three approvers must authorise settlement before
-anything moves. Built on BitSafe's Decentralization Manager, governing a
-single action, `Run_Settle`, and leaving routine activity alone.*
+full coupon run, but a threshold of approvers must authorise settlement
+before anything moves. Built on BitSafe's Decentralization Manager,
+governing a single action, `Run_Settle`, and leaving routine activity
+alone.*
+
+*On DevNet the approvers are two - one of them BitSafe, on their own node -
+and a coupon settled through them on 29 September. In the local sandbox the
+same mechanism runs at two of three. The threshold is a configuration; the
+property it buys is that no single company releases the payout.*
 
 Everything below ran on 21–22 September 2026 in BitSafe's sandbox (Splice
 LocalNet 0.6.12, Canton 3.5.8, three participants, three DecMan v1.8.0
@@ -90,9 +96,9 @@ panes rely on.
 | | Sandbox (contribution pool) | DevNet (Gold, agreed with BitSafe 23 Sep) |
 |---|---|---|
 | Decentralised party | `demo-party`, seeded by BitSafe's `seed.sh` | onboarded through DecMan across two nodes |
-| Members | three, one per participant | **three**: two ours, one BitSafe's |
+| Members | three, one per participant | **two**: one ours, one BitSafe's |
 | Nodes | three participants **in one Canton container** on one workstation | our validator and BitSafe's validator |
-| Threshold | 2 of 3 | **3 of 3** |
+| Threshold | 2 of 3 | **2 of 2** |
 | Independent operators | **none**. Three DecMan nodes and three participants on one machine run by one person are not three operators. The hosting threshold is real; the independence is not. | two. Every settlement needs BitSafe's confirmation on BitSafe's node. |
 
 We say this because claiming operator independence from one laptop is on
@@ -101,12 +107,23 @@ BitSafe's list of things that lose points, and because it is true.
 The threshold in the demo is 2 of 3: one confirmation is refused, two
 execute.
 
-**On DevNet it is 3 of 3, and the arithmetic is the reason.** The party ended
-up with three members, two of them ours. BitSafe suggested 2 of 3 for
-convenience. At 2 of 3 our two members alone reach the threshold, so we could
-settle **without BitSafe** and the shared control would be a label rather than
-a constraint. 3 of 3 is the only setting under which the claim on this page is
-true, so that is what we configured. The configuration is the claim.
+**On DevNet it is 2 of 2, and the arithmetic is the reason.** One member is
+ours, one is BitSafe's, and both must confirm. The rule we applied
+throughout: the threshold must equal the number of members we do not
+control, plus our own. At any setting where our members alone reach the
+threshold, we could settle without BitSafe and the shared control would be
+a label rather than a constraint.
+
+It took a detour to get there. The party briefly had three members, the
+third being a paying agent left over from a test seat - added to the
+membership by mistake, with no Decentralization Manager of its own. A
+member that cannot confirm still counts towards the threshold, so the party
+could not reach its own threshold, and every action including the one that
+would fix the membership was stuck. The way out was BitSafe's
+`PUT /party-config`, which accepts a member party id where the UI does not:
+point the node at the stranded member, confirm, point it back. Recorded
+here because "add a member" is a one-click action whose failure mode is a
+party that can no longer govern itself.
 
 ## 5. The evidence
 
@@ -182,19 +199,31 @@ allocate, as the sandbox's own seed script does.
   `govern confirm` / `govern execute` hold the vote. One confirmation is
   refused by the ledger; two settle. No account, no toolchain, no sandbox
   of ours to trust — see `judge/README.md`.
-- **In progress: DevNet, with BitSafe as the second operator.** Agreed with
-  them on 23 September. Our Decentralization Manager went up on 25 September
-  at `<decman-host>`; we peered with BitSafe, and the
-  decentralised party
-  `indivisa-approvers::1220099c...` is created and co-hosted, with
-  governance rules deployed and **three members at a threshold of three**.
-  What remains is one governed settlement there. It is blocked on a single
-  asset package, `splice-test-token-v2`, which BitSafe's node has not yet
-  vetted: package names resolve only to a version vetted by **every**
-  informee, and their participant validates the settlement because the
-  decentralised party is an executor. Until that clears, the DevNet column
-  above describes a party that exists and rules that are enforced, but not
-  a settlement that has run. **Say it that way.**
+- **Real, on DevNet, with BitSafe as the second operator (29 September).**
+  A coupon settled through the decentralised party at 2 of 2: our
+  confirmation and theirs, on their own node.
+
+  | | |
+  | --- | --- |
+  | Run | `XS2999912340/Coupon/2027-12-01` |
+  | Legs settled | 5 |
+  | Total | 8,421.88 USD |
+  | Update id | `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c` |
+  | Receipt contract | `00d4d24b0c908d907c84e2294876ce2cc2aa137a0f4d971a70516640a8cc0e9bc3...` |
+  | Approver | `indivisa-approvers::1220099c...`, threshold 2 of 2 |
+
+  This is the claim the rest of this page was written to support, and it is
+  now a settlement that happened rather than a configuration that exists.
+  Chain-Experts could not have executed it alone: BitSafe's confirmation was
+  required, on infrastructure we do not run. Reproduce the read with
+  `pwsh infra/bitsafe/govern-devnet.ps1 evidence`.
+
+  Getting there cost two things worth knowing. Their node needed every
+  package the action touches, asset packages included, or the settlement
+  fails with `UNRESOLVED_PACKAGE_NAME` long after the distribution step that
+  caused it. And the paying agent had to be admitted as an additional
+  proposer, which exists in their Daml and their API but not in their UI -
+  BitSafe confirmed this and are adding it.
 - **Unfinished:** showing the governed run in the console — it shows the
   settled state today, not the vote — and a `Governed` variant of the
   recording.
