@@ -13,6 +13,19 @@ Their conventions, from `docs/CONTRIBUTING.md`:
 | Types | `feat`, `fix`, `docs`, `style`, `refact`, `perf`, `test`, `chore` |
 | Staging | `git add <file>`, deliberately — not `git add .` |
 
+**How to submit, from BitSafe of BitSafe, 30 September:** open
+focused pull requests **against `main`**, one for the documentation and one
+for the module. Whether we submit the documentation, the module or both is
+our choice. They will not pre-approve the module or commit the repository to
+Token Standard V2 ahead of review - the maintainers assess dependencies and
+fit through the same process as any other contribution. **A proposed
+contribution does not need to be merged before the hackathon submission**,
+provided it includes the reproducible setup, the tests and adoption notes.
+
+So the module PR goes in without asking first: the question we were holding
+it for is the question the review answers. Name the dependency requirement in
+the description rather than leaving it to be discovered.
+
 Submit them as **two separate pull requests**. They touch nothing in common,
 and the documentation one is useful to them whether or not they want the
 module.

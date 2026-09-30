@@ -1,11 +1,11 @@
 # Tasks
 
-**29 September 2026. Submission 9 October. 10 days.**
+**30 September 2026. Submission 9 October. 9 days.**
 
 ## Where we stand
 
-Everything a submission needs exists. What is left is paperwork with
-deadlines, one optional re-shoot, and going public.
+Every deliverable exists and is recorded. What is left is two pull
+requests and making the repository public.
 
 **Done and verifiable by someone else:**
 
@@ -15,7 +15,7 @@ deadlines, one optional re-shoot, and going public.
 | The product | Model, demo driver, settlement console; `indivisa` 0.4.0 |
 | Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
 | Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
-| **Governed, independently** | **DevNet, 29 Sep. 2 of 2 - ours and BitSafe's, on their node. Update id `1220eb43...727c`.** Chain-Experts could not have produced that transaction alone |
+| **Governed, independently** | **DevNet, twice: 29 and 30 Sep, 2 of 2 - ours and BitSafe's, on their node.** The second is the one filmed, update id `1220eb43...c6ac`. Chain-Experts could not have produced either transaction alone |
 | The video | `Indivisa-HackCanton-S3.mp4`, **2 m 27 s**, 1920x1080, and it now carries the governed settlement filmed on DevNet. Every figure checked against the ledger afterwards |
 | The deck | 15 slides; `deck.html`, `.pdf` and `.pptx` in sync; three unsourced claims removed 29 Sep |
 | The cash-asset question | Asked in the channel and answered: no required asset, and our reason endorsed |
@@ -25,22 +25,33 @@ deadlines, one optional re-shoot, and going public.
 1. ~~Gold application~~ - **applied 29 September, for both tiers.** BitSafe
    confirmed the mechanism: applying is a message to NODERS in the Telegram
    channel, not a form. Sent for Gold and for the contribution pool.
-   **Still not in writing: whether the two are exclusive.** BitSafe's
-   challenge page says Gold applicants are ineligible for the pool, in three
-   places; BitSafe say on Telegram the page is a mistake. We applied for both
-   on that basis. Worth asking NODERS to confirm receipt of both, so there is
-   a record if the page turns out to govern.
-2. **The two BitSafe pull requests.** Prepared in `contrib/bitsafe/` and not
-   opened. The challenge scores *merged* PRs, so prepared is worth nothing.
-3. **Part I re-shoot - optional.** The video has no governance section. It can
-   now be filmed against DevNet, where the second approver is genuinely
-   BitSafe rather than a container on this machine. Needs a 15-minute window
-   from them. Takes the film to about two minutes.
-4. **The repo goes public - last.** Branch protection requiring a PR before
-   anyone can push.
+   **Not exclusive - confirmed by the organisers 30 September.** The
+   challenge is now two separate entries on the platform and *"You can enter
+   both"*. Participation approved the same day.
+   **Platform checked 30 Sep: both challenges are selected on the project.**
+   That mattered - teams on the old single BitSafe challenge were moved to
+   Contribution Pool automatically, so the Telegram application for Gold
+   would not have shown there on its own.
+2. **The two BitSafe pull requests - the only thing left that needs doing.**
+   Prepared in `contrib/bitsafe/` and not opened. BitSafe's instruction
+   (30 Sep): focused PRs **against `main`**, one for the documentation and
+   one for the module, and **a proposed contribution does not need to be
+   merged before submission** provided it carries the reproducible setup,
+   the tests and adoption notes. All three are already written. The module
+   goes in without asking first: they will not pre-approve the Token
+   Standard V2 dependency, because that is what the review is for.
+3. **The repo goes public - last.** Branch protection requiring a pull
+   request before anyone can push.
+
+**Optional, if there is time:** the console showing a governed run. `RunBar`
+already renders an APPROVER line and refuses the agent's own button until
+the vote passes, and nothing in the film shows it - the governed section is
+terminal and DecMan UI only. `docs/decentralization.md` lists this under
+Unfinished. It would need a fresh governed run and another BitSafe
+confirmation.
 
 **Housekeeping, none of it blocking:** commit; rotate the Keycloak client
-secret after DevNet; run the proof suite on 0.4.0; test the shipped Docker
+secret after DevNet; test the shipped Docker
 build paths (`SCRIPT_SOURCE=download`, `UI_SOURCE=build`) on a machine that
 does not intercept TLS.
 
@@ -99,7 +110,8 @@ No LocalNet needed for this phase. Everything here is a download and a build.
 - [ ] Read `OpenZeppelin/canton-specs` → `experiments/cip112-settlement` and
       `docs/reference-architectures/dex.md`. **Reference only** — DAR import is
       gated and nothing there is dependable.
-- [ ] Ask NODERS:
+- [ ] Ask NODERS (mostly overtaken - the challenge structure was answered on
+      30 Sep, and the DevNet questions by simply running on it):
       1. S3 sponsor challenges and tracks; AI-disclosure policy.
       2. Whether regular DevNet now carries Token Standard V2, or the June
          "Token Standard V2 DevNet" is still the target.
@@ -445,11 +457,15 @@ no application backend.
   - Pitch materials may be a **document**, not necessarily slides. Worth
     considering given how much written material already exists.
 - **The BitSafe challenge has two tiers, and they are exclusive.** A team
-  that applies for **Gold** — a decentralised party on DevNet or MainNet,
-  **apply by 4 October** — does **not** compete in the contribution pool.
-  So the 30 September checkpoint is a real fork:
-  - Gold if our DecMan is up on DevNet and BitSafe are peered by then.
-  - Contribution pool otherwise, which the sandbox work already earns.
+  that applies for **Gold** does **not** compete in the contribution pool.
+  **That turned out to be wrong, and the organisers said so on 30 September:**
+  the challenge is now two separate platform entries and *"You can enter
+  both"*. Both are selected on our project. The fork this section describes
+  never had to be taken - we qualified for the pool with the sandbox work and
+  for Gold with the DevNet settlement, and entered both.
+  Worth keeping as a record of how long a published rule can stay wrong: the
+  page said Gold applicants were ineligible in three places, from before
+  21 September until the restructure nine days later.
 - **Grand Final is 21 October** for ten finalists, announced 19 October:
   a 5-minute pitch plus 2 minutes of questions, live. Not part of the
   submission, but it is what the deck should be able to carry.
@@ -531,9 +547,14 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       explaining what changed; and an eighth title card was added to carry
       that explanation. Part F was rewritten for **DaVinci Resolve** - the
       script had assumed Clipchamp.
-      **Not in the film yet:** the governed settlement (Part I), which needs
-      the BitSafe DevNet path. The cut is deliberately complete without it;
-      four items slot in before the closing card if it lands.
+      **The governed settlement is now in the film** (30 Sep): five items
+      between the retry and the closing card, taking it to **2 m 27 s**.
+      Card 5 had to be rewritten twice - first because it described the
+      sandbox's three approver nodes rather than DevNet's two, then because
+      it asserted a coupon should not move on one signature immediately
+      after two clips of exactly that. It now opens "That was one
+      signature", which makes the section read as *default, then option*
+      rather than as a contradiction. The operator caught that, not me.
 - [x] **A one-command local deployment for the judges** — `judge/`, built
       and verified 23 Sep, ahead of the DevNet run rather than after it
       (there was room, and it costs the recording nothing). `cd judge &&
@@ -676,10 +697,19 @@ Done:
       button pressed alone is the "agent refused" shot of the BitSafe clip.
       The vote itself stays in DecMan (its API; its Approvals page does not
       list custom proposals, checked 22 Sep, question for Richie).
-- [ ] Record the governed run: `docs/demo-script.md`, Part I. It is **not a
-      separate film** any more (24 Sep): one submission enters both the main
-      competition and BitSafe's challenge, so the footage is items 10 and 12
-      of the single under-two-minute video.
+- [x] **The governed run is filmed** (30 Sep), against **DevNet** rather than
+      the Docker sandbox - so the second approver is BitSafe on BitSafe's
+      node, not a container here. Six clips: propose, our confirmation, the
+      engine refusing at 1 of 2, their confirmation landing, the settlement,
+      the evidence. Five are in the cut.
+      Part I of `docs/demo-script.md` was rewritten for this, including the
+      trap that cost a take: **every seat allocates a new paying agent, and
+      the additional-proposer admission does not carry to it**, so reuse a
+      settled tag with `prepare` rather than seating fresh.
+      Two takes were also lost to shots that looked right and were not: one
+      filmed our own script's guard rather than the ledger refusing (fixed
+      with `-Force`), and one showed the previous run's update id because
+      the evidence command took the first receipt rather than the newest.
 - [x] **Judge package carries the whole product** (24 Sep, stage 1 of 2). The
       judge Canton image now vets all thirteen DARs, governance included —
       57 packages with dependencies — so an inspecting judge finds everything
