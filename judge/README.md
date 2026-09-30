@@ -172,7 +172,7 @@ threshold is real; the independence is simulated.
 **The independent version has run.** On 29 September a coupon settled on
 Canton DevNet through a decentralised party at **2 of 2**: our confirmation
 and BitSafe's, on BitSafe's own node. 5 legs, 8,421.88 USD, update id
-`122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+`1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`.
 Chain-Experts could not have produced that transaction alone. What you run
 here proves the mechanism offline and on your own machine; that run proves
 the independence. Both are in [`../docs/decentralization.md`](../docs/decentralization.md).

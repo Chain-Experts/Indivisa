@@ -208,7 +208,7 @@ allocate, as the sandbox's own seed script does.
   | Run | `XS2999912340/Coupon/2027-12-01` |
   | Legs settled | 5 |
   | Total | 8,421.88 USD |
-  | Update id | `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c` |
+  | Update id | `1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac` |
   | Receipt contract | `00d4d24b0c908d907c84e2294876ce2cc2aa137a0f4d971a70516640a8cc0e9bc3...` |
   | Approver | `indivisa-approvers::1220099c...`, threshold 2 of 2 |
 

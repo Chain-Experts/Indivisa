@@ -507,24 +507,101 @@ One sentence per shot, spoken slowly; silence is fine between them.
   250 holders, the run that found the ceiling. The holder figure is 1,000
   measured and about 6,400 derived. Saying "13,000 holders" would be false.
 
-## Part I. The BitSafe clip: the governed settlement (≈ 1.5 hours, separate sitting)
+## Part I. The governed settlement, on DevNet (about 30 minutes, plus waiting)
 
-The third recording session. It is on a different network — BitSafe's own
-sandbox in Docker, not our LocalNet — and the two do not fit in memory
-together, so record Parts D and E first, stop LocalNet
-(`pwsh infra\localnet\up.ps1 -Down`), and do this on another day.
+**Filmed against DevNet, not the Docker sandbox.** The sandbox version is
+three approver nodes on this machine: an honest demonstration of the
+mechanism and a simulated one of the independence. On DevNet the second
+approver is BitSafe, on BitSafe's node, and that difference is the whole
+point of the section. The sandbox instructions are kept below as a fallback.
 
-**The footage goes into the same video**, as items 10 and 12 of the edit in
-Part F. One submission enters both the main competition and BitSafe's
-challenge, so there is one film, not two.
+Nothing here needs LocalNet, so it does not compete with Parts D and E for
+memory and needs no separate day.
 
-What it shows, one shot per thing BitSafe scores: it runs from the
-instructions; below threshold the settlement is refused; at threshold it
-settles; only one action is governed; the module is reusable; and what is
-simulated is said out loud.
+**The constraint is BitSafe, not us.** Four of the six clips need nobody;
+two need someone on their side to confirm, ideally at an arranged time so
+the confirmation can be filmed landing.
 
-Save the two clips as `take3-governed-refused.mp4` and
-`take3-governed-settled.mp4` in `Indivisa-recording\raw`.
+### I0. A fresh seat needs a fresh admission
+
+The trap that cost a take on 30 September. **Every seat allocates a new
+paying agent party**, and the agent must be admitted to the governance rules
+as an *additional proposer* before it can file a proposal. That admission is
+granted to one party id and does not carry to the next seat, so a new seat's
+proposal fails at confirmation with
+`The requirement 'Proposer is authorized (member or additional proposer)'
+was not met`.
+
+So **reuse a seat whose agent is already admitted**. `prepare` can be run
+again on a settled tag: it creates a fresh run and fresh allocations under
+the same agent, provided that agent still holds unlocked cash.
+
+```powershell
+$env:INDIVISA_CLIENT_SECRET = "..."
+pwsh infra/bitsafe/govern-devnet.ps1 prepare -Tag gov1
+```
+
+Seat a new tag only if you must, and then expect an extra approval round to
+admit its agent (`infra/bitsafe/admit-proposer.ps1`), which needs BitSafe too.
+
+### I1. Prepare, not filmed (about 3 minutes)
+
+Run the `prepare` above. Do **not** run `disclose` yet - run it after the
+refusal shot, so the blobs match the allocations the execute consumes.
+
+### I2. The six clips
+
+Terminal shots: PowerShell full screen, `cls` first, nothing else visible.
+Browser shots: Chrome on the DecMan **Approvals tab**, F11.
+
+**Never film the Parties tab** - it shows the Keycloak client id and secret.
+Fetch `DECMAN_TOKEN` from the browser console *before* recording, not during.
+
+| # | Clip | Needs BitSafe | What it shows |
+| --- | --- | --- | --- |
+| 1 | `take3-propose.mp4` | no | `propose` - the agent asks for something it cannot grant itself |
+| 2 | `take3-confirm-ours.mp4` | no | our confirmation in the DecMan UI, 0 of 2 to 1 of 2 |
+| 3 | `take3-governed-refused.mp4` | no | `settle-execute.ps1` at 1 of 2, then `-Execute -Force`, and the engine refusing |
+| 4 | `take3-confirm-theirs.mp4` | **yes** | their confirmation landing, 1 of 2 to 2 of 2 |
+| 5 | `take3-governed-settled.mp4` | after 4 | `settle-execute.ps1 -Execute` - settled |
+| 6 | `take3-evidence.mp4` | after 5 | `evidence` - the receipt and the update id |
+
+Each clip: start recording, hold five seconds, do the thing, hold ten
+seconds, stop.
+
+**Clip 3 must use `-Force`.** Without it the script prints its own guard,
+`not yet at threshold`, which is this repository declining to submit and not
+the ledger refusing. The sentence worth filming is the engine's:
+
+```text
+REFUSED by the governance engine
+
+  The requirement 'Enough confirmations to execute action' was not met.
+
+  1 of 2 confirmations. Nothing moved.
+```
+
+Between clips 3 and 5, run `disclose` (not filmed):
+
+```powershell
+pwsh infra/bitsafe/govern-devnet.ps1 disclose -Tag gov1
+```
+
+### I3. Where the clips go
+
+Into the same film, between items 8 and 9 of the running order in Part F4.
+Cards 5 and 6 are already made. Expect to use three or four of the six: the
+edit wants the refusal, the confirmation landing and the settlement, and the
+rest exist so the choice does.
+
+---
+
+### Fallback: the Docker sandbox
+
+Only if BitSafe cannot be reached before the deadline. This runs on their
+own sandbox in Docker rather than our LocalNet, and the two do not fit in
+memory together, so record Parts D and E first, stop LocalNet, and do this
+on another day.
 
 ### I1. Bring up the sandbox (≈ 40 minutes the first time, 5 after)
 

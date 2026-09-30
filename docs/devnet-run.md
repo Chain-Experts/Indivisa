@@ -25,7 +25,7 @@ alone**.
 
 | | |
 |---|---|
-| **Update id** | `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c` |
+| **Update id** | `1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac` |
 | Ledger offset | 3683282 |
 | Holders paid | 5, in one transaction |
 | Total | 8,421.88 USD |
@@ -33,6 +33,14 @@ alone**.
 | Receipt contract | `00d4d24b0c908d907c84e2294876ce2cc2aa137a0f4d971a70516640a8cc0e9bc3ca1212208e84716733ca79f77f191c44d16911947256a3aa0e26f95d58bcf648fa859a8e` |
 | Approver | `indivisa-approvers::1220099c...` |
 | Threshold | **2 of 2**: Chain-Experts and BitSafe |
+| Date | 30 September 2026 |
+
+It has run **twice**. The first was 29 September, update id
+`122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c` at
+offset 3683282; the figures above are the second, which is the one filmed for
+the submission video. Both went through the same party at the same threshold,
+and the repeat matters: it shows the path is a working procedure rather than a
+one-off that happened to succeed.
 
 The run named a **decentralised party** as its approver, so
 `SettlementFactory_SettleBatch` required that party's authority as well as the

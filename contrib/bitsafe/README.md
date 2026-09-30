@@ -100,7 +100,7 @@ ask again with the specifics.
 
 **Branch:** `docs/api/integrating-existing-canton`
 
-**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — six things that are not
+**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — seven things that are not
 in their documentation and each of which cost hours. Suggested location:
 `docs/INTEGRATING.md`, linked from `USER_GUIDE.md` after the Quick Start.
 
@@ -112,7 +112,7 @@ are now dropped and the page **credits that document in its first
 paragraph** and picks up where it leaves off. Proposing a page that
 duplicates a third of an existing one is worse than proposing nothing.
 
-The six that stand:
+The seven that stand:
 
 1. Canton must have `auth-services` on, or every vote fails with a message
    that reads like a governance fault rather than a config one
@@ -126,10 +126,14 @@ The six that stand:
    rules** — it still counts towards the threshold, so the party cannot
    reach the threshold that would remove it. `PUT /party-config` is the only
    way back, because the UI will not edit Member Party ID
+7. **The Approvals tab cannot execute an action that needs disclosed
+   contracts.** Their docs cover `disclosed_contracts` on the API; nothing
+   says the UI has no way to supply them, and the click fails with
+   `CONTRACT_NOT_FOUND` naming a contract rather than a missing parameter
 
 Items 1 to 4 are one story: the authentication chain between DecMan and a
-Canton you already run. Items 5 and 6 are operational, and both surface long
-after the step that caused them.
+Canton you already run. Items 5 to 7 are operational, and each surfaces long
+after the step that caused it.
 
 **Draft description:**
 
@@ -152,6 +156,14 @@ after the step that caused them.
 > could no longer reach its own threshold, including for the action that
 > would have removed the member. `PUT /party-config` was the only way back.
 > A warning line in the add-member dialog would prevent it entirely.
+>
+> Item 7 is a small one with an easy fix: the Approvals tab's Execute button
+> submits with no disclosed contracts, so a custom action whose executeImpl
+> reaches a choice context fails on the click with CONTRACT_NOT_FOUND. The
+> id in the error is the contract that should have been disclosed, and
+> nothing in the message says so. Disabling the button for such actions, or
+> a line beside it pointing at the API, would save the guess. (Pasting them
+> in would not help — our two blobs are 692 and 1,644 characters.)
 >
 > Found while pointing DecMan at our own five-participant Canton, then at a
 > DevNet party shared with your team, through to a governed Token Standard

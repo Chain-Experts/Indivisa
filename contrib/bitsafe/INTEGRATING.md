@@ -144,6 +144,34 @@ Worth a warning in the add-member dialog: **a member that cannot confirm
 still counts towards the threshold.** Worth a line in the docs too, that
 `PUT /party-config` is the escape hatch when it happens.
 
+## 7. The UI cannot execute an action that needs disclosed contracts
+
+`CUSTOM_DAML_TEMPLATES.md` documents `disclosed_contracts` on
+`POST /governance/execute`, and documents it well. What is not said is that
+**the Approvals tab has no way to supply them**. Its Execute button submits
+with none, so a custom `GovernableAction` whose `executeImpl` reaches a
+contract the executing node has not seen fails on the click:
+
+```text
+CONTRACT_NOT_FOUND(11): Contract could not be found with id 00bf0947...
+```
+
+The id in the message is the contract that should have been disclosed - in
+our case the registry's `TokenRules`. Nothing in the error says
+"disclosure", so it reads as a missing contract rather than a missing
+parameter.
+
+Pasting them in would not help even if the dialog offered it: our two blobs
+are 692 and 1,644 characters, and a settlement with one locked holding per
+sender grows from there.
+
+So for an action of this kind, **execute over the API, not from the UI**.
+Worth saying on the Execute button itself, or disabling it for actions whose
+`executeImpl` is known to need a choice context.
+
+The failure is harmless - the proposal and its confirmations survive, and a
+subsequent API execute succeeds.
+
 ## Two worked examples
 
 **Locally, in Docker.** `judge/govern.sh` in
@@ -167,4 +195,4 @@ and 6:
 
 A coupon settled through that party on 29 September 2026 at two of two,
 update id
-`122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+`1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`.

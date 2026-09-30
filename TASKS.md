@@ -15,8 +15,8 @@ deadlines, one optional re-shoot, and going public.
 | The product | Model, demo driver, settlement console; `indivisa` 0.4.0 |
 | Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
 | Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
-| **Governed, independently** | **DevNet, 29 Sep. 2 of 2 - ours and BitSafe's, on their node. Update id `122063f9...727c`.** Chain-Experts could not have produced that transaction alone |
-| The video | `Indivisa-HackCanton-S3.mp4`, **1 m 42 s**, 1920x1080. Every figure checked against the ledger afterwards |
+| **Governed, independently** | **DevNet, 29 Sep. 2 of 2 - ours and BitSafe's, on their node. Update id `1220eb43...727c`.** Chain-Experts could not have produced that transaction alone |
+| The video | `Indivisa-HackCanton-S3.mp4`, **2 m 27 s**, 1920x1080, and it now carries the governed settlement filmed on DevNet. Every figure checked against the ledger afterwards |
 | The deck | 15 slides; `deck.html`, `.pdf` and `.pptx` in sync; three unsourced claims removed 29 Sep |
 | The cash-asset question | Asked in the channel and answered: no required asset, and our reason endorsed |
 
@@ -517,7 +517,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       `indivisa-governance-v0` and `governance-settlement-v0` are not
       vetted and not committed; they matter only for the BitSafe path.
 - [x] **The video is recorded, cut and exported** - 29 Sep,
-      `Indivisa-recording/ready/Indivisa-HackCanton-S3.mp4`, **1 m 42 s,
+      `Indivisa-recording/ready/Indivisa-HackCanton-S3.mp4`, **2 m 27 s,
       1920x1080**, inside the two-minute target and well inside the
       five-minute limit. 250 holders on LocalNet: the success run, the
       deliberate refusal, the fix, the retry. Every figure on screen was
@@ -743,7 +743,7 @@ Done:
       A coupon settled through `indivisa-approvers` at **2 of 2**: our
       confirmation and BitSafe's, on their own node. 5 legs, 8,421.88 USD,
       update id
-      `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+      `1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`.
       Read it back with `pwsh infra/bitsafe/govern-devnet.ps1 evidence`;
       the record is `infra/devnet/demo/evidence-gov1.json`.
       **Apply for Gold by 4 October.** Whether Gold and the contribution

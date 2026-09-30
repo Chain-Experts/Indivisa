@@ -121,9 +121,22 @@ try {
   Write-Host "saved to $out" -ForegroundColor DarkGray
   Write-Host "Next: read the DistributionReceipt off the ledger for the evidence record." -ForegroundColor DarkGray
 } catch {
-  Write-Host "REFUSED" -ForegroundColor Red
   $msg = ErrorText $_
-  Write-Host $msg
+  # The body is JSON, so PowerShell renders quotes as ' and ". The
+  # refusal is the point of this command and is read off a screen, so print
+  # the engine's sentence plainly and keep the raw body in the file.
+  $clean = try { [Regex]::Unescape($msg) } catch { $msg }
+  $sentence = [Regex]::Match($clean, "The requirement '[^']+' was not met\.")
+  Write-Host "REFUSED by the governance engine" -ForegroundColor Red
+  Write-Host ""
+  if ($sentence.Success) {
+    Write-Host ("  " + $sentence.Value) -ForegroundColor Red
+  } else {
+    $inner = [Regex]::Match($clean, 'message:\s*"(.+?)"')
+    Write-Host ("  " + $(if ($inner.Success) { $inner.Groups[1].Value } else { $clean })) -ForegroundColor Red
+  }
+  Write-Host ""
+  Write-Host "  $($cids.Count) of $($state.state.threshold) confirmations. Nothing moved." -ForegroundColor DarkGray
   Set-Content (Join-Path $demoDir "refused-$Tag-$(Get-Date -Format HHmmss).txt") $msg
   exit 1
 }

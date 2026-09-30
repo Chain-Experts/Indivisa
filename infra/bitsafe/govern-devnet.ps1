@@ -172,7 +172,18 @@ switch ($Command) {
     $agent = $seat.payingAgent
     $receipts = ActiveWithBlobs $agent "#indivisa:Indivisa.Model.Distribution:DistributionReceipt"
     if (-not $receipts) { throw "no DistributionReceipt for this agent; did the settlement execute?" }
-    $ev = $receipts | Select-Object -First 1
+    # An agent that has settled the same run id more than once - re-running
+    # prepare on a settled tag does exactly that - has several receipts. Take
+    # the newest by ledger offset, or the evidence describes an older
+    # settlement than the one just executed.
+    $receipts = @($receipts | Sort-Object -Property @{ Expression = { [int64] $_.offset } } -Descending)
+    $ev = $receipts[0]
+    if ($receipts.Count -gt 1) {
+      Write-Host "$($receipts.Count) receipts for this agent; showing the newest (offset $($ev.offset))" -ForegroundColor DarkGray
+      foreach ($r in $receipts | Select-Object -Skip 1) {
+        Write-Host ("  earlier: offset {0}  {1}" -f $r.offset, $r.contractId.Substring(0, 24)) -ForegroundColor DarkGray
+      }
+    }
     $a = $ev.createArgument
     Write-Host ""
     Write-Host "DistributionReceipt on DevNet" -ForegroundColor Green

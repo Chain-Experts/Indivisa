@@ -18,7 +18,7 @@ Built by Chain-Experts for HackCanton Season 3.
   24 September 2026, five holders in one transaction, update id
   `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
   — [`docs/devnet-run.md`](docs/devnet-run.md) has the whole record.
-- **The recording** — 1 minute 42 seconds: a coupon paid to 250 holders in one transaction, the same run refused when one holder is not ready, and the retry once she is. Every figure on screen is read live from a Canton ledger, and each was checked against the ledger afterwards.
+- **The recording** — 2 minutes 27 seconds: a coupon paid to 250 holders in one transaction; the same run refused when one holder is not ready, and the retry once she is; then the same engine with an **approver** named, where the paying agent's own button is refused until an independent second party agrees. Every figure on screen is read live from a Canton ledger, and each was checked against the ledger afterwards.
 - **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
 - **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
 
@@ -194,7 +194,7 @@ approver**; see [`docs/decentralization.md`](docs/decentralization.md).
 - **29 Sep, governed** - the same coupon through a decentralised party at
   **2 of 2**, one member ours and one BitSafe's, on BitSafe's own node.
   Update id
-  `122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.
+  `1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`.
   Chain-Experts could not have produced that transaction alone, which is
   the difference between a threshold that exists and one that constrains
   anybody.
