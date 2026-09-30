@@ -1,11 +1,19 @@
-# Integrating with your own Canton
+# Integrating with a Canton you already run
 
-`hackathon/README.md` gets you running against the bundled LocalNet. This page
-is for the next step: pointing Decentralization Manager at a Canton you already
-run, and driving a governed action from a script rather than the UI.
+[`CUSTOM_DAML_TEMPLATES.md`](CUSTOM_DAML_TEMPLATES.md) covers writing a
+`GovernableAction` and driving it: the package layout, `proposal_cid` and its
+placeholder action, `disclosed_contracts`, granting propose-only rights. It
+assumes Decentralization Manager is already talking to your participant.
 
-Everything below was found by doing it. Each item cost hours because it is not
-written down anywhere, and each has a one-line fix.
+This page is about getting to that point, and about two things that bite
+afterwards. Six items. Four are configuration on the Canton side, where the
+errors name the vote rather than the config and so read as governance
+faults. Two are operational, and both arrive long after the step that caused
+them.
+
+Everything here was found by doing it: first against our own
+five-participant Canton, then on DevNet against a party shared with the
+BitSafe team, through to a governed Token Standard V2 settlement.
 
 ## 1. Canton must have authentication enabled — even locally
 
@@ -80,79 +88,7 @@ DECPM_CANTON_HMAC_SUBJECT=participant_admin
 Any party the governance flow acts as still needs `CanActAs` granted to that
 user, as usual.
 
-## 5. A domain action is identified by `proposal_cid`, not by an action type
-
-This is the one that is hardest to guess from the API. To confirm or execute a
-`GovernableAction` of your own, `action` carries a **placeholder** — the
-request schema requires the field and ignores it for `core_domain` — and the
-real target goes in `proposal_cid`:
-
-```http
-POST /governance/confirm
-{
-  "party_id": "...",
-  "rules_contract_id": "...",
-  "action": { "type": "governance_set_threshold", "new_threshold": 0 },  // ignored
-  "governance_type": "core_domain",
-  "proposal_cid": "<contract id of your GovernableAction>"
-}
-```
-
-Sending your own action type instead gives:
-
-```text
-Json deserialize error: unknown variant `execute_action`, expected one of
-`governance_add_member`, `governance_remove_member`, ...
-```
-
-which reads as "that action is not supported" rather than "that is not how this
-endpoint works".
-
-Confirmations for it come back under `domain_actions`, matched on
-`proposal_cid` — not under `actions`, which is where the core self-governance
-confirmations are:
-
-```text
-GET /governance/confirmations?party_id=...
-  .domain_actions[] | select(.proposal_cid == $cid) | .confirmations[].contract_id
-```
-
-## 6. `execute` needs the contracts your action touches, disclosed
-
-The executing node runs your `executeImpl`. Anything it reaches that lives on
-another participant has to be disclosed, or the transaction fails on a contract
-the node has never seen.
-
-For a Token Standard V2 batch settlement that is the registry's `TokenRules`
-and the sender's locked holdings — fetched with `includeCreatedEventBlob: true`
-and passed as:
-
-```jsonc
-"disclosed_contracts": [ { "contract_id": "...", "blob": "..." } ]
-```
-
-A note in the API reference saying "disclose whatever `executeImpl` touches
-off-node" would have saved the whole afternoon this took.
-
-## 7. `SelfAction_AddAdditionalProposer` is not in the UI
-
-`Governance.Rules` has it, and the API accepts
-`governance_add_additional_proposer`. The governance dialog offers only four
-self-actions: add member, remove member, set threshold, set timeout.
-
-So a party that must **propose but never confirm** — an application's own
-service party, say — cannot be admitted by clicking. Either call
-`/governance/confirm` directly, or work around it.
-
-The workaround, if you take it, has a trap. Adding that party as a **member**
-instead does let it propose, but it also lets it confirm, and it changes what
-the threshold means. With members `{app, you, peer}` at threshold 2, the app
-plus you can act without the peer — which may be exactly the property you
-were trying to guarantee. Raise the threshold in the same action: the
-add-member dialog takes a new threshold, so it costs one approval round
-rather than two.
-
-## 8. Peers need every package your action touches, not just yours
+## 5. Peers need every package your action touches, not just yours
 
 Distributing your own DARs to a peer is not enough. Naming a decentralised
 party as an approver makes the peer's participant a stakeholder — and, if the
@@ -174,7 +110,7 @@ distribution — long after the step that caused it.
 Worth a line in the DAR-distribution docs: send the transitive set your
 `executeImpl` reaches, not only the package your action is defined in.
 
-## 9. A member with no node can lock the party out of its own rules
+## 6. A member with no node can lock the party out of its own rules
 
 The one that cost a day. Adding a governance member is a single dialog, and
 its failure mode is a party that can no longer govern itself.
@@ -208,14 +144,27 @@ Worth a warning in the add-member dialog: **a member that cannot confirm
 still counts towards the threshold.** Worth a line in the docs too, that
 `PUT /party-config` is the escape hatch when it happens.
 
-## A worked example
+## Two worked examples
 
-`judge/govern.sh` in [Indivisa](https://github.com/Chain-Experts/Indivisa)
-does all of the above against a five-participant Canton in Docker: peer mesh,
-onboarding at threshold 2, member parties, governance rules, admitting an
-additional proposer, then propose → confirm → execute. It is a port of
-`hackathon/seed.sh` and is deliberately readable as a reference.
+**Locally, in Docker.** `judge/govern.sh` in
+[Indivisa](https://github.com/Chain-Experts/Indivisa) does items 1 to 4
+against a five-participant Canton: peer mesh, onboarding at threshold 2,
+member parties, governance rules, admitting an additional proposer, then
+propose, confirm, execute. It is a port of `hackathon/seed.sh` and is
+deliberately readable as a reference. It skips DAR distribution, because
+that Canton vets the packages at bootstrap - worth knowing that the step is
+optional when you control the node.
 
-It also skips your DAR distribution step, because that Canton vets the packages
-at bootstrap — worth knowing that the step is optional when you control the
-node.
+**On DevNet, against a party shared with your team.**
+`infra/bitsafe/govern-devnet.ps1` and its neighbours do the same where the
+second member is somebody else's. Two of them exist only because of items 5
+and 6:
+
+| Script | Why |
+| --- | --- |
+| `verify-packages.ps1` | Asks the ledger which packages resolve for the shared party, rather than trusting a distribution's reported status |
+| `confirm-as-member.ps1` | Casts a confirmation as a member the node is not configured with, via `PUT /party-config` - the escape hatch for item 6 |
+
+A coupon settled through that party on 29 September 2026 at two of two,
+update id
+`122063f9d1aa424743607dd2e5d8e111e671267c32d97837dc25041085b982ed727c`.

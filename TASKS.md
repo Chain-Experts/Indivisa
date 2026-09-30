@@ -654,11 +654,22 @@ Done:
       rights on the parties it allocates; a participant's clock can be behind
       the runner's by enough to fail `offeredAt = now` (`requestedAt` is now
       five minutes in the past).
-- [ ] LocalNet regression of the six proofs on 0.4.0. The main demo itself
-      is regressed by the recording: 250 holders seated twice, settled,
-      refused and retried on 28-29 Sep, every figure checked against the
-      ledger afterwards. What is untested is `dpm test` across the proof
-      suite since the governance packages landed.
+- [x] **Regression on 0.4.0: green** (30 Sep). `dpm test` in both test
+      packages: **34 tests, 0 failures**. `indivisa-test` 24 - all five
+      proofs, the coupon chain end to end, register, entitlement, scale to
+      50. `indivisa-governance-test` 10 - `SettleRunProposal` and the
+      generic `BatchSettlement` module, each proving below threshold
+      refused, proposer alone refused, at threshold settled.
+      One stale test was found and fixed: `scaleLegs_wellFormed` asserted
+      four-digit leg-id padding where the builder has produced five for some
+      time. Test-only - real leg ids are `runId <> "#" <> show i`, unpadded.
+      Five digits is correct anyway: the scale runs reach 13,000 legs and
+      four stops sorting at 10,000.
+      **`dpm test` runs inside a package, not at the multi-package root** -
+      at the root it exits 1 with `daml test: Not in package`.
+      The main demo is separately regressed by the recording: 250 holders
+      seated twice, settled, refused and retried on 28-29 Sep, every figure
+      checked against the ledger afterwards.
 - [x] The panes show the approver (22 Sep): an APPROVER line on the agent's
       pane, a note that the agent's own button is refused until the vote,
       and honest wording on a holder pane that shares the agent's node. The

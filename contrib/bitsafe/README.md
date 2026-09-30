@@ -96,18 +96,23 @@ ask again with the specifics.
 
 ---
 
-## PR 2 — `docs(api): documented integrating with an existing Canton`
+## PR 2 — `docs(api): documented integrating with a Canton you already run`
 
 **Branch:** `docs/api/integrating-existing-canton`
 
-**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — nine things that are not
+**What it is.** [`INTEGRATING.md`](INTEGRATING.md) — six things that are not
 in their documentation and each of which cost hours. Suggested location:
 `docs/INTEGRATING.md`, linked from `USER_GUIDE.md` after the Quick Start.
 
-This is arguably the more valuable of the two. The module helps teams doing
-what we did; this helps **every** team pointing DecMan at their own node.
+**It started as nine.** Checking against their repo on 30 September, three
+were already covered by `docs/CUSTOM_DAML_TEMPLATES.md`, a page we had not
+found: `proposal_cid` with its placeholder action, `disclosed_contracts`
+with the wire shape, and granting propose-only rights to a non-member. Those
+are now dropped and the page **credits that document in its first
+paragraph** and picks up where it leaves off. Proposing a page that
+duplicates a third of an existing one is worse than proposing nothing.
 
-The nine:
+The six that stand:
 
 1. Canton must have `auth-services` on, or every vote fails with a message
    that reads like a governance fault rather than a config one
@@ -115,49 +120,45 @@ The nine:
    Canton booting
 3. Tokens need `exp`, and Canton caps the lifetime — `max-token-lifetime = Inf`
 4. Use the built-in `participant_admin`; creating a user first is a loop
-5. A domain action is identified by `proposal_cid` with a **placeholder**
-   `action`, and its confirmations come back under `domain_actions`
-6. `execute` needs `disclosed_contracts` for anything `executeImpl` touches
-   off-node
-7. `SelfAction_AddAdditionalProposer` exists in the Daml and the API but not
-   in the UI — and the obvious workaround, adding the party as a member,
-   silently changes what the threshold guarantees
-8. A peer needs every package the action touches, asset packages included;
+5. A peer needs every package the action touches, asset packages included;
    the error names the package but not the node, and arrives at settlement
-9. **A member with no node of its own can lock the party out of its own
-   rules** - it still counts towards the threshold, so the party cannot
-   reach the threshold that would remove it. `PUT /party-config` is the
-   only way back, because the UI will not edit Member Party ID
+6. **A member with no node of its own can lock the party out of its own
+   rules** — it still counts towards the threshold, so the party cannot
+   reach the threshold that would remove it. `PUT /party-config` is the only
+   way back, because the UI will not edit Member Party ID
+
+Items 1 to 4 are one story: the authentication chain between DecMan and a
+Canton you already run. Items 5 and 6 are operational, and both surface long
+after the step that caused them.
 
 **Draft description:**
 
-> While pointing Decentralization Manager at our own Canton, and then at a
-> live DevNet party shared with your team through to a governed settlement,
-> we hit nine things that are not in
-> the docs, each of which took a while to work
-> out and each of which has a one-line fix. This adds a page covering them.
+> `CUSTOM_DAML_TEMPLATES.md` covers writing a `GovernableAction` and driving
+> it, and it covers it well — it answered three of the things we had written
+> up before we found it. What we could not find anywhere was how to get
+> Decentralization Manager talking to a Canton we already run, and two
+> operational traps that surface much later. This adds a page for those.
 >
-> The one we would most like to have read is number 5: a domain action is
-> identified by `proposal_cid`, with the `action` field carrying a placeholder
-> that is ignored for `core_domain`. Sending a sensible-looking action type
-> instead produces `unknown variant`, which reads as "unsupported" rather than
-> "wrong shape".
+> Items 1 to 4 are the authentication chain. With no `auth-services` on the
+> participant, onboarding and DAR distribution both succeed and the first
+> confirmation fails with `INVALID_TOKEN ... missing a user-id` — it looks
+> like a governance problem and is not. The remaining three are each a
+> one-line fix and each cost an evening.
 >
-> Number 1 is the one most likely to stop someone entirely: with no
-> `auth-services` on the participant, onboarding and DAR distribution succeed
-> and the first confirmation fails with `INVALID_TOKEN ... missing a user-id`.
-> It looks like a governance problem and is not.
->
-> Number 9 is the one we would most like to have been warned about. Adding a
+> Item 6 is the one we would most like to have been warned about. Adding a
 > governance member is a single dialog, and if that member has no
-> Decentralization Manager of its own it can never confirm - while still
-> counting towards the threshold. We did this by accident and the party could
-> no longer reach its own threshold, including for the action that would have
-> removed the member. `PUT /party-config` was the only way back, since the UI
-> will not edit Member Party ID. A warning line in the add-member dialog
-> would prevent it entirely.
+> Decentralization Manager of its own it can never confirm — while still
+> counting towards the threshold. We did this by accident and the party
+> could no longer reach its own threshold, including for the action that
+> would have removed the member. `PUT /party-config` was the only way back.
+> A warning line in the add-member dialog would prevent it entirely.
 >
-> Happy to move it, split it, or reword anything that does not match how you
+> Found while pointing DecMan at our own five-participant Canton, then at a
+> DevNet party shared with your team, through to a governed Token Standard
+> V2 settlement at two of two.
+>
+> Happy to move it, split it, fold any of it into
+> `CUSTOM_DAML_TEMPLATES.md`, or reword anything that does not match how you
 > would put it.
 
 ---

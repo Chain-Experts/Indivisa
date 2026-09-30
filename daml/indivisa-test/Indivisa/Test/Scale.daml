@@ -228,6 +228,10 @@ scaleLegs_wellFormed : Script ()
 scaleLegs_wellFormed = do
   ps <- forA [1..12] $ \i -> allocateParty ("H" <> show i)
   let legs = scaleLegs ps
-  map (.legId) legs === [ "leg-" <> t | t <- ["0001","0002","0003","0004","0005","0006","0007","0008","0009","0010","0011","0012"] ]
+  -- Five characters, not four: the scale runs reach 13,000 legs and four
+  -- would stop sorting at 10,000. The literal below said four and the
+  -- builder has padded to five for a while, so this asserted nothing but
+  -- its own staleness.
+  map (.legId) legs === [ "leg-" <> t | t <- ["00001","00002","00003","00004","00005","00006","00007","00008","00009","00010","00011","00012"] ]
   length (map (basicAccount . (.recipient)) legs) === 12
   sum (map (.amount) legs) === 1278.0
