@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ledger, LedgerError } from "../ledger/client";
-import { agentState, factoryDisclosure, recordRejection, settle, type AgentState } from "../ledger/queries";
+import { agentState, factoryDisclosure, proposeSettlement, recordRejection, settle, type AgentState } from "../ledger/queries";
 import type { Config } from "../config";
 
 export const POLL_MS = 2000;
@@ -13,6 +13,7 @@ export type Pressed =
   | { kind: "idle" }
   | { kind: "busy" }
   | { kind: "settled"; updateId: string; ms: number }
+  | { kind: "proposed"; ms: number }
   | { kind: "rejected"; reason: string };
 
 export interface AgentHandle {
@@ -23,6 +24,8 @@ export interface AgentHandle {
   lastAt: number | null;
   refresh: () => Promise<void>;
   onSettle: () => Promise<void>;
+  /** The two connections, so the vote can reuse them rather than open its own. */
+  ledgers: { agent: Ledger; registry: Ledger };
 }
 
 export function useAgent(config: Config): AgentHandle {
@@ -65,6 +68,27 @@ export function useAgent(config: Config): AgentHandle {
     if (!state?.run) return;
     setPressed({ kind: "busy" });
     try {
+      // A run that names an approver is not the agent's to settle. The button
+      // asks instead: it signs a request the approvers confirm on their own
+      // nodes. Pressing the settle anyway would be refused by the ledger,
+      // which is a correct answer to a question an interface should not have
+      // let anyone ask.
+      if (state.run.approver) {
+        const t0 = performance.now();
+        const currency = state.instrument?.currency ?? "";
+        const description =
+          `Settle ${seat.runId}: ${state.run.legs} legs, ${state.run.total.toFixed(2)} ${currency}`.trim();
+        await proposeSettlement(
+          agent,
+          state.run.approver,
+          state.run.cid,
+          state.allocations.map((a) => a.cid),
+          seat.rulesCid,
+          description,
+        );
+        setPressed({ kind: "proposed", ms: Math.round(performance.now() - t0) });
+        return;
+      }
       const factory = await factoryDisclosure(registry, seat.rulesCid);
       const r = await settle(agent, state.run.cid, state.allocations.map((a) => a.cid), seat.rulesCid, factory);
       setPressed({ kind: "settled", updateId: r.updateId, ms: r.ms });
@@ -81,7 +105,7 @@ export function useAgent(config: Config): AgentHandle {
     }
   }, [agent, registry, refresh, seat.rulesCid, seat.runId, state]);
 
-  return { state, error, pressed, lastAt, refresh, onSettle };
+  return { state, error, pressed, lastAt, refresh, onSettle, ledgers: { agent, registry } };
 }
 
 function extractReason(body: string): string {

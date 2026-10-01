@@ -25,10 +25,12 @@
 
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet("seat", "prepare", "propose", "disclose", "status", "evidence")]
+  [ValidateSet("seat", "fund", "prepare", "propose", "disclose", "status", "evidence")]
   [string] $Command,
   [string] $Tag = "gov1",
   [int] $Holders = 5,
+  # Top-up for `fund`. Zero means one run's total, read from the seat.
+  [decimal] $Amount = 0,
   [string] $Approver = "indivisa-approvers::1220099c55468768a4f5a449ba7e1388967f9f42b1b03d982d9d375f7a2642bb7b3a",
   [string] $User = "d446488e-1170-4211-880e-0e7cd720a5d5"
 )
@@ -107,6 +109,40 @@ switch ($Command) {
     Write-Host "next: govern-devnet.ps1 prepare -Tag $Tag"
   }
 
+  "fund" {
+    # The seat funds the agent once, with exactly what the run costs, so a
+    # second run on the same tag dies with "Not enough funds for allocation".
+    # Seating afresh would fix the money and break the governance: a new seat
+    # allocates a new paying agent, and that party is not an admitted
+    # proposer. Topping up the existing agent keeps both.
+    $seat = Seat
+    $amt = if ($Amount -gt 0) { $Amount } else { [decimal] $seat.total }
+    $argsFile = Join-Path $demoDir "fund-args-$Tag.json"
+    $outFile = Join-Path $demoDir "funded-$Tag.json"
+    if (Test-Path $outFile) { Remove-Item $outFile -Force }
+    Set-Content -Path $argsFile -NoNewline -Value (
+      '{"seat":' + (Get-Content $seatFile -Raw) + ',"amount":"' + $amt.ToString([Globalization.CultureInfo]::InvariantCulture) + '"}')
+    & pwsh -NoProfile -File (Join-Path $root "infra/participants-with-parties.ps1") `
+      -Network $Network -Out $mapFile -Seat $seatFile | Out-Null
+    $env:JAVA_TOOL_OPTIONS = "-Xss64m -Xmx4g"
+    if (Test-Path (Join-Path $netDir "truststore.jks")) {
+      $env:JAVA_TOOL_OPTIONS += " -Djavax.net.ssl.trustStore=$(Join-Path $netDir 'truststore.jks') -Djavax.net.ssl.trustStorePassword=changeit"
+    }
+    Push-Location (Join-Path $root "daml/indivisa-test")
+    try {
+      & dpm script --dar (Join-Path $root "daml/indivisa-test/.daml/dist/indivisa-test-0.1.0.dar") `
+        --script-name "Indivisa.Test.Demo:demo_fund" --input-file $argsFile --output-file $outFile `
+        --participant-config $mapFile --tls 2>&1 |
+        Tee-Object -FilePath (Join-Path $demoDir "fund-$Tag.log") |
+        Select-String -Pattern "FailedCmd|Exception|funds" |
+        ForEach-Object { $_.Line.Substring(0, [Math]::Min(300, $_.Line.Length)) }
+    } finally { Pop-Location; $env:JAVA_TOOL_OPTIONS = $null }
+    if (-not (Test-Path $outFile)) { throw "fund failed; see $demoDir/fund-$Tag.log" }
+    Write-Host ""
+    Write-Host "funded the paying agent with $amt $($seat.currency ?? 'USD')" -ForegroundColor Green
+    Write-Host "next: govern-devnet.ps1 prepare -Tag $Tag"
+  }
+
   "prepare" {
     Demo "prepare" @("-Approver", $Approver)
     $p = Get-Content $preparedFile -Raw | ConvertFrom-Json
@@ -124,7 +160,8 @@ switch ($Command) {
     Set-Content -Path $argsFile -Value $json -NoNewline
     # A token seconds old into the participant map: the Daml Script runner
     # holds one for the whole script and cannot refresh mid-run.
-    & pwsh -NoProfile -File (Join-Path $root "infra/participants-with-parties.ps1") -Network $Network -Out $mapFile | Out-Null
+    & pwsh -NoProfile -File (Join-Path $root "infra/participants-with-parties.ps1") `
+      -Network $Network -Out $mapFile -Seat $seatFile | Out-Null
     $env:JAVA_TOOL_OPTIONS = "-Xss64m"
     Push-Location (Join-Path $root "daml/indivisa-governance-test")
     try {

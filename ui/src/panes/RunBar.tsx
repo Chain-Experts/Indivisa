@@ -2,6 +2,7 @@ import { Money } from "../components/Money";
 import { StatusPill } from "../components/StatusPill";
 import { displayName, type Config } from "../config";
 import type { AgentHandle } from "../state/useAgent";
+import type { VoteHandle } from "../state/useVote";
 
 export interface RunSummary {
   currency: string;
@@ -22,11 +23,27 @@ export interface RunSummary {
  * ready it is, and the one command that moves it. Everything here is read
  * from the paying agent's own participant.
  */
-export function RunBar({ config, agent, run }: { config: Config; agent: AgentHandle; run: RunSummary }) {
+export function RunBar({
+  config,
+  agent,
+  run,
+  voting,
+}: {
+  config: Config;
+  agent: AgentHandle;
+  run: RunSummary;
+  /** Absent on a network with no Decentralization Manager configured. */
+  voting?: VoteHandle;
+}) {
   const { seat } = config;
   const { state, pressed } = agent;
   const { currency, legs, expectedAllocations, haveAllocations, missing, settled, units, exactTotal } = run;
-  const canPress = !!state?.run && !settled && pressed.kind !== "busy";
+  // A run with an approver is not the agent's to settle, so the button asks
+  // instead; and once it has asked there is nothing more for the agent to do
+  // until the approvers have voted.
+  const governed = !!state?.run?.approver;
+  const asked = !!state?.proposal || pressed.kind === "proposed";
+  const canPress = !!state?.run && !settled && pressed.kind !== "busy" && !(governed && asked);
   const ready = Math.min(haveAllocations, expectedAllocations);
   const pct = expectedAllocations > 0 ? Math.round((ready / expectedAllocations) * 100) : 0;
 
@@ -69,6 +86,7 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
         </Kpi>
         <Kpi label="Run">
           {settled ? <StatusPill tone="ok">settled</StatusPill>
+            : asked ? <StatusPill tone="ready">awaiting approval</StatusPill>
             : state?.rejections.length && pressed.kind !== "settled" ? <StatusPill tone="bad">rejected</StatusPill>
             : state?.run ? <StatusPill tone="ready">prepared</StatusPill>
             : <StatusPill tone="neutral">not prepared</StatusPill>}
@@ -81,7 +99,17 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
       <div className="action">
         {config.readOnly ? null : (
           <button className="settle" disabled={!canPress} onClick={agent.onSettle}>
-            {pressed.kind === "busy" ? "Settling…" : settled ? "Settled" : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
+            {pressed.kind === "busy"
+              ? governed
+                ? "Asking…"
+                : "Settling…"
+              : settled
+                ? "Settled"
+                : governed
+                  ? asked
+                    ? "Waiting for the approvers"
+                    : `Ask the approvers to settle ${legs.toLocaleString("en-GB")} legs`
+                  : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
           </button>
         )}
         <div className="action-note">
@@ -93,8 +121,10 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
               ? "This run has settled. Every holder was paid in the same transaction."
               : !state?.run
                 ? `Prepare the run first: demo.ps1 prepare -Tag ${seat.tag}`
-                : state.run.approver
-                  ? "All or nothing, and not alone: this run names an approver, so the agent's own button is refused until the approvers have confirmed and executed."
+                : governed
+                  ? asked
+                    ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
+                    : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead."
                   : "All or nothing. If any leg cannot settle, nothing moves."}
           {!settled && missing.length > 0 ? (
             <span className="warn">
@@ -107,7 +137,31 @@ export function RunBar({ config, agent, run }: { config: Config; agent: AgentHan
           <div className="action-note approver">
             Approver <strong>{displayName(state.run.approver, seat.tag)}</strong> · a decentralised party; its members must
             confirm before the settle can execute.
+            {voting?.vote ? (
+              <>
+                {" "}
+                <strong>
+                  {voting.vote.confirmations} of {voting.vote.threshold} confirmed.
+                </strong>
+              </>
+            ) : null}
           </div>
+        ) : null}
+        {/* The execute is offered only when the engine itself says the
+            threshold is met. Asking the page to decide that from a count
+            would be a second opinion on somebody else's rules. */}
+        {!settled && voting?.vote?.canExecute ? (
+          <div className="action-second">
+            <button className="settle go" disabled={voting.executing.kind === "busy"} onClick={voting.onExecute}>
+              {voting.executing.kind === "busy" ? "Settling…" : `Settle ${legs.toLocaleString("en-GB")} legs, now approved`}
+            </button>
+            <span className="action-note">
+              The approvers have agreed. This exercises the settlement with their authority and the agent's together.
+            </span>
+          </div>
+        ) : null}
+        {voting?.executing.kind === "failed" ? (
+          <div className="action-note warn">{voting.executing.reason}</div>
         ) : null}
       </div>
     </section>

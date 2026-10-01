@@ -406,3 +406,30 @@ demo_smoke = do
     query @EntitlementSchedule h >>= (=== [])
     query @DistributionRun h >>= (=== [])
     query @SettlementRejected h >>= (=== [])
+
+-- | Top up the paying agent, so a seat can run a second coupon.
+--
+-- The seat funds the agent once, with exactly what the run costs. Settling
+-- spends it, and a second `demo_prepare` on the same tag then dies with
+-- "Not enough funds for allocation" - which is correct and unhelpful, since
+-- the obvious next move, seating afresh, allocates a NEW paying agent party.
+-- On a governed network that party has to be admitted to the governance
+-- rules before it may propose anything, and admitting it needs the other
+-- approvers. So a rerun that should cost nothing costs a round trip to
+-- another organisation.
+--
+-- Funding the existing agent avoids all of that: the party is unchanged, its
+-- admission still stands, and the run is the same shape. Nothing proven
+-- depends on how the agent was funded (see `fund`).
+data DemoFundArgs = DemoFundArgs
+  with
+    seat   : DemoSeat
+    amount : Decimal
+  deriving (Eq, Show)
+
+demo_fund : DemoFundArgs -> Script Decimal
+demo_fund args = do
+  let s = args.seat
+  cash <- cashFor s.registry s.rulesCid
+  fund cash s.payingAgent args.amount
+  pure args.amount

@@ -9,6 +9,7 @@ import { Holders, type HolderRow } from "./panes/Holders";
 import { Privacy } from "./panes/Privacy";
 import { Activity } from "./panes/Activity";
 import { useAgent } from "./state/useAgent";
+import { useVote } from "./state/useVote";
 import { groupByNode, useHolders } from "./state/useHolders";
 
 // The console: one working header, one command, and four ways of looking at
@@ -30,6 +31,16 @@ export function App() {
 function Console({ config }: { config: Config }) {
   const { seat } = config;
   const agent = useAgent(config);
+  // The vote only exists while a proposal is outstanding, and only on a
+  // network that has a Decentralization Manager configured.
+  const voting = useVote(
+    config.decmanParty,
+    agent.state?.proposal?.cid ?? null,
+    agent.ledgers.agent,
+    agent.ledgers.registry,
+    seat.rulesCid,
+    agent.refresh,
+  );
   const currency = agent.state?.instrument?.currency ?? "USD";
   const holders = useHolders(config, currency);
   const byNode = useMemo(() => groupByNode(config, seat.holders), [config, seat.holders]);
@@ -121,7 +132,7 @@ function Console({ config }: { config: Config }) {
 
       {agent.error ? <div className="error pad">{agent.error}</div> : null}
 
-      <RunBar config={config} agent={agent} run={run} />
+      <RunBar config={config} agent={agent} run={run} voting={voting} />
 
       {settled && state?.receipt ? (
         <div className="outcome ok">
@@ -136,6 +147,32 @@ function Console({ config }: { config: Config }) {
               <span className="muted"> · submitted to committed in {agent.pressed.ms.toLocaleString("en-GB")} ms</span>
             ) : null}
           </div>
+        </div>
+      ) : !settled && state?.proposal ? (
+        <div className="outcome wait">
+          <div className="outcome-title">
+            AWAITING APPROVAL · {legs.toLocaleString("en-GB")} payments requested · 0 executed
+          </div>
+          <div className="outcome-line">
+            {state.proposal.description}
+            {state.run?.approver ? (
+              <span className="muted"> · {displayName(state.run.approver, config.seat.tag)} must confirm to its threshold</span>
+            ) : null}
+          </div>
+          {voting.vote ? (
+            <div className="outcome-line">
+              <strong>
+                {voting.vote.confirmations} of {voting.vote.threshold}
+              </strong>{" "}
+              <span className="muted">
+                {voting.vote.canExecute
+                  ? "confirmed. The threshold is met and the settlement can execute."
+                  : "confirmed. Each approver confirms on its own node; nothing moves until the threshold is met."}
+              </span>
+            </div>
+          ) : voting.error ? (
+            <div className="outcome-line muted">The vote could not be read: {voting.error}</div>
+          ) : null}
         </div>
       ) : agent.pressed.kind === "rejected" || (state?.rejections.length && !settled) ? (
         <div className="outcome bad">

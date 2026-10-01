@@ -43,6 +43,9 @@ export const T = {
   receipt: "#indivisa:Indivisa.Model.Distribution:DistributionReceipt",
   rejected: "#indivisa:Indivisa.Model.Distribution:SettlementRejected",
   tokenRules: "#splice-test-token-v2:Splice.Testing.Tokens.TestTokenV2:TokenRules",
+  // Only on a network where the governance packages are vetted. Reads of it
+  // are allowed to fail: see `proposals` in queries.ts.
+  proposal: "#indivisa-governance-v0:Indivisa.Governance.SettleRunProposal:SettleRunProposal",
 };
 
 export const I = {
@@ -64,6 +67,9 @@ export class LedgerError extends Error {
 }
 
 export class Ledger {
+  /** The ledger user to submit as. Set once from the participant map. */
+  static userId = "indivisa-ui";
+
   // `headers` is for a client outside the browser (scripts/settle.ts), which
   // has no proxy to add the bearer token for it.
   constructor(
@@ -143,15 +149,21 @@ export class Ledger {
   }
 
   /** Active contracts implementing an interface, with their views. */
-  interfaces(interfaceId: string): Promise<ActiveContract[]> {
-    return this.activeContracts([{ InterfaceFilter: { value: { interfaceId, includeInterfaceView: true, includeCreatedEventBlob: false } } }]);
+  interfaces(interfaceId: string, withBlob = false): Promise<ActiveContract[]> {
+    return this.activeContracts([
+      { InterfaceFilter: { value: { interfaceId, includeInterfaceView: true, includeCreatedEventBlob: withBlob } } },
+    ]);
   }
 
   /** Submit commands as this party and wait for the commit. Returns the update id. */
   async submitAndWait(commands: unknown[], disclosedContracts: DisclosedContract[] = []): Promise<{ updateId: string; completionOffset: number }> {
     return this.post("/v2/commands/submit-and-wait", {
       commandId: `indivisa-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      userId: "indivisa-ui",
+      // Canton takes the user from the token on an authenticated network and
+      // refuses a command naming a different one. The dev server serves the
+      // right id from the participant map; "indivisa-ui" is the unauthenticated
+      // fallback, where any name does.
+      userId: Ledger.userId,
       actAs: [this.party],
       commands,
       disclosedContracts,

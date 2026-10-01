@@ -36,22 +36,39 @@ export interface AgentState {
   allocations: { cid: ContractId; authorizer: Party | null; legs: number; isSend: boolean }[];
   rejections: { cid: ContractId; attemptedAt: string; legsRequested: number; reason: string }[];
   receipt: { cid: ContractId; legsSettled: number; total: number; offset: number; updateId: string | null; effectiveAt: string | null } | null;
+  /** The filed request for approval, when this run names one. Null on an
+   *  ungoverned run, and null on a network that does not vet the governance
+   *  package at all. */
+  proposal: { cid: ContractId; description: string } | null;
 }
 
 export async function agentState(agent: Ledger, runId: string, isin: string): Promise<AgentState> {
-  const [instruments, schedules, runs, allocs, rejected, receipts] = await Promise.all([
+  const [instruments, schedules, runs, allocs, rejected, receipts, proposals] = await Promise.all([
     agent.templates(T.instrument),
     agent.templates(T.schedule),
     agent.templates(T.run),
     agent.interfaces(I.allocation),
     agent.templates(T.rejected),
     agent.templates(T.receipt),
+    // The governance package is vetted on DevNet and deliberately not on the
+    // judges' local stack, where the vote runs in its own containers. A
+    // participant that has never seen the package answers with an error, and
+    // that is not a fault worth surfacing: an ungoverned run has no proposal.
+    agent.templates(T.proposal).catch(() => []),
   ]);
 
   const inst = instruments.find((c) => c.createdEvent.createArgument.isin === isin)?.createdEvent.createArgument;
   const sched = schedules.find((c) => c.createdEvent.createArgument.isin === isin);
   const run = runs.find((c) => c.createdEvent.createArgument.runId === runId);
-  const receipt = receipts.find((c) => c.createdEvent.createArgument.runId === runId);
+  // A run id can settle more than once: preparing a tag whose run has already
+  // settled creates a fresh run under the same id, and the earlier receipt is
+  // still on the ledger. A receipt created BEFORE the current run belongs to
+  // that earlier settlement, and treating it as this one's makes the page
+  // announce a settlement that has not happened (seen 1 Oct).
+  const receipt = receipts
+    .filter((c) => c.createdEvent.createArgument.runId === runId)
+    .filter((c) => !run || c.createdEvent.offset > run.createdEvent.offset)
+    .sort((a, b) => b.createdEvent.offset - a.createdEvent.offset)[0];
 
   const allocations = allocs
     .map((c) => ({ c, v: view<AllocationView>(c, ":Allocation") }))
@@ -94,10 +111,61 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
     allocations,
     rejections: rejected
       .filter((c) => c.createdEvent.createArgument.runId === runId)
+      // Refusals from an earlier run under the same id are history, not this
+      // run's state; showing them would put a red box above a fresh run.
+      .filter((c) => !run || c.createdEvent.offset > run.createdEvent.offset)
       .map((c) => ({ cid: c.createdEvent.contractId, ...c.createdEvent.createArgument, legsRequested: Number(c.createdEvent.createArgument.legsRequested) }))
       .sort((a, b) => (a.attemptedAt < b.attemptedAt ? 1 : -1)),
     receipt: receiptOut,
+    proposal: (() => {
+      if (!run) return null;
+      const p = proposals.find((c) => c.createdEvent.createArgument.runCid === run.createdEvent.contractId);
+      return p ? { cid: p.createdEvent.contractId, description: p.createdEvent.createArgument.description } : null;
+    })(),
   };
+}
+
+/**
+ * Ask the approvers, instead of settling.
+ *
+ * On a run that names an approver the agent cannot settle: `Run_Settle` needs
+ * that party's authority as well as its own, and the ledger refuses the agent
+ * acting alone. What it can do is sign a request. This creates the
+ * `SettleRunProposal` the approvers then confirm through their own
+ * Decentralization Managers, and whose `executeImpl` performs the settlement
+ * once they have.
+ *
+ * Nothing is disclosed here: a create that stores a contract id does not need
+ * to read the contract. The disclosure belongs to the execute, which happens
+ * on an approver's node.
+ */
+export async function proposeSettlement(
+  agent: Ledger,
+  approver: Party,
+  runCid: ContractId,
+  allocationCids: ContractId[],
+  rulesCid: ContractId,
+  description: string,
+) {
+  return agent.submitAndWait([
+    {
+      CreateCommand: {
+        templateId: T.proposal,
+        createArguments: {
+          governanceParty: approver,
+          proposer: agent.party,
+          runCid,
+          factoryCid: rulesCid,
+          allocationCids,
+          extraArgs: {
+            context: { values: { "testTokenV2/tokenRules": { tag: "AV_ContractId", value: rulesCid } } },
+            meta: { values: {} },
+          },
+          description,
+        },
+      },
+    },
+  ]);
 }
 
 /** The factory the settle needs, disclosed from the registry's own participant. */
@@ -111,6 +179,38 @@ export async function factoryDisclosure(registry: Ledger, rulesCid: ContractId):
     createdEventBlob: c.createdEvent.createdEventBlob,
     synchronizerId: c.synchronizerId,
   };
+}
+
+/**
+ * The contracts the executing node has to be handed.
+ *
+ * An approver's node runs the action's `executeImpl` and has never seen the
+ * registry's rules or the agent's locked cash, so both travel with the
+ * execute request as disclosed contracts. One locked holding per send
+ * allocation, which for a coupon is one.
+ */
+export async function executeDisclosures(
+  agent: Ledger,
+  registry: Ledger,
+  rulesCid: ContractId,
+): Promise<{ contract_id: string; blob: string }[]> {
+  const [rules, holdings] = await Promise.all([
+    registry.templates(T.tokenRules, true),
+    agent.interfaces(I.holding, true),
+  ]);
+  const out: { contract_id: string; blob: string }[] = [];
+
+  const r = rules.find((c) => c.createdEvent.contractId === rulesCid);
+  if (!r) throw new Error("the cash registry's rules contract was not found on its participant");
+  out.push({ contract_id: r.createdEvent.contractId, blob: r.createdEvent.createdEventBlob });
+
+  for (const c of holdings) {
+    const v = view<HoldingView>(c, ":Holding");
+    if (!v || v.lock == null || v.account.owner !== agent.party) continue;
+    out.push({ contract_id: c.createdEvent.contractId, blob: c.createdEvent.createdEventBlob });
+  }
+  if (out.length < 2) throw new Error("no locked holding found for the paying agent; was the run prepared?");
+  return out;
 }
 
 /** The one button. Exercises Run_Settle as the paying agent; the ledger decides. */

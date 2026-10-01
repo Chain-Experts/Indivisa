@@ -25,6 +25,14 @@ infra/bitsafe/participants-with-parties.json
 infra/bitsafe/demo/
 infra/bitsafe/log/
 
+# The Decentralization Manager's bearer token, pasted in by the operator so
+# the dev server can read the vote and execute. A credential: never committed,
+# and never sent to the browser.
+infra/*/decman-token.txt
+infra/*/decman-refresh.txt
+infra/*/ca.pem
+infra/*/truststore.jks
+
 # Internal working documents, never committed (briefs, messages, private notes).
 private/
 

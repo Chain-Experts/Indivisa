@@ -115,6 +115,14 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
 .outcome { margin: 0; padding: 12px max(20px, calc((100% - var(--maxw)) / 2)); display: grid; gap: 4px; font-family: var(--mono); font-size: 0.82rem; border-bottom: 1px solid var(--line); }
 .outcome.ok { background: var(--ledger-soft); color: var(--ledger); border-color: #b9dcc9; }
 .outcome.bad { background: var(--bad-soft); color: var(--bad); border-color: #e9c4c4; }
+/* Waiting on a vote is neither a success nor a refusal, and should not be
+   coloured as either: nothing has gone wrong and nothing has happened. */
+.outcome.wait { background: #f4f1e6; color: #6b5a2a; border-color: #ddd2ae; }
+
+/* The second command, offered only once the approvers have agreed. It sits
+   below the first so the order on screen is the order of events. */
+.action-second { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.settle.go { background: var(--ledger); border-color: var(--ledger); }
 .outcome-title { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em; }
 .outcome-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .outcome-line code { word-break: break-all; }

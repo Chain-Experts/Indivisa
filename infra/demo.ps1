@@ -37,7 +37,14 @@ if (-not (Test-Path $netDir)) { throw "No network '$Network' under infra/" }
 New-Item -ItemType Directory -Force $demoDir | Out-Null
 
 if (-not (Test-Path $dar)) { throw "Build first: dpm build --all" }
-pwsh -NoProfile -File (Join-Path $PSScriptRoot "participants-with-parties.ps1") -Network $Network -Out $mapFile | Out-Null
+# Pass the seat where there is one: on a shared network the party list is the
+# whole synchronizer's and walking it outlives the token. There is no seat yet
+# on the first `seat` run, and none is needed - the runner allocates those
+# parties itself.
+$seatForMap = Join-Path $demoDir "seat-$Tag.json"
+$mapArgs = @("-Network", $Network, "-Out", $mapFile)
+if (Test-Path $seatForMap) { $mapArgs += @("-Seat", $seatForMap) }
+pwsh -NoProfile -File (Join-Path $PSScriptRoot "participants-with-parties.ps1") @mapArgs | Out-Null
 
 # The scripts' "LocalNet" topology means "named participants, one party per
 # command". On DevNet the same five names are keys in participants.json that
@@ -77,6 +84,9 @@ try {
     "seat" {
       $argsFile = Join-Path $demoDir "seat-args-$Tag.json"
       $seatFile = Join-Path $demoDir "seat-$Tag.json"
+      # Same reason as prepare: presence is only evidence if it cannot be
+      # left over from a previous run.
+      if (Test-Path $seatFile) { Remove-Item $seatFile -Force }
       Set-Content -Path $argsFile -Value ('{"topology":"LocalNet","holders":' + $Holders + ',"tag":"' + $Tag + '","user":' + $userJson + '}') -NoNewline
       $t = Measure-Command {
         & dpm script --dar $dar --script-name "Indivisa.Test.Demo:demo_seat" `
@@ -98,6 +108,10 @@ try {
       if (-not (Test-Path $seatFile)) { throw "No seat '$Tag' on $Network. Run: demo.ps1 seat -Network $Network -Tag $Tag" }
       $argsFile = Join-Path $demoDir "attempt-args-$Tag.json"
       $outFile = Join-Path $demoDir "prepared-$Tag.json"
+      # Remove it first, so "the file is there" means THIS run wrote it. On
+      # 1 Oct a prepare died on "Not enough funds" and was reported as a
+      # success, because yesterday's output file was still sitting there.
+      if (Test-Path $outFile) { Remove-Item $outFile -Force }
       $seat = Get-Content $seatFile -Raw
       Set-Content -Path $argsFile -Value ('{"seat":' + $seat + ',"withhold":' + $Withhold + ',"approver":' + $approverJson + '}') -NoNewline
       $t = Measure-Command {

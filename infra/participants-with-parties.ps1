@@ -14,7 +14,14 @@
 param(
   [string] $Network = "localnet",
   [string] $Out = "",
-  [string] $Prefix = ""
+  [string] $Prefix = "",
+  # Resolve only the parties this seat names, instead of listing every party
+  # the synchronizer knows. On DevNet that list is the whole network's -
+  # thousands of parties, shared by everyone - and walking it five times, once
+  # per participant name, outlives the 300-second token before it finishes.
+  # A seat has eight parties on a five-holder run, and each is one cheap
+  # lookup. Leave it unset on LocalNet, where the list is this demo's own.
+  [string] $Seat = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,6 +45,17 @@ if ($fresh) { Write-Host "minted a ledger token for '$Network'" }
 # registry keeps "registry", the agent and issuer keep "agent", holders get
 # the first holder node name. On LocalNet every name is its own node and
 # nothing here matters.
+# The parties worth resolving, when a seat names them.
+$wanted = @()
+if ($Seat) {
+  if (-not (Test-Path $Seat)) { throw "no seat at $Seat" }
+  $s = Get-Content $Seat -Raw | ConvertFrom-Json
+  foreach ($p in @($s.payingAgent, $s.registry, $s.issuer)) { if ($p) { $wanted += $p } }
+  foreach ($h in @($s.holders)) { if ($h) { $wanted += $h } }
+  $wanted = @($wanted | Select-Object -Unique)
+  Write-Host "resolving $($wanted.Count) parties from $(Split-Path $Seat -Leaf)"
+}
+
 $candidates = [ordered]@{}
 foreach ($name in $base.participants.PSObject.Properties.Name) {
   $u = $ui.participants.$name
@@ -46,17 +64,46 @@ foreach ($name in $base.participants.PSObject.Properties.Name) {
   $headers = @{}
   $bearer = if ($fresh) { $fresh } else { $u.token }
   if ($bearer) { $headers["Authorization"] = "Bearer " + $bearer }
-  try {
-    $resp = Invoke-RestMethod -Uri $url -Method Get -Headers $headers -TimeoutSec 30 -SkipCertificateCheck:([bool]$ui.insecureTls)
-  } catch {
-    Write-Warning "cannot reach $url ($_); skipping $name"
-    continue
-  }
-  foreach ($d in $resp.partyDetails) {
-    if ($d.isLocal -and $d.party.StartsWith($Prefix)) {
-      if (-not $candidates.Contains($d.party)) { $candidates[$d.party] = @() }
-      $candidates[$d.party] += $name
+
+  if ($wanted) {
+    # One lookup per party we actually care about.
+    foreach ($party in $wanted) {
+      try {
+        $one = Invoke-RestMethod -Uri "$url/$([uri]::EscapeDataString($party))" -Method Get -Headers $headers `
+          -TimeoutSec 30 -SkipCertificateCheck:([bool]$ui.insecureTls)
+      } catch {
+        continue   # not known to this participant, which is an answer
+      }
+      foreach ($d in $one.partyDetails) {
+        if ($d.isLocal -and $d.party.StartsWith($Prefix)) {
+          if (-not $candidates.Contains($d.party)) { $candidates[$d.party] = @() }
+          $candidates[$d.party] += $name
+        }
+      }
     }
+  } else {
+    # No seat given: list them. Fine where the list is this demo's own, and
+    # paged because the first page is not the list.
+    $page = $null
+    $pages = 0
+    do {
+      $q = if ($page) { "$url`?pageSize=1000&pageToken=$([uri]::EscapeDataString($page))" } else { "$url`?pageSize=1000" }
+      try {
+        $resp = Invoke-RestMethod -Uri $q -Method Get -Headers $headers -TimeoutSec 60 -SkipCertificateCheck:([bool]$ui.insecureTls)
+      } catch {
+        Write-Warning "cannot reach $url ($_); skipping $name"
+        break
+      }
+      foreach ($d in $resp.partyDetails) {
+        if ($d.isLocal -and $d.party.StartsWith($Prefix)) {
+          if (-not $candidates.Contains($d.party)) { $candidates[$d.party] = @() }
+          $candidates[$d.party] += $name
+        }
+      }
+      $page = $resp.nextPageToken
+      $pages++
+    } while ($page -and $pages -lt 50)
+    if ($pages -ge 50) { Write-Warning "$name`: stopped after 50 pages. Pass -Seat to resolve only the parties you need." }
   }
 }
 

@@ -2,7 +2,7 @@
 // show and which participant hosts each. Both come from files the demo
 // scripts wrote (served by the dev server; see vite.config.ts).
 
-import type { Party } from "./ledger/client";
+import { Ledger, type Party } from "./ledger/client";
 
 /** The seat, as Indivisa.Test.Demo.demo_seat emitted it (JSON of DemoSeat). */
 export interface Seat {
@@ -26,6 +26,13 @@ export interface ParticipantMap {
   // A deployment whose proxy allows reads only (the public one for judges).
   // The settle button is hidden rather than left to fail on a refused POST.
   readOnly?: boolean;
+  // The decentralised party whose members approve a governed run, when this
+  // network has one. The party id only: the token that reaches its
+  // Decentralization Manager stays on the server.
+  decman?: { party: Party } | null;
+  // The ledger user to submit as, from the participant map. Null on an
+  // unauthenticated network, where the default name does.
+  userId?: string | null;
 }
 
 /**
@@ -51,6 +58,8 @@ export interface Config {
   sharingWithAgent: (participant: string) => NodeSharing;
   /** Distinct nodes behind the participant names, or null if they could not be read. */
   distinctNodes: number | null;
+  /** The approvers' party, when a Decentralization Manager is configured. */
+  decmanParty: Party | null;
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -59,6 +68,9 @@ export async function loadConfig(): Promise<Config> {
   if (!mapR.ok) throw new Error("No participant map. Run: pwsh infra/participants-with-parties.ps1");
   const seat = (await seatR.json()) as Seat;
   const map = (await mapR.json()) as ParticipantMap;
+  // Set before any submission: an authenticated Canton takes the user from
+  // the token and refuses a command naming a different one.
+  if (map.userId) Ledger.userId = map.userId;
   const participantOf = (party: Party): string => {
     const p = map.party_participants[party];
     if (!p) throw new Error(`no participant known for ${party}; regenerate participants-with-parties.json`);
@@ -103,6 +115,7 @@ export async function loadConfig(): Promise<Config> {
     nodeIdOf,
     sharingWithAgent,
     distinctNodes,
+    decmanParty: map.decman?.party ?? null,
   };
 }
 
