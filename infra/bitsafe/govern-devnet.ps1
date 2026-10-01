@@ -5,6 +5,11 @@
 #   pwsh infra/bitsafe/govern-devnet.ps1 prepare   # allocations, approver named
 #   pwsh infra/bitsafe/govern-devnet.ps1 propose   # files the SettleRunProposal
 #   pwsh infra/bitsafe/govern-devnet.ps1 disclose  # contracts the execute needs
+#
+# Since 1 October the CONSOLE does propose, shows the vote, and executes, so
+# the filmed path needs only fund and prepare from here. propose, disclose and
+# evidence stay because they are useful without a browser - a scripted run, a
+# headless check, or working out why the page disagrees with the ledger.
 #   pwsh infra/bitsafe/govern-devnet.ps1 status
 #
 # Why this exists rather than infra/govern.ps1: that script drives BitSafe's

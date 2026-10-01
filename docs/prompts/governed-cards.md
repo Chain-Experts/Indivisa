@@ -34,7 +34,7 @@ through.
 
 HOW TO BUILD IT
 The existing deck has 8 slides. Keep slide 4 as a styling reference, delete
-everything else, then duplicate slide 4 six times and replace the text. That
+everything else, then duplicate slide 4 seven times and replace the text. That
 guarantees identical fonts, sizes, colours and margins.
 
 Slide 4 has exactly the shape these need: a bold headline over one
@@ -43,7 +43,7 @@ supporting line.
 Do not design a new layout. Do not adjust spacing "to look better". These sit
 in a sequence and consistency matters more than any single slide.
 
-THE SIX SLIDES, TEXT EXACTLY
+THE SEVEN SLIDES, TEXT EXACTLY
 
 Slide 1
   Headline:    Indivisa
@@ -58,8 +58,8 @@ Slide 2
   Supporting:  And an approver: a party no single company controls.
 
 Slide 3
-  Headline:    The agent cannot settle alone.
-  Supporting:  It presses its own button. The ledger refuses.
+  Headline:    The agent cannot settle this alone.
+  Supporting:  So it asks. The button files a request, not a payment.
 
 Slide 4
   Headline:    Two approvers. One of them is not ours.
@@ -67,7 +67,7 @@ Slide 4
 
 Slide 5
   Headline:    One approval is not enough.
-  Supporting:  Below the threshold, nothing moves.
+  Supporting:  At one of two, there is nothing to press.
 
 Slide 6
   Headline:    Both agreed. One transaction. Five holders paid.
@@ -75,6 +75,11 @@ Slide 6
   Third line (smaller, grey):
                splice-test-token-v2 stands in for the cash. The model never
                names the asset.
+
+Slide 7
+  Headline:    This console settles. It does not keep the register.
+  Supporting:  Holders, positions and the schedule come from systems a paying
+               agent already runs. Here a script stands in for them.
 
 DECK CONVENTIONS, inherited from the original
 - Widescreen 16:9, solid background #F6F7F3
@@ -90,12 +95,12 @@ Save As → create and choose the folder
 D:\Dev\ChainExperts\Indivisa-recording\governed-cards →
 file name "cards" → when asked which slides, choose All Slides.
 
-The result must be Slide1.PNG through Slide6.PNG, each 1920x1080.
+The result must be Slide1.PNG through Slide7.PNG, each 1920x1080.
 
 CHECK BEFORE YOU FINISH
-- governed-cards.pptx has exactly 6 slides
+- governed-cards.pptx has exactly 7 slides
 - cards.pptx is untouched
-- All six PNGs exist at 1920x1080
+- All seven PNGs exist at 1920x1080
 - Fonts, sizes and margins match the original deck
 - Slide 6's third line is present and smaller than the supporting line
 
@@ -112,18 +117,30 @@ watches nothing else knows what it is about.
 **Slide 2** sets up the run and introduces the approver *before* anything
 happens, so the refusal that follows is not a surprise.
 
-**Slide 3** is the one the first film lacked. It says plainly that the agent
-tries and fails, which is what the console then shows.
+**Slide 3** was rewritten on 1 October. The first version said the agent
+presses its button and the ledger refuses. That stopped being true when the
+console learned to file a proposal instead of attempting a payment: the agent
+still cannot settle alone, but nothing is refused, because nothing is tried.
+The card now says what actually happens.
 
 **Slide 4** is the claim the whole film exists for, and the word that carries
 it is **not ours**. Avoid softening it.
 
-**Slide 5** explains the second refusal so the viewer does not read it as the
-same failure twice.
+**Slide 5** carries the refusal that survives, and it is the better one: at
+one of two there is no error message, there is simply no button. "Below the
+threshold, nothing moves" was replaced by "At one of two, there is nothing to
+press" because the second describes the screen.
 
-**Slide 6** closes, and its small third line is the honesty disclosure. It
-must not be dropped to save room: the cash is a stand-in and the film says
-so.
+**Slide 6** closes the settlement, and its small third line is the honesty
+disclosure. It must not be dropped to save room: the cash is a stand-in and
+the film says so.
+
+**Slide 7** is the last card in the film, after the proof. It answers the
+question a judge asks the moment the settlement succeeds - what was off
+camera? The reset that prepares the run is a script, and the register, the
+positions and the schedule would come from systems a paying agent already
+operates. Ending on that is deliberate; see docs/production-readiness.md for
+the full account.
 
 ## If you would rather not use Claude Desktop
 

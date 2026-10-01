@@ -1,187 +1,192 @@
 # The governed settlement: a complete recording script
 
-This films one thing from start to finish: **a coupon that one company cannot
-pay on its own.**
+A coupon that one company cannot pay on its own, settled on Canton DevNet,
+with BitSafe holding one of the two approvals on their own node.
 
-It is written for someone who has never seen the project. Every command is
-given exactly. Every screen is described before you see it, so you know
-whether you are looking at the right thing.
+Target length **about two minutes**. Everything is driven from the page.
 
-## What makes this different from the main recording
+---
 
-`demo-script.md` films the product's normal mode: the paying agent presses a
-button and 250 holders are paid. The governed settlement was added to that
-film afterwards, as a section near the end.
+## What changed on 1 October, and why this script was rewritten
 
-This script films the governed mode **as the whole story**, with the console
-in it. That matters because the console is where a viewer sees the agent try
-to pay and be told no — and the existing film never shows that.
+The previous version of this film had the paying agent press its own button
+and the **ledger refuse it**. That shot no longer exists, and cannot.
 
-You may end up with two videos, or you may use this one to replace the last
-third of the first. Decide after you have watched it.
+The console now knows the run needs approval, so the button files a request
+instead of attempting a payment. That is a better product and a weaker
+demonstration, and the film has to take the trade: a button that asks for
+approval cannot also be a button that gets refused.
 
-## Before you film this: it may be about to change
+**What survives, and it is the stronger half:** at one approval out of two,
+nothing can be executed. That refusal is real, it is the threshold doing its
+job, and it is still on camera.
 
-**1-2 October.** Four of the shots below are PowerShell commands, and work is
-under way to move two of them (`propose` and `execute`) into the page, with
-the vote visible there. See "The terminal gap" in `TASKS.md`.
+Two steps that used to be PowerShell - `propose` and `execute` - are now
+page actions. The only terminal left is the **reset**, which is seat
+preparation rather than settlement, and card 7 says so out loud.
 
-If that lands, this script changes in one important way: **shot 2 disappears**.
-A button that files a proposal when an approver is named is not a button the
-ledger can refuse, so the agent never tries and fails. The replacement is the
-page saying the run needs approval and offering that instead - a better
-product and a quieter film.
-
-The threshold refusal, shot 4, survives either way: it is a deliberately
-forced request and no interface prevents it.
-
-**So do not film until that is decided.** If the work is abandoned, this
-script stands exactly as written.
+---
 
 ## What you need
 
 - The repo at `D:\Dev\ChainExperts\Indivisa`, built (`dpm build --all`).
-- The DevNet client secret.
-- **Someone at BitSafe available to click Confirm**, at a time you agree in
+- `ui\.env.local` filled in (copy `ui\.env.example`). It carries the network,
+  the tag and the client secret, so starting the console is `npm run dev` and
+  nothing else.
+- **Someone at BitSafe available to press Confirm**, at a time agreed in
   advance. This is the only part you cannot do alone, and it is the part the
   film exists to show.
-- OBS, DaVinci Resolve, PowerPoint.
+- OBS and DaVinci Resolve.
+- The seven cards, already exported to
+  `D:\Dev\ChainExperts\Indivisa-recording\governed-cards\Slide1.PNG` to
+  `Slide7.PNG`.
 
 No LocalNet. No Docker. Everything here runs against the real DevNet.
 
 ## Time
 
-About 90 minutes, of which 10 minutes is filming and the rest is setting up
-and waiting for BitSafe.
+About **70 minutes**, of which roughly 8 minutes is filming. The rest is
+setting up and waiting for BitSafe.
 
 ---
 
-## Part A. Prepare the run (not filmed, about 5 minutes)
+## Part A. Reset the run (not filmed, about 5 minutes)
 
-### A1. Open PowerShell and set the secret
+This is the only terminal work, and it happens before the camera starts.
+
+### A1. Open PowerShell
 
 ```powershell
 cd D:\Dev\ChainExperts\Indivisa
-$env:INDIVISA_CLIENT_SECRET = "<the validator client secret>"
 ```
 
-### A2. Create a fresh run under an agent that is already admitted
+The client secret comes from `infra\devnet\ui.json`, so there is nothing to
+paste.
+
+### A2. Top up the agent, then create the run
 
 ```powershell
+pwsh infra\bitsafe\govern-devnet.ps1 fund -Tag gov1
 pwsh infra\bitsafe\govern-devnet.ps1 prepare -Tag gov1
-pwsh infra\bitsafe\govern-devnet.ps1 propose -Tag gov1
 ```
 
-**Why `gov1` and not a new name.** Every seat creates a brand new paying
-agent party, and that party has to be admitted to the governance rules
-before it may propose anything. `gov1`'s agent was admitted on 29 September.
-A new seat would need BitSafe to approve the admission first, which is an
-extra round of waiting.
-
 `prepare` ends with `6 allocations, 5 legs, total 8421.88`.
-`propose` ends with `PROPOSED` and an action contract id. Keep that id: it is
-what BitSafe will confirm.
 
-If `prepare` fails saying there are no holdings, the agent has run out of
-cash and you do need a new seat. See Troubleshooting.
+**Why `gov1` and not a fresh name.** Every seat creates a brand new paying
+agent party, and a new party is not an admitted proposer - it would need
+BitSafe to approve its admission first, which is another round of waiting.
+`gov1`'s agent was admitted on 29 September. Reuse it.
 
-### A3. Do **not** run `disclose` yet
+**Why `fund` first.** The seat funds the agent with exactly one run's worth
+of cash. A second run on the same seat has nothing to pay with, and `prepare`
+fails saying there are no holdings. `fund` tops up the *existing* agent,
+which is the whole point: it avoids a new seat.
 
-Run it later, after the refusal shot. It collects the contracts the final
-step needs, and they must match the allocations that step will consume.
+### A3. Nothing else
+
+There is no `propose` and no `disclose` to run. The page does both.
 
 ---
 
-## Part B. The title cards (about 20 minutes)
+## Part B. The cards
 
-Six cards. Use the prompt in `docs/prompts/governed-cards.md` to have Claude
-Desktop build them from the existing deck, so the look matches the other
-film exactly.
+Seven, already built and verified. In order:
 
-They export as `Slide1.PNG` to `Slide6.PNG` in
-`D:\Dev\ChainExperts\Indivisa-recording\governed-cards\`.
+| | Headline | Supporting |
+|---|---|---|
+| 1 | **Indivisa** | A coupon that one company cannot pay on its own. |
+| 2 | A bond coupon. Five holders. One paying agent. | And an approver: a party no single company controls. |
+| 3 | The agent cannot settle this alone. | So it asks. The button files a request, not a payment. |
+| 4 | Two approvers. One of them is not ours. | BitSafe run the second node, on their own machine. |
+| 5 | One approval is not enough. | At one of two, there is nothing to press. |
+| 6 | Both agreed. One transaction. Five holders paid. | Settled on Canton DevNet. |
+| 7 | This console settles. It does not keep the register. | Holders, positions and the schedule come from systems a paying agent already runs. Here a script stands in for them. |
+
+If you ever rebuild them, the prompt is `docs/prompts/governed-cards.md` -
+**but note it still describes six slides and the old slide 3 text.** Update
+it before reusing it.
 
 ---
 
 ## Part C. Set up the screen and the recorder (about 15 minutes)
 
-### C1. The console
+### C1. The DecMan refresh token
 
-The console is the web page that shows the coupon run. Point it at DevNet:
+Do this **first**, because the console reads it at startup.
 
-Open a **second** PowerShell window and run:
+Open `https://<decman-host>`, sign in, press **F12**, click
+**Console**, and paste:
+
+```js
+sessionStorage.getItem("dec_party_manager_refresh_token")
+```
+
+Copy the value **without the quotes** into:
+
+```
+D:\Dev\ChainExperts\Indivisa\infra\devnet\decman-refresh.txt
+```
+
+That file is git-ignored. The dev server trades it for access tokens and
+writes the rotated one back, so the session stays alive for the whole
+recording. **Do not use `dec_party_manager_token`** - that is the short-lived
+access token, and it will expire in the middle of the film.
+
+Close the browser console.
+
+### C2. The console
 
 ```powershell
 cd D:\Dev\ChainExperts\Indivisa\ui
-$env:INDIVISA_CLIENT_SECRET = "<the secret>"
-$env:INDIVISA_NETWORK = "devnet"
-$env:INDIVISA_TAG = "gov1"
 npm run dev
 ```
 
-It ends with `Local: http://localhost:5173/`. **Leave this window alone** -
-it is serving the page.
+It should print, among other lines:
+
+```
+[indivisa] ledger token minted, lives 300s, refreshing every 198s
+[indivisa] DecMan token minted from the refresh token, lives ...s
+```
+
+**If the second line is missing or warns**, the vote will show as
+unavailable and the film cannot be made. Fix it before going on.
+
+Leave this window alone - it is serving the page.
+
+### C3. Check the page before you record
 
 Open `http://localhost:5173` in Chrome. You should see:
 
-- A dark bar at the top with the Indivisa mark.
-- A row of figures: HOLDERS **5**, TOTAL DUE **8,421.88 USD**,
-  ALLOCATIONS **6 / 6**, RUN **PREPARED**.
-- A green button, **Settle 5 legs in one transaction**.
-- Under the button, in place of the usual note:
-  *"All or nothing, and not alone: this run names an approver, so the
-  agent's own button is refused until the approvers have confirmed and
-  executed."*
-- Below that: **Approver `indivisa-approvers`** · a decentralised party; its
+- HOLDERS **5**, TOTAL DUE **8,421.88 USD**, ALLOCATIONS **6 / 6**,
+  RUN **PREPARED**.
+- A button reading **Ask the approvers to settle 5 legs**.
+- Below it: **Approver `indivisa-approvers`** - a decentralised party; its
   members must confirm before the settle can execute.
 
-**If those last two lines are missing, stop.** It means the run has no
-approver, and the whole film depends on it. Re-run `prepare` with the
-approver named.
+**If the approver line is missing, stop.** The run has no approver and the
+whole film depends on it. Re-run `prepare`.
 
-### C2. Chrome
+### C4. Chrome
 
 Two tabs, nothing else:
 
 1. `http://localhost:5173` - the console.
-2. `https://<decman-host>` - the Decentralization Manager,
-   on the **Approvals** tab.
+2. `https://<decman-host>` - the Decentralization Manager, on
+   the **Approvals** tab.
 
 Hide the bookmarks bar with **Ctrl+Shift+B**. Press **F11** for full screen.
 
-**Never show the Parties tab on camera.** It displays the Keycloak client id
-and secret.
+**Never show the DecMan Parties tab on camera.** It displays the Keycloak
+client id and secret.
 
-### C3. The DecMan token
-
-You will need it for two commands. Get it **now**, before recording:
-
-On the DecMan tab press **F12**, click **Console**, paste this and press
-Enter:
-
-```js
-sessionStorage.getItem("dec_party_manager_token")
-```
-
-Copy the value without the quotes. In your first PowerShell window:
-
-```powershell
-$env:DECMAN_TOKEN = "<paste it>"
-cls
-```
-
-Close the browser console. The token expires quickly, so if a command later
-says the token is bad, fetch a fresh one the same way.
-
-### C4. OBS
+### C5. OBS
 
 - Settings → **Video**: 1920x1080 for both resolutions, 30 fps.
 - Settings → **Output**: Simple; Recording Path
   `D:\Dev\ChainExperts\Indivisa-recording\raw`; High Quality, Medium File
   Size; **MP4**.
-- Settings → **Audio**: set every device to **Disabled**. You are not
-  speaking. If you want narration, add it over the finished cut.
-- Sources → **+** → **Display Capture** → pick the monitor Chrome is on.
+- Settings → **Audio**: every device **Disabled**. You are not speaking.
+- Sources → **+** → **Display Capture** → the monitor Chrome is on.
 
 Record ten seconds, check it plays and the text is sharp, delete it.
 
@@ -190,254 +195,195 @@ Record ten seconds, check it plays and the text is sharp, delete it.
 
 ---
 
-## Part D. The eight shots
+## Part D. The seven shots
 
-Every shot follows the same pattern:
+You say nothing. The cards carry the words.
 
-> Start Recording → hold still 5 seconds → do the thing → hold still 10
-> seconds → Stop.
+Record each shot as its own file, named for the shot. A fluffed mouse move
+then costs one shot, not the session.
 
-The holds matter. They give the editor room to cut, and they give a viewer
-time to read.
+### Shot 1 - the run, waiting (about 10 seconds)
 
-Rename each file as soon as you stop, or you will not remember which is
-which.
+Console tab, at the top of the page.
 
-### Shot 1 - the run, waiting
+- Hold still for three seconds on the figures.
+- Scroll slowly down the holder cards and back up.
 
-**Where:** Chrome, the console tab.
+**What the viewer must see:** five holders, 8,421.88 USD, and an approver
+named under the button.
 
-Hold still on the page for five seconds. Then move the mouse slowly to the
-**Approver** line and rest there three seconds, so it can be read.
+### Shot 2 - the agent asks (about 12 seconds)
 
-**Name it:** `g1-run-with-approver.mp4`
+- Move the cursor to **Ask the approvers to settle 5 legs** and hold for a
+  beat before clicking.
+- Click once.
+- Stay still.
 
-**What it shows:** a coupon ready to pay, and a named party that has to agree
-first.
+**What should happen:** the button becomes inactive and an amber strip
+appears reading **0 of 2 confirmed**.
 
-### Shot 2 - the agent tries alone
+**This is the shot that replaced the ledger refusal.** The agent pressed its
+own button and no money moved, because the button does not move money. Card 3
+says exactly that over it.
 
-**Where:** the same page, still recording or a new recording.
+### Shot 3 - our own approval (about 15 seconds)
 
-Click the green **Settle 5 legs in one transaction** button. Do not move the
-mouse afterwards.
+Switch to the DecMan tab, **Approvals**.
 
-**What should happen:** the ledger refuses, and the page shows a red
-**REJECTED** state with the reason.
+- The pending action is there. Hold for two seconds.
+- Press **Confirm**.
+- Wait for it to show as confirmed.
 
-**Name it:** `g2-agent-alone-refused.mp4`
+We are one of the two members, so confirming here is us doing our own half -
+not us approving on anybody's behalf.
 
-**If the button is greyed out** and cannot be clicked, do not force it.
-Film the note and the Approver line instead, and rename the file
-`g2-agent-alone-note.mp4`. Tell the editor; card 3 still works.
+### Shot 4 - one is not enough (about 12 seconds)
 
-### Shot 3 - the first approver agrees
+Switch back to the console.
 
-**Where:** Chrome, the DecMan tab, Approvals.
+- The strip now reads **1 of 2 confirmed**.
+- Hold. Move the cursor across the page and show there is **no green
+  button**.
 
-You should see a row: **SettleDistributionRun**, with the description
-*Settle XS2999912340/Coupon/2027-12-01: 5 legs, 8421.88 USD*, and **0 of 2**.
+**This is the refusal that survives**, and it is a better one than the old
+shot: nothing is being rejected by an error message, there is simply nothing
+to press. Card 5 goes here.
 
-Rest on it three seconds so the amount can be read. Click **Confirm**. Wait
-until it reads **1 of 2**.
+### Shot 5 - BitSafe agree (about 12 seconds)
 
-**Name it:** `g3-confirm-ours.mp4`
+Message BitSafe that you are ready. **Start recording before they confirm**,
+because the page updates on its own every three seconds and the change is
+the shot.
 
-### Shot 4 - one is not enough
+- Hold on the strip at **1 of 2**.
+- It flips to **2 of 2 confirmed** and a green button appears:
+  **Settle 5 legs, now approved**.
+- Hold three seconds on the green button without clicking.
 
-**Where:** PowerShell.
+You cannot film their screen and should not pretend to. The page changing by
+itself, because somebody else acted, *is* the evidence. Card 4 belongs just
+before this.
 
-```powershell
-pwsh infra\bitsafe\settle-execute.ps1 -Tag gov1
-```
+### Shot 6 - it settles (about 15 seconds)
 
-It prints `confirmations 1`, `can execute False`. Hold three seconds. Then:
+- Move to the green button, hold a beat, click once.
+- Do not move the mouse while it works.
 
-```powershell
-pwsh infra\bitsafe\settle-execute.ps1 -Tag gov1 -Execute -Force
-```
+**What should happen:** a green strip reading
+**SETTLED · 5 of 5 legs · 8,421.88 USD**, with an update id and the
+submitted-to-committed time.
 
-**What should happen:**
+- Hold five seconds on that strip.
 
-```text
-REFUSED by the governance engine
+### Shot 7 - the holders are paid (about 15 seconds)
 
-  The requirement 'Enough confirmations to execute action' was not met.
+- Scroll slowly down the holder cards.
 
-  1 of 2 confirmations. Nothing moved.
-```
+Every card now reads **PAID** with cash against it. Scroll back to the top.
 
-**Name it:** `g4-below-threshold-refused.mp4`
+Scrolling the grid again after settling was the operator's idea on the first
+film and it was right: without it a viewer cannot tell whether only the
+visible cards changed.
 
-**`-Force` is essential.** Without it the script prints its own message,
-`not yet at threshold`, which is this repository declining to send the
-request. That is not the ledger refusing, and filming it would claim
-something we did not show.
+### Shot 8 - the proof (about 12 seconds)
 
-### Shot 5 - the second approver agrees
-
-**Where:** Chrome, the DecMan tab.
-
-This is the shot BitSafe have to be present for. Agree a time with them, have
-the recording running, and film the count change from **1 of 2** to
-**2 of 2**.
-
-**Name it:** `g5-confirm-theirs.mp4`
-
-**This is the most important shot in the film.** It is another company
-agreeing, in their own software, on their own machine, before your money
-moves.
-
-### Shot 6 - now it settles
-
-**Where:** PowerShell. First, not filmed:
-
-```powershell
-pwsh infra\bitsafe\govern-devnet.ps1 disclose -Tag gov1
-```
-
-Then start recording:
-
-```powershell
-pwsh infra\bitsafe\settle-execute.ps1 -Tag gov1
-```
-
-`confirmations 2`, `can execute True`. Hold three seconds. Then:
-
-```powershell
-pwsh infra\bitsafe\settle-execute.ps1 -Tag gov1 -Execute
-```
-
-It prints **EXECUTED**.
-
-**Name it:** `g6-settled.mp4`
-
-### Shot 7 - the holders are paid
-
-**Where:** Chrome, back on the console tab.
-
-Within a few seconds the page changes on its own: the pill reads **SETTLED**,
-a green box appears, and every holder card turns green with a **PAID** pill.
-
-Rest there. Do not click anything.
-
-**Name it:** `g7-console-settled.mp4`
-
-**This is the payoff.** The same page that refused the agent two minutes ago
-now shows every holder paid - and the only thing that changed is that a
-second company agreed.
-
-### Shot 8 - the proof
-
-**Where:** PowerShell.
-
-```powershell
-pwsh infra\bitsafe\govern-devnet.ps1 evidence -Tag gov1
-```
-
-It prints the receipt and an **update id** - a long code that identifies the
-transaction on the real network. Hold ten seconds so a viewer can pause and
-read it.
-
-**Name it:** `g8-evidence.mp4`
+- Click the **Activity** tab.
+- Hold on the settlement row.
+- Hover the update id so it is readable.
 
 ---
 
 ## Part E. The edit (about 30 minutes, DaVinci Resolve)
 
-New project. **File → Project Settings**: 1920x1080, 30 fps.
-**Preferences → User → Editing → Standard still duration**: 3 seconds.
+Timeline 1920x1080, 30 fps.
 
-Drag everything in: the eight clips from `raw`, and the six PNGs from
-`governed-cards`.
+| Order | Clip | Length |
+|---|---|---|
+| 1 | Card 1 | 3 s |
+| 2 | Card 2 | 3 s |
+| 3 | Shot 1 | 8 s |
+| 4 | Card 3 | 3 s |
+| 5 | Shot 2 | 10 s |
+| 6 | Shot 3 | 10 s |
+| 7 | Card 5 | 3 s |
+| 8 | Shot 4 | 8 s |
+| 9 | Card 4 | 3 s |
+| 10 | Shot 5 | 10 s |
+| 11 | Card 6 | 3 s |
+| 12 | Shot 6 | 10 s |
+| 13 | Shot 7 | 12 s |
+| 14 | Shot 8 | 8 s |
+| 15 | Card 7 | 4 s |
 
-Lay them out in this order:
+That is **about 1 minute 38 seconds**. Trim the holds rather than the cards
+if it runs long: the cards are the only words in the film.
 
-| # | Item | Keep | What it carries |
-| --- | --- | --- | --- |
-| 1 | `Slide1.PNG` | 3 s | title |
-| 2 | `Slide2.PNG` | 4 s | a coupon, five holders, and an approver |
-| 3 | `g1-run-with-approver.mp4` | ~8 s | the run, and the party that must agree |
-| 4 | `Slide3.PNG` | 4 s | the agent cannot settle alone |
-| 5 | `g2-agent-alone-refused.mp4` | ~8 s | it tries; the ledger refuses |
-| 6 | `Slide4.PNG` | 4 s | two approvers, one of them not ours |
-| 7 | `g3-confirm-ours.mp4` | ~6 s | the first agrees |
-| 8 | `g4-below-threshold-refused.mp4` | ~9 s | one is not enough |
-| 9 | `Slide5.PNG` | 3 s | below the threshold nothing moves |
-| 10 | `g5-confirm-theirs.mp4` | ~7 s | **the second agrees** |
-| 11 | `g6-settled.mp4` | ~7 s | executed |
-| 12 | `g7-console-settled.mp4` | ~8 s | every holder paid |
-| 13 | `g8-evidence.mp4` | ~6 s | the update id |
-| 14 | `Slide6.PNG` | 6 s | closing |
+- Cross dissolve, 12 frames, between every clip.
+- No music. The main film has none either.
+- Export: **MP4, H.264, 1920x1080, 30 fps**, to
+  `D:\Dev\ChainExperts\Indivisa-recording\ready\Indivisa-Governed-DevNet.mp4`.
 
-That lands near **85 seconds**.
-
-**Trimming.** Drag a clip's edge inwards, then right-click the gap and choose
-**Delete Gap**. To cut a clip in two, park the playhead and use
-**Timeline → Blade**.
-
-**No music, no transitions, no zoom effects.** A straight cut is right for
-this, and effects read as padding.
-
-**Export:** Deliver page → H.264 Master → MP4, 1920x1080, 30 fps → name it
-`Indivisa-Governed.mp4` → Add to Render Queue → Render All. Watch it once,
-end to end.
+**Card 7 goes last, after the proof.** Ending on what the demo does *not* do
+is deliberate: a judge who has just watched a settlement is exactly the
+person who will wonder what was off camera, and answering before they ask is
+worth more than another second of success.
 
 ---
 
-## Part F. What to say, if there is a voice-over
+## Part F. If operator sign-in is working by then
 
-One sentence per shot, spoken slowly. Silence between them is fine.
+If DevOps has created the public Keycloak client and
+`infra\devnet\ui.json` carries an `operator` block, the page asks you to sign
+in before it will read or write anything.
 
-- Over the run: "A bond coupon, five holders, and a paying agent that cannot
-  pay them by itself. This run names an approver."
-- Over the refusal: "The agent presses its own button. The ledger refuses.
-  It does not have the authority alone."
-- Over the first confirmation: "One approver agrees."
-- Over the engine refusing: "One is not enough. Nothing moves."
-- Over the second confirmation: "The second approver is not us. It is
-  BitSafe, on BitSafe's own node."
-- Over the settlement: "Now it executes. Five holders paid in one
-  transaction."
-- Over the evidence: "On Canton DevNet. The update id is on screen; you can
-  check it."
+**Optional shot 0**, about 8 seconds, at the very front:
+
+- The sign-in screen: *"This console settles money. Sign in before it will
+  read or write anything."*
+- Click **Sign in**, let Keycloak take you through, land on the console.
+
+It answers a question a judge is entitled to ask about an application that
+moves money, and it costs eight seconds. Add it if it works on the day;
+leave it out rather than fight it.
+
+**If you include it,** say nothing more about it on a card. The screen says
+enough, and a card claiming more than sign-in exists would be overclaiming:
+there are no roles and no maker-checker yet. That gap is written down in
+`docs/production-readiness.md`.
 
 ---
 
 ## Part G. What a caption may and may not claim
 
-**May say:**
-
-- The settlement needed two approvals, and one of them was not ours.
-- BitSafe ran the second node. We could not have produced this transaction
-  alone.
-- The refusal came from the ledger and from BitSafe's governance engine, not
-  from our own code.
-- The update id is real and on Canton DevNet.
-
-**May not say:**
-
-- That the cash is real money. It is `splice-test-token-v2`, the Token
-  Standard's own reference asset. Say so.
-- That holders never authorise. They authorise once, at onboarding.
-- That no one can see the run. The paying agent sees all of it, by design,
-  and so do the approvers. What is private is that **no holder sees
-  another**.
-- "Two of three approvers." On DevNet it is **two of two**. Three of three
-  approver nodes is the local Docker version, where the independence is
-  simulated.
+| May say | May not say |
+|---|---|
+| A coupon one company cannot pay alone | "Nobody can move the money" - we can, with the approvers' agreement, which is the point |
+| BitSafe held one of two approvals on their own node | "Three independent operators" - there are two |
+| Settled on Canton DevNet | "On MainNet" |
+| One transaction, five holders, all or nothing | "No holder saw another" *on DevNet* - all five participant names point at one validator there; that claim belongs to the local five-node run |
+| The cash is `splice-test-token-v2`, standing in | "Settled in Canton Coin" |
+| The console files the request; the approvers agree elsewhere | "The console approves" - it deliberately cannot confirm |
 
 ---
 
 ## Troubleshooting
 
-| What happened | What it means | What to do |
-| --- | --- | --- |
-| `prepare` says no holdings | The agent spent its cash on an earlier settlement | Seat a new tag, then admit its agent with `infra\bitsafe\admit-proposer.ps1` - this needs BitSafe as well |
-| Confirming fails: *Proposer is authorized...* | The agent of this seat was never admitted | You are on a fresh seat. Use `gov1`, or admit this one |
-| Any command says the token is bad | The DecMan token expired | Fetch a fresh one, see C3 |
-| `No such host is known` | Local DNS hiccup, not DevNet | Wait a minute, try again |
-| The console shows no Approver line | The run was prepared without an approver | Re-run `prepare -Tag gov1`; the script passes the approver automatically |
-| The console shows nothing at all | Wrong network or tag | Check `INDIVISA_NETWORK=devnet` and `INDIVISA_TAG=gov1` in the window running `npm run dev` |
-| Clip 4 prints `not yet at threshold` | You left off `-Force` | Re-film with it |
-| `evidence` shows an old update id | There are several receipts | Already fixed - it takes the newest and says how many it found |
+**The vote shows "could not be read".** The DecMan refresh token is stale or
+missing. Fetch a new one (C1) and restart `npm run dev`.
+
+**`prepare` says there are no holdings.** The agent is out of cash. Run
+`fund` and try again.
+
+**The page announces a settlement that did not happen, or shows an old
+refusal.** This was a real bug, fixed on 1 October: a run id is reused, so
+outcomes are now matched on the ledger's own offsets. If you ever see it
+again, the filter has regressed - do not film around it.
+
+**"A security-sensitive error has been received."** Canton is refusing a
+command whose user id does not match the token, and declining to say so. The
+participant map serves the right id; if this appears, the map is stale -
+re-run `prepare`, which regenerates it.
+
+**The strip stays at 0 of 2 after BitSafe confirm.** Their confirmation went
+to a different proposal. Check the action in DecMan's Approvals tab is the
+one the page filed in shot 2.
