@@ -8,6 +8,7 @@ import { RunBar, type RunSummary } from "./panes/RunBar";
 import { Holders, type HolderRow } from "./panes/Holders";
 import { Privacy } from "./panes/Privacy";
 import { Activity } from "./panes/Activity";
+import { completeSignIn, currentOperator, resumeSession, signIn, signOut, type Operator, type OperatorAuth } from "./auth";
 import { useAgent } from "./state/useAgent";
 import { useVote } from "./state/useVote";
 import { groupByNode, useHolders } from "./state/useHolders";
@@ -16,19 +17,83 @@ import { groupByNode, useHolders } from "./state/useHolders";
 // the same run. Every figure is read from the participant that holds it;
 // there is no application backend and nothing is cached between views.
 export function App() {
+  // `undefined` means we have not yet asked whether sign-in is required.
+  const [auth, setAuth] = useState<OperatorAuth | null | undefined>(undefined);
+  const [operator, setOperator] = useState<Operator | null>(null);
+  const [ready, setReady] = useState(false);
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Whether this deployment requires an operator, and where they sign in.
+  // Served from /demo, which is the one thing the proxy leaves open - the
+  // page cannot sign in without first being told where to.
   useEffect(() => {
-    loadConfig().then(setConfig).catch((e) => setError(String(e)));
+    fetch("/demo/participants.json")
+      .then((r) => r.json())
+      .then((m: { operator?: OperatorAuth | null }) => setAuth(m.operator ?? null))
+      .catch((e) => setError(String(e)));
   }, []);
 
+  // Finish a redirect back from the identity provider, or pick up a session
+  // already in this tab.
+  useEffect(() => {
+    if (auth === undefined) return;
+    if (!auth) {
+      setReady(true);
+      return;
+    }
+    // Either this load is the redirect back from Keycloak, or there is a
+    // session already in the tab. Both end with a token in the headers or no
+    // operator at all; neither leaves one without a scheduled refresh.
+    completeSignIn(auth)
+      .then((fresh) => setOperator(fresh ? currentOperator() : resumeSession(auth)))
+      .catch((e) => setError(String(e)))
+      .finally(() => setReady(true));
+  }, [auth]);
+
+  // Only now read the ledger: every one of those requests is refused without
+  // an operator, so loading first would just produce a page of failures.
+  useEffect(() => {
+    if (!ready) return;
+    if (auth && !operator) return;
+    loadConfig().then(setConfig).catch((e) => setError(String(e)));
+  }, [ready, auth, operator]);
+
   if (error) return <div className="boot error">{error}</div>;
+  if (!ready || auth === undefined) return <div className="boot">Starting…</div>;
+  if (auth && !operator) return <SignIn auth={auth} />;
   if (!config) return <div className="boot">Loading the seat…</div>;
-  return <Console config={config} />;
+  return <Console config={config} operator={operator} auth={auth} />;
 }
 
-function Console({ config }: { config: Config }) {
+function SignIn({ auth }: { auth: OperatorAuth }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="boot signin">
+      <div className="signin-card">
+        <img className="logo" src="/indivisa-logo.png" alt="" width={66} height={44} />
+        <h1>Indivisa</h1>
+        <p>This console settles money. Sign in before it will read or write anything.</p>
+        <button
+          className="go"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            signIn(auth).catch(() => setBusy(false));
+          }}
+        >
+          {busy ? "Taking you to sign in…" : "Sign in"}
+        </button>
+        <p className="muted">
+          The paying agent's own ledger credential stays on the server and never reaches this page. Signing in
+          identifies <em>you</em>, so that who asked for a settlement is a question with an answer.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Console({ config, operator, auth }: { config: Config; operator: Operator | null; auth: OperatorAuth | null }) {
   const { seat } = config;
   const agent = useAgent(config);
   // The vote only exists while a proposal is outstanding, and only on a
@@ -111,6 +176,12 @@ function Console({ config }: { config: Config }) {
         </div>
         <div className="top-right">
           <Live lastAt={Math.max(agent.lastAt ?? 0, holders.lastAt ?? 0) || null} onRefresh={() => { agent.refresh(); holders.refresh(); }} />
+          {operator && auth ? (
+            <div className="whoami">
+              <span className="muted">signed in as</span> <strong>{operator.name}</strong>{" "}
+              <button className="linklike" onClick={() => { signOut(); window.location.reload(); }}>sign out</button>
+            </div>
+          ) : null}
           <div className="labels">
             <span className="label real">
               real · {config.readOnly ? "every number is read live from a Canton participant" : "ledger reads and the settle are live over the JSON Ledger API"}

@@ -6,6 +6,14 @@
     "clientSecret": "<secret, or leave out and set INDIVISA_CLIENT_SECRET>",
     "scope": "daml_ledger_api"
   },
+  "decman": {
+    "url": "https://<decentralization manager host>",
+    "party": "<the decentralised party id>"
+  },
+  "operator": {
+    "issuer": "https://<keycloak host>/realms/canton-devnet",
+    "clientId": "<a PUBLIC client, authorization code + PKCE, redirect http://localhost:5173/*>"
+  },
   "participants": {
     "registry": { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },
     "agent":    { "jsonApi": "https://validator-a.example.org/<json ledger api prefix>" },

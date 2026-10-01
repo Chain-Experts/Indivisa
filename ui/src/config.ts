@@ -33,6 +33,8 @@ export interface ParticipantMap {
   // The ledger user to submit as, from the participant map. Null on an
   // unauthenticated network, where the default name does.
   userId?: string | null;
+  // Where operators sign in, when this deployment requires it.
+  operator?: { issuer: string; clientId: string } | null;
 }
 
 /**
@@ -60,6 +62,8 @@ export interface Config {
   distinctNodes: number | null;
   /** The approvers' party, when a Decentralization Manager is configured. */
   decmanParty: Party | null;
+  /** Where operators sign in, or null on an unauthenticated deployment. */
+  operatorAuth: { issuer: string; clientId: string } | null;
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -116,6 +120,7 @@ export async function loadConfig(): Promise<Config> {
     sharingWithAgent,
     distinctNodes,
     decmanParty: map.decman?.party ?? null,
+    operatorAuth: map.operator ?? null,
   };
 }
 

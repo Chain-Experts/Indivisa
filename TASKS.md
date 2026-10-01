@@ -40,10 +40,12 @@ requests and making the repository public.
    the tests and adoption notes. All three are already written. The module
    goes in without asking first: they will not pre-approve the Token
    Standard V2 dependency, because that is what the review is for.
-3. **The governed run, driven from the page instead of a terminal.**
-   Timeboxed to **one day, decided 2 October**, with a rollback to the
-   committed state if it is not working. See "The terminal gap" below.
-4. **The repo goes public - last.** Branch protection requiring a pull
+3. **The governed run, driven from the page instead of a terminal** -
+   **built 1 October** and settled from the page (run `1220db3477ad...`).
+   See "The terminal gap" below.
+4. **Operator sign-in** - built 1 October, **blocked on one Keycloak client**
+   that DevOps has to create. See "Operator sign-in" below.
+5. **The repo goes public - last.** Branch protection requiring a pull
    request before anyone can push.
 
 ## The terminal gap, and the plan to close it
@@ -75,6 +77,21 @@ works.
 3. **Execute from the page**, calling DecMan's `/governance/execute` with the
    disclosed contracts the page fetches itself.
 
+**All three are built and all three worked on DevNet on 1 October.** The
+page proposed, showed 0 of 2 become 2 of 2 as BitSafe confirmed, and
+executed: **5 of 5 legs, 8,421.88 USD**, run `1220db3477ad...`. Nothing but
+the reset (`fund`, `prepare`) is a terminal now, and that is seat
+preparation rather than settlement - the registrar's import, which the deck
+lists as absent.
+
+Three bugs, all the same bug, and worth remembering: the page announced a
+settlement that had not happened, `evidence` showed the previous day's
+receipt, and a stale refusal appeared over a fresh run. Every one was
+**matching on `runId` alone**, which is not unique because a run id settles
+more than once. Receipts and rejections are now filtered on
+`createdEvent.offset > run.createdEvent.offset`: the ledger's own ordering,
+not ours.
+
 **The constraint that shapes all three:** *tokens never reach the browser*.
 The dev server and nginx already inject the ledger bearer token server-side
 and serve only `party_participants`; a DecMan route follows the same
@@ -93,6 +110,68 @@ way, because that one is a deliberate forced request.
 the page work is not convincing by the end of 2 October, the new code is not
 committed and the submission is the state that exists now: a complete film,
 a governed DevNet settlement, and a documented gap.
+
+## Operator sign-in
+
+**Decided 1 October, at Avraham's insistence and against my earlier
+position.** I had argued a login was out of scope for a hackathon demo. The
+objection that settled it: *an application that settles money without a login
+is not a thing you can show as secure, and a judge is entitled to read that
+as carelessness.* He was right, and I had made a specific mistake - I had
+conflated two identities that are not the same:
+
+| | What it is | Where its credential lives |
+| --- | --- | --- |
+| **Paying agent** | a ledger party | the server. Never the browser |
+| **Operator** | a person at the keyboard | the browser, after they sign in |
+
+The paying agent's service-account token being safely server-side said
+nothing about whether a person had to prove who they were, and nobody did.
+
+**What was built** - OIDC authorization code with PKCE against the same
+Keycloak realm that issues the ledger credential. No client secret: this is a
+browser application and a secret in one is not a secret.
+
+- `ui/src/auth.ts` - sign in, complete the redirect, refresh before the
+  five-minute token lapses, resume a session on reload.
+- `operatorGate()` in `ui/vite.config.ts` - **the check is in the proxy, not
+  the page**. The proxy is what holds the credentials, so it is where "who is
+  asking?" has to be answered; a check in the page is theatre, because anyone
+  can skip a page. Registered from `configureServer` directly, which Vite runs
+  **before** its own proxy - a check after the proxy would be a check on the
+  way out.
+- `/demo/*` stays open, and has to: the page cannot learn where to sign in
+  until something tells it. Nothing there is a credential.
+- The token is checked and then **deleted from the request**. Forwarding it
+  would hand a live credential for our realm to the participant and, worse, to
+  a Decentralization Manager somebody else operates.
+
+**Measured 1 October, against the real Keycloak**, with the gate pointed at an
+echo server so the forwarded headers could be read:
+
+| Request | Result |
+| --- | --- |
+| no operator token | **401** `no operator token` |
+| a junk token | **401** signature rejected against the realm's JWKS |
+| **a live, correctly signed token from another client of the same realm** | **401** `token issued to another client` |
+| a live token for the configured client | **200**, and the downstream saw `x-indivisa-operator` absent and `Authorization` present |
+
+The third row is the one that matters: a valid token from the right realm is
+still refused if it was not issued to this application.
+
+**Still blocked, and it is not ours to unblock.** The flow cannot be exercised
+end to end until DevOps creates a **public** Keycloak client in realm
+`canton-devnet`: authorization code with PKCE, no secret, redirect
+`http://localhost:5173/*`. Until it exists, `infra/devnet/ui.json` carries no
+`operator` block, so the console behaves exactly as it did yesterday and
+nothing is at risk. The shape to paste in is in
+`infra/devnet/ui.example.json`.
+
+**Unauthenticated deployments are deliberately unchanged.** LocalNet and the
+judges' Docker stack have no identity provider to sign in against and nothing
+but the one machine that can reach them, so they carry no `operator` block
+and the gate is not registered at all. A judge still runs
+`docker compose up` and gets a console.
 
 **Housekeeping, none of it blocking:** commit; rotate the Keycloak client
 secret after DevNet; test the shipped Docker

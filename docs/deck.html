@@ -362,6 +362,7 @@
   <h2 class="wide">Scoping a run is the first thing we build next.</h2>
   <p class="lede" style="margin-top:16px">If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 into a second run. <b style="color:#E9EFEA">The batch stays all-or-nothing; its membership becomes a decision, not an accident.</b> The model supports it. The workflow, and the audit trail that says why five were held back, are not written.</p>
   <ul style="margin-top:22px">
+    <li><b>The set-up surface</b>: the console settles a run; it does not keep the register. Holders, positions and the schedule come from systems a paying agent already runs, and in the demo a script stands in for them. That boundary is deliberate &mdash; it is why Indivisa works against registers that already exist.</li>
     <li><b>Production onboarding</b>: holders sign through a real client, not a script.</li>
     <li><b>The scheduled agent</b>: today a person presses the button; in production a daemon watches payment dates.</li>
     <li><b>Real cash</b>: a production run settles Canton Coin or a registry's own token. The model never names the asset, so this is a field and one registry adapter, not a rewrite.</li>

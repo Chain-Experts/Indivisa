@@ -171,8 +171,27 @@ agent; for the demo it is a button.*
 | **Privacy** | the same per-party check run once per participant, continuously |
 | **Activity** | the settlement and every refusal, read back as contracts |
 
-No auth flows, no application backend, nothing cached: each view is a read
-of the participant that holds the data.
+No application backend and nothing cached: each view is a read of the
+participant that holds the data.
+
+**Two identities meet here, and they are not the same.** The **paying agent**
+is a ledger party; its credential is a service account, it stays on the server
+and the browser never sees it. The **operator** is a person; they sign in
+through the browser, and the proxy carries nothing for a request that cannot
+prove one. Keeping the first safe says nothing about the second: an
+application whose claim is that no single party releases a payout unchecked
+cannot leave its own front door unlatched.
+
+The sign-in is OIDC authorization code with PKCE against the same realm that
+issues the ledger credential - no client secret, because a secret in a browser
+is not one. **The check is in the proxy, not the page**: the proxy is what
+holds the credentials, so that is where "who is asking?" has to be answered,
+and a check in the page would be theatre. The operator token is verified
+against the realm published keys, confirmed to have been issued to this
+application, and then **deleted from the request** rather than forwarded.
+Deployments with no identity provider to sign in against - a local network,
+the judges Docker stack - carry no sign-in configuration and the gate is not
+registered at all.
 
 **The impressive part is not the styling.** It is that a card opened on one
 node is conspicuously empty where the executor's schedule has everything —

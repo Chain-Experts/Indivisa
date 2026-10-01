@@ -13,6 +13,8 @@
 // makes. The page proposes and, once the threshold is met, executes. The
 // agreeing happens elsewhere, and should.
 
+import { operatorHeaders } from "./client";
+
 export class DecManError extends Error {
   constructor(public status: number, public body: string) {
     super(`DecMan ${status}: ${body.slice(0, 300)}`);
@@ -38,7 +40,7 @@ export interface DisclosedForExecute {
 }
 
 async function get<R>(path: string): Promise<R> {
-  const r = await fetch(`/decman${path}`, { headers: { Accept: "application/json" } });
+  const r = await fetch(`/decman${path}`, { headers: { Accept: "application/json", ...operatorHeaders() } });
   const text = await r.text();
   if (!r.ok) throw new DecManError(r.status, text);
   return JSON.parse(text) as R;
@@ -47,7 +49,7 @@ async function get<R>(path: string): Promise<R> {
 async function post<R>(path: string, body: unknown): Promise<R> {
   const r = await fetch(`/decman${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...operatorHeaders() },
     body: JSON.stringify(body),
   });
   const text = await r.text();

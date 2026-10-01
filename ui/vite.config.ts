@@ -16,6 +16,7 @@
 import { defineConfig, type Plugin, type ProxyOptions, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { resolve } from "node:path";
 
 interface UiConfig {
@@ -31,6 +32,11 @@ interface UiConfig {
   // it; it never settles the run itself, because the authority to do that
   // belongs to the decentralised party and not to us.
   decman?: { url: string; party: string };
+  // Operator sign-in. Present means the proxy carries nothing for a request
+  // that does not prove a signed-in person; absent means an unauthenticated
+  // deployment (LocalNet, the judges' stack), where there is no identity
+  // provider to sign in against and nothing but this machine to reach it.
+  operator?: { issuer: string; clientId: string };
 }
 
 /**
@@ -205,6 +211,50 @@ const ui: UiConfig | null = existsSync(uiPath) ? (JSON.parse(readFileSync(uiPath
 const seatPath = resolve(process.env.INDIVISA_SEAT ?? resolve(netDir, "demo", `seat-${process.env.INDIVISA_TAG ?? "demo"}.json`));
 const mapPath = resolve(netDir, "participants-with-parties.json");
 
+/**
+ * Refuse proxied requests that do not carry a signed-in operator.
+ *
+ * Registered from `configureServer` directly, which Vite runs BEFORE its own
+ * middlewares - including the proxy. A check that ran after the proxy would
+ * be a check on the way out.
+ *
+ * `/demo/*` stays open: it carries the party map and the seat, and the page
+ * needs the sign-in configuration from it before it can sign in at all.
+ * Nothing there is a credential.
+ */
+function operatorGate(operator: NonNullable<UiConfig["operator"]>): Plugin {
+  const guard = operatorGuard(operator);
+  return {
+    name: "indivisa-operator-gate",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url ?? "";
+        if (!url.startsWith("/api/") && !url.startsWith("/decman/")) return next();
+        guard(req as never)
+          .then((problem) => {
+            if (!problem) {
+              // Checked here, and it stops here. The operator token is proof
+              // for us; forwarding it would hand a live credential for our
+              // realm to the participant and - worse - to a Decentralization
+              // Manager somebody else operates.
+              delete req.headers["x-indivisa-operator"];
+              return next();
+            }
+            res.statusCode = 401;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ error: "not signed in", detail: problem }));
+          })
+          .catch((e) => {
+            // A failure to reach the identity provider is not permission.
+            res.statusCode = 503;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ error: "could not check the operator token", detail: String(e) }));
+          });
+      });
+    },
+  };
+}
+
 function serveDemoFiles(): Plugin {
   return {
     name: "indivisa-demo-files",
@@ -231,6 +281,10 @@ function serveDemoFiles(): Plugin {
             party_participants: full.party_participants ?? {},
             decman: ui?.decman ? { party: ui.decman.party } : null,
             userId: anyParticipant?.user_id ?? null,
+            // How to sign in. Public by nature: an issuer and a public
+            // client id are what a browser needs to start the flow, and
+            // neither is a secret.
+            operator: ui?.operator ?? null,
           });
         }
         if (body === null) return next();
@@ -265,6 +319,39 @@ function loadDotEnv(path: string) {
     }
     process.env[key] = value;
   }
+}
+
+/**
+ * Refuse anything that does not carry a signed-in operator.
+ *
+ * The point of the proxy is that it holds credentials the browser must not:
+ * the paying agent's ledger token and the Decentralization Manager's. So the
+ * proxy is exactly where the question "who is asking?" has to be answered.
+ * Checking it in the page would be theatre - anyone can skip a page.
+ *
+ * The signature is verified against the realm's published keys. Nothing is
+ * taken on trust from the token itself except after that check, and the
+ * issuer must match the one configured: a correctly signed token from
+ * somewhere else is still somebody else's.
+ */
+function operatorGuard(operator: NonNullable<UiConfig["operator"]>) {
+  const issuer = operator.issuer.replace(/\/+$/, "");
+  const jwks = createRemoteJWKSet(new URL(`${issuer}/protocol/openid-connect/certs`));
+  return async (req: { headers: Record<string, string | string[] | undefined> }): Promise<string | null> => {
+    const raw = req.headers["x-indivisa-operator"];
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    const token = header?.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return "no operator token";
+    try {
+      const { payload } = await jwtVerify(token, jwks, { issuer });
+      // `azp` is the client the token was issued to. A token minted for a
+      // different client of the same realm is not this application's.
+      if (payload.azp && payload.azp !== operator.clientId) return "token issued to another client";
+      return null;
+    } catch (e) {
+      return `token rejected: ${(e as Error).message}`;
+    }
+  };
 }
 
 function notFound(res: { statusCode: number; end: (s: string) => void }, file: string) {
@@ -322,7 +409,7 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
     : {};
 
   return {
-  plugins: [react(), serveDemoFiles()],
+  plugins: [react(), ...(ui?.operator ? [operatorGate(ui.operator)] : []), serveDemoFiles()],
   server: {
     port: 5173,
     proxy: {

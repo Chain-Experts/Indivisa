@@ -66,6 +66,23 @@ export class LedgerError extends Error {
   }
 }
 
+/**
+ * The signed-in operator's token, sent with every proxied request.
+ *
+ * A separate header from Authorization, which the proxy fills in with the
+ * application's own ledger credential. Two identities, two headers: the party
+ * that signs the settlement, and the person who asked for it.
+ */
+let operatorToken: string | null = null;
+
+export function setOperatorToken(t: string | null) {
+  operatorToken = t;
+}
+
+export function operatorHeaders(): Record<string, string> {
+  return operatorToken ? { "X-Indivisa-Operator": "Bearer " + operatorToken } : {};
+}
+
 export class Ledger {
   /** The ledger user to submit as. Set once from the participant map. */
   static userId = "indivisa-ui";
@@ -91,7 +108,7 @@ export class Ledger {
   private async post<R>(path: string, body: unknown): Promise<R> {
     const r = await fetch(`${this.base}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...this.headers },
+      headers: { "Content-Type": "application/json", ...operatorHeaders(), ...this.headers },
       body: JSON.stringify(body),
     });
     const text = await r.text();
@@ -100,7 +117,7 @@ export class Ledger {
   }
 
   async ledgerEnd(): Promise<number> {
-    const r = await fetch(`${this.base}/v2/state/ledger-end`, { headers: this.headers });
+    const r = await fetch(`${this.base}/v2/state/ledger-end`, { headers: { ...operatorHeaders(), ...this.headers } });
     if (!r.ok) throw new LedgerError(r.status, await r.text());
     return (await r.json()).offset as number;
   }
