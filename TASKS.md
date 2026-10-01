@@ -1,6 +1,6 @@
 # Tasks
 
-**30 September 2026. Submission 9 October. 9 days.**
+**1 October 2026. Submission 9 October. 8 days.**
 
 ## Where we stand
 
@@ -40,15 +40,59 @@ requests and making the repository public.
    the tests and adoption notes. All three are already written. The module
    goes in without asking first: they will not pre-approve the Token
    Standard V2 dependency, because that is what the review is for.
-3. **The repo goes public - last.** Branch protection requiring a pull
+3. **The governed run, driven from the page instead of a terminal.**
+   Timeboxed to **one day, decided 2 October**, with a rollback to the
+   committed state if it is not working. See "The terminal gap" below.
+4. **The repo goes public - last.** Branch protection requiring a pull
    request before anyone can push.
 
-**Optional, if there is time:** the console showing a governed run. `RunBar`
-already renders an APPROVER line and refuses the agent's own button until
-the vote passes, and nothing in the film shows it - the governed section is
-terminal and DecMan UI only. `docs/decentralization.md` lists this under
-Unfinished. It would need a fresh governed run and another BitSafe
-confirmation.
+## The terminal gap, and the plan to close it
+
+**Decided 1 October.** The governed recording drives four steps from
+PowerShell, and a judge reasonably asks why a product needs a terminal. The
+answer today is honest but weak: because we have not built those steps into
+the page. One day is allocated to building them, and the work is committed
+separately so it can be abandoned without touching anything that already
+works.
+
+**What is a terminal today, and whose gap it is:**
+
+| Step | Whose gap |
+| --- | --- |
+| `propose` - file the `SettleRunProposal` | **Ours.** The button attempts `Run_Settle` directly and the ledger refuses it |
+| the forced execute below threshold | Nobody's - a deliberate demonstration |
+| `execute` | **BitSafe's.** Their Approvals tab cannot supply disclosed contracts (our contribution, finding 7) |
+| `evidence` | Nobody's - the page already shows the update id |
+
+**What gets built:**
+
+1. **Propose from the button.** When `DistributionRun.approver` is set,
+   pressing the button creates a `SettleRunProposal` rather than exercising
+   `Run_Settle`. The page already holds everything it needs: the run, the
+   allocations, and `rulesCid` from the seat file.
+2. **The vote, visible on the page.** Confirmations as they arrive, so the
+   operator sees 0 of 2 become 2 of 2 without leaving the page.
+3. **Execute from the page**, calling DecMan's `/governance/execute` with the
+   disclosed contracts the page fetches itself.
+
+**The constraint that shapes all three:** *tokens never reach the browser*.
+The dev server and nginx already inject the ledger bearer token server-side
+and serve only `party_participants`; a DecMan route follows the same
+pattern. Putting a DecMan token in page JavaScript would break a rule we
+have kept since 18 September.
+
+**What this costs, and it is not nothing.** Closing the gap **deletes the
+refusal shot**. If the button files a proposal when an approver is named,
+the agent never tries and fails, so there is nothing for the ledger to
+refuse. A finished product would say "this run needs approval" and never
+offer the action. That is a better product and a weaker demonstration, and
+the film has to decide which it wants. The threshold refusal survives either
+way, because that one is a deliberate forced request.
+
+**Rollback.** The current state is committed before any of this starts. If
+the page work is not convincing by the end of 2 October, the new code is not
+committed and the submission is the state that exists now: a complete film,
+a governed DevNet settlement, and a documented gap.
 
 **Housekeeping, none of it blocking:** commit; rotate the Keycloak client
 secret after DevNet; test the shipped Docker

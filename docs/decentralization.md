@@ -224,9 +224,14 @@ allocate, as the sandbox's own seed script does.
   caused it. And the paying agent had to be admitted as an additional
   proposer, which exists in their Daml and their API but not in their UI -
   BitSafe confirmed this and are adding it.
-- **Unfinished:** showing the governed run in the console — it shows the
-  settled state today, not the vote — and a `Governed` variant of the
-  recording.
+- **Unfinished, and being worked on (1-2 October):** showing the governed run
+  in the console. It shows the settled state today, not the vote, so the
+  recording drives `propose` and `execute` from a terminal. Those are being
+  moved into the page, with the confirmations visible as they arrive. The
+  one step that will stay outside the page is each approver's own
+  confirmation, which belongs on that approver's own node and in their own
+  Decentralization Manager - an approver confirming in software the proposer
+  wrote and hosts would weaken the very independence the design is for.
 
 ## 8. What comes next
 

@@ -1,5 +1,11 @@
 # The recording: a complete script
 
+> For the **governed** settlement filmed end to end as its own story - with
+> the console showing the agent's own button refused until a second company
+> agrees - see [`demo-script-governed.md`](demo-script-governed.md). This
+> script films the product's normal mode and carries the governed run as a
+> section near the end.
+
 This is written for someone who has never seen the project. Follow it top to
 bottom. Every command is given exactly; every screen is described before
 you see it, so you know whether you are looking at the right thing.
