@@ -87,7 +87,7 @@ case "${1:-seat}" in
     # governed path is wanted, the seat stops here and `govern prepare`
     # creates the run instead.
     if [ -n "${INDIVISA_GOVERNED:-}" ]; then
-      jq "{network: \"judge\", readOnly: false, party_participants: .party_participants}"         /tmp/participants.json > "$OUT/participants.json"
+      jq "{network: \"judge\", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}"         /tmp/participants.json > "$OUT/participants.json"
       printf %s "$instance" > "$OUT/instance"
       say "Seated. The run itself is created by the governed path."
       printf "    Next:  docker compose run --rm govern-seed
@@ -102,8 +102,11 @@ case "${1:-seat}" in
       --input-file /tmp/prepare-args.json --output-file "$OUT/prepared.json" \
       --participant-config /tmp/participants.json
 
-    # What the page needs: party -> participant, and nothing else.
-    jq '{network: "judge", readOnly: false, party_participants: .party_participants}' \
+    # What the page needs: party -> participant, and the ledger user to
+    # submit as. Canton is authenticated here and takes the user from the
+    # token subject, refusing a command that names a different one - with an
+    # error that deliberately says nothing. Never let the page guess it.
+    jq '{network: "judge", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}' \
       /tmp/participants.json > "$OUT/participants.json"
     printf %s "$instance" > "$OUT/instance"
     say "Ready. Open http://localhost:${INDIVISA_PORT:-8080} and press the button."
@@ -111,7 +114,7 @@ case "${1:-seat}" in
 
   prepare)
     [ -f "$OUT/seat.json" ] || { echo "not seated yet; run: docker compose up" >&2; exit 1; }
-    instance="$(curl -fsS http://canton:5023/v2/parties/participant-id | jq -r .participantId)"
+    instance="$(curl -fsS "${AUTH[@]}" http://canton:5023/v2/parties/participant-id | jq -r .participantId)"
     if [ "$(cat "$OUT/instance" 2>/dev/null || true)" != "$instance" ]; then
       echo "the seat belongs to an earlier ledger; run: docker compose down && docker compose up" >&2
       exit 1

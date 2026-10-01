@@ -412,6 +412,11 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
   plugins: [react(), ...(ui?.operator ? [operatorGate(ui.operator)] : []), serveDemoFiles()],
   server: {
     port: 5173,
+    // Fail rather than drift. Vite normally hunts for a free port, but the
+    // operator sign-in registers exactly one redirect URI with Keycloak: on
+    // 5174 the page would load and then be refused at sign-in, which is an
+    // opaque failure to debug with a camera running.
+    strictPort: true,
     proxy: {
       ...Object.fromEntries(
         Object.entries(ui?.participants ?? {}).map(([name, p]): [string, ProxyOptions] => [

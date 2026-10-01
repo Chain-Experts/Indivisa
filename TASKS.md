@@ -111,6 +111,39 @@ the page work is not convincing by the end of 2 October, the new code is not
 committed and the submission is the state that exists now: a complete film,
 a governed DevNet settlement, and a documented gap.
 
+## The judges path, re-verified 1 October
+
+Checking whether operator sign-in affected the judges Docker package turned up
+something unrelated and worse: **the settle button had been broken since
+24 September**, when authentication was turned on for the governed demo. Every
+run since then went through scripts, so nothing exercised the page.
+
+| Fault | Symptom a judge would see |
+| --- | --- |
+| The page was not told the ledger user, and guessed `indivisa-ui`, which does not exist on that ledger | First press: *a security-sensitive error has been received* - which reads as a broken product, not as the atomicity demonstration |
+| One `curl` in `seed.sh`s prepare branch was missing the auth header | `docker compose run --rm prepare` died with `curl: (22) ... 401` |
+
+Both fixed in `judge/seed.sh`. Also `judge/nginx.conf` now serves
+`index.html` with `Cache-Control: no-store`, so rebuilding the image actually
+changes what a returning browser loads.
+
+**Verified by running it as a judge would, 1 Oct:**
+
+1. `docker compose up` - seated 20 holders, one deliberately withheld.
+2. Pressed the button: **SETTLEMENT REJECTED - 20 payments requested, 0
+   executed, NO PARTIAL SETTLEMENT**, with `missing authorizations` naming
+   Sable Asset Management. That is the demonstration, and it is what a judge
+   is supposed to see.
+3. `docker compose run --rm prepare`.
+4. Pressed again: **SETTLED - 20 of 20 legs - 83,321.88 USD**, update id
+   `12209a2e71cab527...`, submitted to committed in **1,106 ms**, every holder
+   card PAID.
+
+**The lesson, and it is not a small one:** a change to authentication is a
+change to every path, including the ones already working. The page path must
+be re-run after anything touching auth - a script passing is not evidence that
+the product does.
+
 ## Operator sign-in
 
 **Decided 1 October, at Avraham's insistence and against my earlier
