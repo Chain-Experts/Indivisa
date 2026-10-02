@@ -192,7 +192,25 @@ echo server so the forwarded headers could be read:
 The third row is the one that matters: a valid token from the right realm is
 still refused if it was not issued to this application.
 
-**Still blocked, and it is not ours to unblock.** The flow cannot be exercised
+**Working on DevNet, 2 October.** DevOps created the public client and the
+flow runs end to end: signed in as `ui-dcpm-devnet`, token carrying
+`azp: chain-experts-devnet-indivisa-ui`, zero refusals from the proxy after
+sign-in, and a reload keeps the session and re-arms the refresh. That last one
+was the only untested path and it matters: without it an operator stays signed
+in for whatever is left of one 200-second token and then silently stops being
+able to write.
+
+Checked before touching the server, which saved a round trip: Keycloak serves
+its login page for our exact parameters (so client id, redirect URI and PKCE
+are right), and the token endpoint returns
+`access-control-allow-origin: http://localhost:5173` on both the preflight and
+the real POST. CORS was the single most likely thing to go wrong.
+
+One cosmetic item left with DevOps: the realm display name reads **"Chian
+Experts Canton Devnet"**. It is on the login page, which is on camera if the
+optional sign-in shot is filmed.
+
+**Previously blocked, now resolved:** The flow cannot be exercised
 end to end until DevOps creates a **public** Keycloak client in realm
 `canton-devnet`: authorization code with PKCE, no secret, redirect
 `http://localhost:5173/*`. Until it exists, `infra/devnet/ui.json` carries no
