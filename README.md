@@ -167,6 +167,16 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   it over the JSON Ledger API; and, on any card, the same node asked as
   that holder alone — which answers with its own line and six zeros for
   everyone else.
+  On a deployment that names an identity provider, **an operator signs in
+  before the console reads or writes anything**, and the check sits in the
+  proxy that holds the ledger credential rather than in the page — two
+  identities kept apart: the paying agent is a party, the operator is a
+  person. On a run that needs approval the button files a request rather than
+  attempting a payment, and **a request can be withdrawn** until it executes:
+  the agent is the sole signatory, archiving is itself a ledger event, and the
+  request and its withdrawal both stay in the history. After settlement there
+  is nothing to withdraw - the correction is a new payment, not an edit, which
+  is what an atomic settlement means.
 - **A one-command package for anyone who wants to run it** (`judge/`, 23 Sep):
   `docker compose up` gives the whole thing — five participants, the nine
   packages, twenty seated holders with one allocation deliberately withheld,

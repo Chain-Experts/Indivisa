@@ -43,9 +43,13 @@ requests and making the repository public.
 3. **The governed run, driven from the page instead of a terminal** -
    **built 1 October** and settled from the page (run `1220db3477ad...`).
    See "The terminal gap" below.
-4. **Operator sign-in** - built 1 October, **blocked on one Keycloak client**
-   that DevOps has to create. See "Operator sign-in" below.
-5. **The repo goes public - last.** Branch protection requiring a pull
+4. **Operator sign-in** - built 1 October, **working on DevNet 2 October**.
+   See "Operator sign-in" below.
+5. **Re-shoot the governed video.** The script is rewritten for the
+   page-driven flow and all seven cards are exported and verified; what is
+   left is a dry run on our side and a time agreed with BitSafe, who hold one
+   of the two approvals.
+6. **The repo goes public - last.** Branch protection requiring a pull
    request before anyone can push.
 
 ## The terminal gap, and the plan to close it
@@ -144,6 +148,51 @@ change to every path, including the ones already working. The page path must
 be re-run after anything touching auth - a script passing is not evidence that
 the product does.
 
+## Withdrawing a request (2 October)
+
+Avraham asked for it and the reason is the right one: **the paying agent can
+archive a mistaken request on the ledger, but it had no way to do so from the
+page.** Without a control, the only remedy for a request filed in error is to
+leave it live and tell the approvers by other means not to act on it - which
+is not a control, it is an email.
+
+- The proposer is the sole signatory of `SettleRunProposal`, so it archives
+  it. Both the request and the withdrawal stay in the ledger history; nothing
+  is erased.
+- **Two presses.** One is too few for an action another company can see, and a
+  confirmation naming what is being withdrawn is the cheapest guard against a
+  wrong click.
+- If an approver has already confirmed, the confirmation says so. Their
+  confirmation was permission to settle, not an obligation on the agent to go
+  through with it; what they see afterwards is an action that can no longer be
+  executed.
+- It disappears once the run has settled. There is nothing to withdraw after
+  the money has moved - verified against the live settled run on 2 October.
+- It also makes the proposal ordering matter: withdraw-then-propose-again is
+  the one case where two proposals really do belong to the same
+  `DistributionRun`, because only a settlement archives that contract. The
+  page takes the newest by offset.
+
+**Not yet exercised against a live ledger.** It type-checks and builds; firing
+it needs `fund`, `prepare` and a real proposal, so it is folded into the dry
+run rather than done on its own.
+
+## `docs/production-readiness.md` (2 October)
+
+The road after the hackathon: production hardening, known limits, and the
+difference between a pilot and real money.
+
+**Framing is deliberate and must be kept if it is edited.** It is forward
+work - *not* unfinished basics, *not* hidden blockers, *not* anything needed
+to make the demo work. The document opens by saying the submission is complete
+and that nothing in it is outstanding on the demo. Section 3 in particular
+frames the surrounding product as the deliberate boundary it is - the console
+settles, it does not keep the register - rather than as a list of missing
+screens.
+
+Its own summary: a pilot with a willing counterparty is about **one quarter of
+focused engineering**; full production is mostly not an engineering question.
+
 ## Operator sign-in
 
 **Decided 1 October, at Avraham's insistence and against my earlier
@@ -218,7 +267,7 @@ end to end until DevOps creates a **public** Keycloak client in realm
 nothing is at risk. The shape to paste in is in
 `infra/devnet/ui.example.json`.
 
-### The switch-on runbook, so no time is lost when the client lands
+### The switch-on runbook (used 2 October; kept for any other deployment)
 
 1. **Add the block to `infra/devnet/ui.json`** (git-ignored), beside `auth`:
    ```json

@@ -59,7 +59,8 @@ Indivisa/
 │   ├── scripts/settle.ts          the button's settle, from Node, for the benchmark
 │   └── src/
 │       ├── main.tsx
-│       ├── App.tsx                the shell: header, outcome strip, four tabs, leg state per holder
+│       ├── auth.ts                operator sign-in: OIDC authorization code with PKCE, no secret
+│       ├── App.tsx                the shell: sign-in gate, header, outcome strip, four tabs, leg state per holder
 │       ├── config.ts
 │       ├── styles.css
 │       ├── ledger/
@@ -183,10 +184,13 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | File | Does |
 |---|---|
 | `ledger/client.ts` | JSON Ledger API v2 over fetch: ledger end, active contracts by template or interface, submit-and-wait, update-by-offset. One client per party, pointed at its participant; `reading(parties)` returns one that reads several at once. No Java tier. |
-| `ledger/queries.ts` | `agentState` (instrument, schedule, run, allocations, rejections, receipt with update id), `holderState` (one party alone: mine, and the counts of everything else), `nodeHolders` (every holder on one node, in one pass), `factoryDisclosure`, `settle`, `recordRejection`. |
-| `state/useAgent.ts` | The executor's connection and the one command, held at the top of the app because the header and every tab read from it. |
+| `ledger/queries.ts` | `agentState` (instrument, schedule, run, allocations, rejections, receipt with update id, and the outstanding proposal), `holderState` (one party alone: mine, and the counts of everything else), `nodeHolders` (every holder on one node, in one pass), `factoryDisclosure`, `settle`, `recordRejection`, `proposeSettlement`, `withdrawProposal`, `executeDisclosures`. Receipts, rejections and the proposal are all matched on ledger offsets, never on the run id alone: a run id is reused and does not identify an outcome. |
+| `ledger/decman.ts` | The approvers vote, read and executed through BitSafe Decentralization Manager via the `/decman/` proxy. Deliberately has no `confirm`: an approver confirming in software the proposer wrote and hosts would hollow out the only claim the governed path makes. |
+| `auth.ts` | Operator sign-in: OIDC authorization code with PKCE, no client secret. One `keep()` writes the token, so the in-memory copy the request headers use can never go stale; `resumeSession` picks up a session on reload and schedules the refresh from the token own `exp`. |
+| `state/useAgent.ts` | The executor connection and its commands, held at the top of the app because the header and every tab read from them. `onSettle` branches: a run naming an approver files a request instead of attempting a payment. `onWithdraw` archives a request filed by mistake. |
+| `state/useVote.ts` | Polls DecMan every three seconds while a request is outstanding. On repeated failure it sets the error **and clears the stale count** - a number nobody can refresh is worse than no number. |
 | `state/useHolders.ts` | The grid's poll — one request set per participant, not per holder — and `useNodeProbe`, the deliberately separate per-party read that proves the claim. |
-| `App.tsx` | The shell: header, working header, outcome strip, four tabs. Derives each holder's leg state from the allocations actually on the ledger. |
+| `App.tsx` | The shell: a three-stage boot (learn whether sign-in is required, complete it, then read the ledger), the sign-in gate, header, working header, outcome strip, four tabs, and the withdraw control. Derives each holder leg state from the allocations actually on the ledger. |
 | `panes/RunBar.tsx` | Instrument, holders, per unit, total due, an allocations meter, the run's state, and the button. |
 | `panes/Holders.tsx` | A card per holder with search, filter and sort, and the drawer that asks one node as one party. |
 | `panes/Privacy.tsx` | The same question once per participant, refreshed continuously. |
@@ -194,7 +198,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `components/*` | `Money` (tabular figures), `LegTable` (every holder, sortable, each leg waiting / ready / paid, and a footer naming whoever is holding the batch up), `NodeAnswer`, `Tabs`, `CopyId`, `StatusPill`. |
 | `public/indivisa-logo.png` | The mark, in the dark header bar. |
 | `config.ts` | Loads the seat and the party-to-participant map; display names from party ids. |
-| `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer token injected server-side; serves the seat and the party map (stripped to `party_participants`) at `/demo/*`. |
+| `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer tokens minted and refreshed server-side (ledger by client credentials, DecMan from a stored refresh token); serves the seat and the party map at `/demo/*`, reduced to what the page may see. Also `operatorGate()`: registered from `configureServer`, which Vite runs **before** its own proxy, so an unauthenticated `/api/` or `/decman/` request is refused on the way in. The operator token is verified against the realm published keys, checked to have been issued to this client, and then deleted from the request rather than forwarded. |
 | `scripts/settle.ts` | The same `settle` call as the button, run from Node against `infra/<network>/ui.json` directly (no proxy; adds the bearer header itself). `infra/settle.ps1` bundles it with esbuild and runs it after a script-side prepare; it is how the benchmark times submit to commit without the Daml Script runner. |
 
 ## `judge/` — run it with one command
@@ -237,4 +241,4 @@ The module is the copy that would be contributed; the one that builds is
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 1,770 of TypeScript and 310 of CSS; 2,060 of PowerShell, Canton config, shell and Docker, the judge package included (24 Sep).
+About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 3,174 of TypeScript and 373 of CSS; 2,060 of PowerShell, Canton config, shell and Docker, the judge package included (recounted 2 Oct, after the governed console actions and operator sign-in).

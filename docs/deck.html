@@ -121,6 +121,10 @@
   .dense li{font-size:17px;line-height:1.33}
   .dense .kicker{margin-bottom:11px;font-size:12px}
   .dense .col p{font-size:15px;line-height:1.42}
+  /* slide 13 only: six items need the full measure */
+  .dense.full .lede{max-width:none}
+  .dense.full li{max-width:none}
+  .dense.full ul{gap:9px;margin-top:14px}
   @media print{ .slide{margin:0;page-break-after:always} }
   @page{ size:1280px 720px; margin:0 }
 </style>
@@ -356,12 +360,13 @@
 </section>
 
 <!-- 13 NOT BUILT -->
-<section class="slide dense">
+<section class="slide dense full">
   <div class="rh"><span class="act">Honest</span><span class="no">13 / 15</span></div><div class="rule"></div>
   <p class="kicker">Known, designed, not yet built</p>
   <h2 class="wide">Scoping a run is the first thing we build next.</h2>
   <p class="lede" style="margin-top:16px">If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 into a second run. <b style="color:#E9EFEA">The batch stays all-or-nothing; its membership becomes a decision, not an accident.</b> The model supports it. The workflow, and the audit trail that says why five were held back, are not written.</p>
   <ul style="margin-top:22px">
+    <li><b>Access control</b>: an operator signs in before the console reads or writes anything, and the check sits in the proxy that holds the credentials, not in the page. There are no roles yet &mdash; no maker-checker, where one person prepares a run and another releases it. For a payout that is the control an auditor asks about first.</li>
     <li><b>The set-up surface</b>: the console settles a run; it does not keep the register. Holders, positions and the schedule come from systems a paying agent already runs, and in the demo a script stands in for them. That boundary is deliberate &mdash; it is why Indivisa works against registers that already exist.</li>
     <li><b>Production onboarding</b>: holders sign through a real client, not a script.</li>
     <li><b>The scheduled agent</b>: today a person presses the button; in production a daemon watches payment dates.</li>

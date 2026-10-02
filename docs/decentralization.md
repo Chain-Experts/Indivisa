@@ -72,6 +72,55 @@ announcement, the snapshot, the schedule, the allocations. None of them
 moves money, and governing routine activity is on BitSafe's own list of
 what loses points.
 
+### The lifecycle of a request, including the way back out
+
+A governed run has three steps, and only one of them is irreversible.
+
+| Step | Who | Reversible? |
+|---|---|---|
+| **Ask** - the agent files a `SettleRunProposal` | the paying agent, alone | yes |
+| **Approve** - each member confirms on its own node | the members, independently | yes, until the threshold executes |
+| **Execute** - the batch settles | whoever executes, once the threshold is met | **no** |
+
+The way back out of the first two is **withdrawal**. The paying agent is the
+sole signatory of the proposal, so it can archive it, and the page offers that
+as an action rather than leaving it as something only a developer could do.
+
+This matters more than it looks. A request is visible to another company the
+moment it is filed. Without a control, an agent that filed the wrong run - the
+wrong date, a figure noticed too late, a coupon superseded by a corporate
+event - has no way to take it back: the request stays live on the ledger and
+the only remedy is to tell the approvers by other means not to act on it.
+**That is not a control, it is an email.**
+
+Three properties worth stating, because they are what make it a control rather
+than a delete button:
+
+- **Nothing is erased.** Archiving is itself a ledger event. The request and
+  its withdrawal both remain in the history, so "this was asked for and then
+  taken back" is a fact anyone entitled to see the run can establish.
+- **Only the proposer may do it.** Withdrawal is not a way for one approver to
+  veto another, and it is not available to the approvers at all. It is the
+  agent taking back its own request.
+- **Approvers who already confirmed are not consulted, deliberately.** A
+  confirmation is permission to settle, not an instruction that the agent must
+  proceed. What a confirming member sees afterwards is an action that can no
+  longer be executed, because the contract it pointed at is gone.
+
+**And it stops at settlement.** Once the batch has committed there is nothing
+to withdraw: the money has moved, every holder has been paid, and the
+correction is a *new payment*, not an edit to an old one. That boundary is not
+a shortcoming - it is the product. A settlement that could be revised after
+the fact would not be the thing Indivisa claims to be. The window in which
+anything can still be undone is the window before the money moves, and that is
+exactly where the control sits.
+
+**What this is not.** It is one correction path, not a suite. Re-running a
+scoped subset of holders, amending a schedule after approval, and reversing a
+settled payment by issuing its opposite are all operational workflows a
+production deployment would need, and none of them is built. See
+[`production-readiness.md`](production-readiness.md).
+
 ## 3. The module, and the reference application
 
 **`governance-settlement-v0`** (`daml/governance-settlement/`) is the
