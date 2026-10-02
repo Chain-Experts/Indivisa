@@ -148,67 +148,65 @@ change to every path, including the ones already working. The page path must
 be re-run after anything touching auth - a script passing is not evidence that
 the product does.
 
-## Two ways back out (2 October)
+## The ways back out, and the dry run that corrected them (2 October)
 
-Avraham asked for the first and then found the gap the first one left: **what
-if the agent spots the problem before it has asked anybody?** That stage is not
-idle - `prepare` has already locked the agent cash in the send allocation - so
-it is the more consequential of the two, and it had no control at all.
+Avraham asked for a withdraw control, then found the gap it left: **what if the
+agent spots the problem before it has asked anybody?** That stage is not idle -
+`prepare` has already locked the agent cash - so it looked like the more
+important of the two. Building it taught us something better.
 
-Both are now page actions, and together they cover every stage before the
-money moves:
+### What the dry run on DevNet established
 
-| Stage | Control | What it does |
+| Stage | Control | Verified |
 | --- | --- | --- |
-| Prepared, not yet asked | **Cancel this run** | `Allocation_Withdraw` on the send allocation: releases the cash, makes the batch unsettleable, keeps the holders authorisations |
-| Asked, not yet executed | **Withdraw this request** | archives the `SettleRunProposal` |
-| Executed | none | the money has moved; the correction is a new payment |
+| Prepared, not asked | **Cancel this run** - `Allocation_Cancel` on the send allocation | Offered only on an **ungoverned** run |
+| Asked, not executed | **Withdraw this request** - archives the `SettleRunProposal` | Works; proposal left the ledger and **DecMan dropped the action by itself** |
+| Executed | none | the money has moved |
 
-**`Allocation_Withdraw`, not `Allocation_Cancel`.** Cancel is the executors
-route, and on a governed run the executors are the agent **and** the approver,
-so the agent could not cancel alone - which defeats a control meant for the
-stage before anyone has been asked. Withdraw is the authorizer route and the
-agent authorises its own send allocation. The Token Standard names the use
-case: *"can for example be used by the authorizer to undo a mistakenly created
-allocation."*
+### The correction, and it is a better story than the plan
 
-**Only the send allocation locks anything.** Receiving locks nothing, so one
-choice on one contract is the whole cancellation. The receipt allocations are
-left alone deliberately: a corrected `prepare` reuses them instead of asking
-every holder twice.
+The first implementation used `Allocation_Withdraw`, reasoning that the agent
+authorises its own send allocation. **The ledger refused it:**
 
-**Neither has run against a live ledger yet.** Both type-check and build;
-exercising them needs `fund`, `prepare` and a real proposal, so both are
-folded into the dry run.
+    cannot-withdraw-committed-allocation
 
-## Withdrawing a request (2 October)
+Our send allocation is **committed**, and the standard says what that means:
+*"the authorizer cannot withdraw the allocation until the settlement deadline.
+Use committed allocations for cases where the executors need a guarantee that
+the allocation will be available until settlement."* A committed allocation
+ends only by the executors settling it, **the executors cancelling it**, the
+deadline passing, or the admin expiring it.
 
-Avraham asked for it and the reason is the right one: **the paying agent can
-archive a mistaken request on the ledger, but it had no way to do so from the
-page.** Without a control, the only remedy for a request filed in error is to
-leave it live and tell the approvers by other means not to act on it - which
-is not a control, it is an email.
+Read from the live contract, the executors are the paying agent **and**
+`indivisa-approvers`. **So on a governed run the agent cannot release the cash
+alone** - and that is right: the commitment is what makes an approval worth
+anything, so undoing it cannot be unilateral either. The console offers the
+control only where the agent is the sole executor, and says why not otherwise.
 
-- The proposer is the sole signatory of `SettleRunProposal`, so it archives
-  it. Both the request and the withdrawal stay in the ledger history; nothing
-  is erased.
-- **Two presses.** One is too few for an action another company can see, and a
-  confirmation naming what is being withdrawn is the cheapest guard against a
-  wrong click.
-- If an approver has already confirmed, the confirmation says so. Their
-  confirmation was permission to settle, not an obligation on the agent to go
-  through with it; what they see afterwards is an action that can no longer be
-  executed.
-- It disappears once the run has settled. There is nothing to withdraw after
-  the money has moved - verified against the live settled run on 2 October.
-- It also makes the proposal ordering matter: withdraw-then-propose-again is
-  the one case where two proposals really do belong to the same
-  `DistributionRun`, because only a settlement archives that contract. The
-  page takes the newest by offset.
+**Not built:** cancelling a governed run as a governed action, proposed and
+approved like the settlement. The ledger supports it; the console does not.
 
-**Not yet exercised against a live ledger.** It type-checks and builds; firing
-it needs `fund`, `prepare` and a real proposal, so it is folded into the dry
-run rather than done on its own.
+### Three things the dry run caught that would have happened in front of BitSafe
+
+1. The cancel design was wrong, as above.
+2. **A refused cancellation announced "SETTLEMENT REJECTED"** - wrong strip,
+   wrong word, and it is what made the failure confusing. It has its own line
+   now.
+3. **DecMan still shows a dead action** (`003a5d6160b5ac07`) that is on no
+   ledger and errors on confirm. Reported to BitSafe with a request to remove
+   it, plus a suggestion that a proposer be able to retire its own pending
+   action. **Until it is gone, tell BitSafe the exact proposal id on the day.**
+
+### Also corrected in the documents
+
+An earlier draft said a confirming approver would be left looking at an action
+that could no longer be executed. **It simply disappears** - better than we
+claimed, and now stated correctly.
+
+And withdrawing a request **does not release the cash**: measured, six
+allocations before and six after. The request and the funding are different
+commitments.
+
 
 ## `docs/production-readiness.md` (2 October)
 

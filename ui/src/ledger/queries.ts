@@ -192,8 +192,14 @@ export async function proposeSettlement(
  *
  * Approvers who have already confirmed are not consulted, and should not be:
  * their confirmation was permission to settle, not an obligation on the agent
- * to go through with it. What they see is an action that can no longer be
- * executed, because the contract it points at is gone.
+ * to go through with it. Measured on DevNet on 2 October: the Decentralization
+ * Manager drops the action from its approvals by itself once the contract is
+ * archived, so nothing is left sitting on their board.
+ *
+ * This does NOT release the agent cash. The allocations survive untouched -
+ * six before, six after - because the request and the funding are different
+ * commitments. Releasing the funds is `cancelRun`, and on a governed run that
+ * is not the agent to do alone.
  */
 export async function withdrawProposal(agent: Ledger, proposalCid: ContractId) {
   return agent.submitAndWait([

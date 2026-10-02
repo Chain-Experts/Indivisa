@@ -72,83 +72,92 @@ announcement, the snapshot, the schedule, the allocations. None of them
 moves money, and governing routine activity is on BitSafe's own list of
 what loses points.
 
-### The lifecycle of a request, including the way back out
+### The lifecycle of a run, and the ways back out
 
-A governed run has four steps, and only the last is irreversible. **Each of
-the first three has a way back out, and each is an action on the page.**
+**Everything below was measured on DevNet on 2 October**, including the two
+things we got wrong first.
 
-| Step | Who | The way out |
+A run has four stages. Only the last is irreversible, but the earlier ones are
+not all undoable by the same party, and that turns out to be the interesting
+part.
+
+| Stage | What is at stake | The way out |
 |---|---|---|
-| **Prepare** - allocations are created and the agent cash is locked | the paying agent | **Cancel the run**: withdraw the send allocation, releasing the cash |
-| **Ask** - the agent files a `SettleRunProposal` | the paying agent, alone | **Withdraw the request**: archive it |
-| **Approve** - each member confirms on its own node | the members, independently | the request can still be withdrawn |
-| **Execute** - the batch settles | once the threshold is met | **none. The money has moved** |
-
-### Cancelling a prepared run
-
-The earlier control, and the more consequential one. `prepare` does not merely
-plan a settlement: it creates the allocations, and the agent own **send
-allocation locks its cash**. A coupon found to be wrong at this stage - the
-wrong date, a figure noticed too late, a corporate event that supersedes it -
-has real money tied up behind it before any approver has seen anything.
-
-Only the send allocation locks anything; receiving locks nothing. So one
-choice on one contract releases the funds and makes the batch unsettleable,
-which is what cancelling a run means.
-
-The choice is **`Allocation_Withdraw`**, and the distinction from
-`Allocation_Cancel` matters. Cancel is the *executors* route, and on a
-governed run the executors are the agent **and** the approver - so the agent
-could not cancel alone, which would defeat the purpose of a control that
-exists for the stage before anyone has been asked. Withdraw is the
-*authorizer* route, and the agent authorises its own send allocation. The
-Token Standard names this exact use: *"can for example be used by the
-authorizer to undo a mistakenly created allocation."*
-
-The holders standing authorisations are deliberately left in place. They lock
-nothing, and leaving them means a corrected `prepare` reuses them rather than
-asking every holder a second time.
+| **Prepare** | the allocations exist and the agent cash is **locked** | cancel the run - but only the **executors** may, see below |
+| **Ask** | a `SettleRunProposal` is filed and visible to the approvers | **withdraw the request**: the agent archives it, alone |
+| **Approve** | confirmations accumulate towards the threshold | the request can still be withdrawn |
+| **Execute** | the batch settles | **none. The money has moved** |
 
 ### Withdrawing a request
 
-The paying agent is the sole signatory of the proposal, so it can archive it,
-and the page offers that as an action rather than leaving it as something only
-a developer could do.
+The paying agent is the sole signatory of the proposal, so it archives it, and
+the page offers that as an action rather than leaving it to a developer with a
+terminal.
 
-This matters more than it looks. A request is visible to another company the
-moment it is filed. Without a control, an agent that filed the wrong run - the
-wrong date, a figure noticed too late, a coupon superseded by a corporate
-event - has no way to take it back: the request stays live on the ledger and
-the only remedy is to tell the approvers by other means not to act on it.
-**That is not a control, it is an email.**
+Measured: the proposal left the ledger, and **the Decentralization Manager
+dropped the action from its Approvals tab by itself**. An earlier draft of
+this document said a confirming approver would be left looking at an action
+that could no longer be executed. That is not what happens - it simply
+disappears, which is better than we claimed.
 
-Three properties worth stating, because they are what make it a control rather
-than a delete button:
+Two properties worth stating:
 
-- **Nothing is erased.** Archiving is itself a ledger event. The request and
-  its withdrawal both remain in the history, so "this was asked for and then
-  taken back" is a fact anyone entitled to see the run can establish.
-- **Only the proposer may do it.** Withdrawal is not a way for one approver to
-  veto another, and it is not available to the approvers at all. It is the
-  agent taking back its own request.
-- **Approvers who already confirmed are not consulted, deliberately.** A
-  confirmation is permission to settle, not an instruction that the agent must
-  proceed. What a confirming member sees afterwards is an action that can no
-  longer be executed, because the contract it pointed at is gone.
+- **Nothing is erased.** Archiving is a ledger event. The asking and the
+  withdrawal both stay in the history.
+- **Only the proposer may do it.** Withdrawal is not a veto one approver holds
+  over another; it is the agent taking back its own request.
 
-**And it stops at settlement.** Once the batch has committed there is nothing
-to withdraw: the money has moved, every holder has been paid, and the
-correction is a *new payment*, not an edit to an old one. That boundary is not
-a shortcoming - it is the product. A settlement that could be revised after
-the fact would not be the thing Indivisa claims to be. The window in which
-anything can still be undone is the window before the money moves, and that is
-exactly where the control sits.
+**It does not release the cash.** Withdrawing the request retires the request.
+The allocations survive untouched - measured: six before, six after - and the
+agent money stays locked. That is deliberate: the request and the funding are
+different commitments, and taking back the first does not revoke the second.
 
-**What this is not.** It is one correction path, not a suite. Re-running a
-scoped subset of holders, amending a schedule after approval, and reversing a
-settled payment by issuing its opposite are all operational workflows a
-production deployment would need, and none of them is built. See
+### Cancelling a prepared run, and why the agent may not do it alone
+
+This is the control we assumed would be simple and was not.
+
+`prepare` locks the agent cash in a **committed** send allocation. Our first
+implementation had the agent withdraw it, reasoning that the agent is its own
+authorizer. The ledger refused:
+
+    cannot-withdraw-committed-allocation
+
+The Token Standard is explicit about why. A committed allocation is a promise
+to the people relying on it:
+
+> If set to `True`, then the authorizer cannot withdraw the allocation until
+> the settlement deadline. Use committed allocations for cases where **the
+> executors need a guarantee** that the allocation will be available until
+> settlement.
+
+So a committed allocation ends in exactly four ways: the executors settle it,
+**the executors cancel it**, the settlement deadline passes, or the admin
+expires it. Cancelling is an *executors* action, and on this run the executors
+read, from the live contract:
+
+    [ Meridian-Paying-Agent...,  indivisa-approvers... ]
+
+**On a governed run the paying agent cannot release that cash by itself.** The
+approver must act too.
+
+That is the right answer rather than an inconvenient one, and it is worth
+saying plainly: **the commitment is symmetric.** The reason an approval is
+worth anything is that the funds are guaranteed to be there when the threshold
+is met. An agent that could pull them back unilaterally would be offering a
+guarantee it could revoke, which is no guarantee. So the lock binds the agent
+as much as it binds the settlement.
+
+The console therefore offers *Cancel this run* only where the agent is the
+sole executor - an ungoverned run - and on a governed run says why not. A
+button the ledger would refuse is worse than no button.
+
+**What a governed deployment would need**, and we have not built it: cancelling
+a prepared governed run should itself be a governed action, proposed and
+approved the same way the settlement is. The ledger already supports it;
+nothing in the console does. Until then the remaining routes are the
+settlement deadline and the registry admin. See
 [`production-readiness.md`](production-readiness.md).
+
 
 ## 3. The module, and the reference application
 

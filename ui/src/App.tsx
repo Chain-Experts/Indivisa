@@ -124,8 +124,8 @@ function Withdraw({ busy, confirmations, onWithdraw }: { busy: boolean; confirma
         {confirmations > 0 ? (
           <span className="muted">
             {" "}
-            {confirmations === 1 ? "One approver has" : `${confirmations} approvers have`} already confirmed; they will
-            see an action that can no longer be executed.
+            {confirmations === 1 ? "One approver has" : `${confirmations} approvers have`} already confirmed; the
+            request will disappear from their approvals.
           </span>
         ) : null}
       </span>
