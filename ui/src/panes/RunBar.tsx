@@ -90,7 +90,13 @@ export function RunBar({
   // Deliberately not gated on `busy`: the control stays on screen while the
   // request is in flight so it can say "Cancelling…", instead of vanishing at
   // the moment the operator is waiting to see what happened.
-  const cancellable = !!state?.run && !settled && !asked && sendLocked;
+  // Only where the agent is the sole executor. A committed allocation is
+  // ended by its EXECUTORS, and on a governed run those are the agent and the
+  // approver - so the agent cannot release the cash alone. That is the
+  // commitment working, not a missing feature: it is what makes the approval
+  // worth something. Offering a button that the ledger would refuse would be
+  // worse than offering none.
+  const cancellable = !!state?.run && !settled && !asked && sendLocked && !governed;
   const cancelled = !!state?.run && !settled && !asked && !sendLocked && (state?.allocations.length ?? 0) > 0;
   const ready = Math.min(haveAllocations, expectedAllocations);
   const pct = expectedAllocations > 0 ? Math.round((ready / expectedAllocations) * 100) : 0;
@@ -161,6 +167,11 @@ export function RunBar({
           </button>
         )}
         {cancellable && !config.readOnly ? <CancelRun busy={pressed.kind === "busy"} onCancel={agent.onCancelRun} /> : null}
+        {pressed.kind === "failed" ? (
+          <span className="cancel-failed">
+            <b>The run was not cancelled.</b> {pressed.reason}
+          </span>
+        ) : null}
         <div className="action-note">
           {cancelled ? (
             <span>
@@ -179,7 +190,7 @@ export function RunBar({
                 : governed
                   ? asked
                     ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
-                    : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead."
+                    : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead. The cash these allocations lock is committed to the approvers too, so releasing it is their decision as much as the agent's."
                   : "All or nothing. If any leg cannot settle, nothing moves."}
           {!settled && !cancelled && missing.length > 0 ? (
             <span className="warn">

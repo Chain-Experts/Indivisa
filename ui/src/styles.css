@@ -153,6 +153,7 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
 .cancel-confirm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; flex: 1 1 420px; min-width: 0; font-size: 0.82rem; }
 .cancel-confirm > span:first-child { flex: 1 1 300px; min-width: 0; color: var(--muted); }
 .cancel-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.cancel-failed { flex: 1 1 100%; font-size: 0.82rem; color: var(--bad); font-family: var(--mono); word-break: break-word; }
 .action-note { font-size: 0.82rem; color: var(--muted); flex: 1 1 320px; min-width: 0; }
 .action-note.approver { flex-basis: 100%; }
 

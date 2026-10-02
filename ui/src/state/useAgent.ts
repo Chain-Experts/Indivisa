@@ -16,7 +16,8 @@ export type Pressed =
   | { kind: "busy" }
   | { kind: "settled"; updateId: string; ms: number }
   | { kind: "proposed"; ms: number }
-  | { kind: "rejected"; reason: string };
+  | { kind: "rejected"; reason: string }
+  | { kind: "failed"; what: "cancel"; reason: string };
 
 export interface AgentHandle {
   state: AgentState | null;
@@ -129,17 +130,23 @@ export function useAgent(config: Config): AgentHandle {
 
   const onCancelRun = useCallback(async () => {
     const send = state?.allocations.find((a) => a.isSend);
-    if (!send) return;
+    if (!send || !state?.run) return;
+    // Cancelling a committed allocation is an executors action, and the
+    // executors are the agent plus the approver when there is one.
+    const executors = [agent.party, ...(state.run.approver ? [state.run.approver] : [])];
     setPressed({ kind: "busy" });
     try {
       // The same disclosure the settle needs: the choice runs the registry own
       // code, and the executing participant has never seen its rules contract.
       const factory = await factoryDisclosure(registry, seat.rulesCid);
-      await cancelRun(agent, send.cid, seat.rulesCid, factory);
+      await cancelRun(agent, send.cid, executors, seat.rulesCid, factory);
       setPressed({ kind: "idle" });
     } catch (e) {
       const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
-      setPressed({ kind: "rejected", reason });
+      // Deliberately NOT "rejected": that strip says SETTLEMENT REJECTED, and
+      // a refused cancellation is not a refused settlement. Saying so cost
+      // real confusion on 2 October.
+      setPressed({ kind: "failed", what: "cancel", reason });
     } finally {
       refresh();
     }

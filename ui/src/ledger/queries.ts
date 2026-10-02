@@ -282,31 +282,42 @@ export async function settle(agent: Ledger, runCid: ContractId, allocationCids: 
 /**
  * Cancel a run that has been prepared but not yet asked for.
  *
- * This is the earlier of the two ways back out, and the more consequential
- * one. `prepare` does not merely plan a settlement: it creates the
- * allocations, and the agent own SEND allocation **locks its cash**. So a
- * coupon found to be wrong at this stage - the wrong date, a figure noticed
- * too late, a corporate event that supersedes it - has real money tied up
- * behind it, before any approver has seen anything at all.
+ * `prepare` does not merely plan a settlement: it creates the allocations, and
+ * the agent own SEND allocation **locks its cash**. A coupon found to be wrong
+ * at this stage has real money tied up behind it, so there has to be a way to
+ * release it.
  *
- * Only the send allocation locks anything; receiving locks nothing. So one
- * choice on one contract releases the funds and makes the batch unsettleable,
- * which is what cancelling a run means.
+ * **`Allocation_Cancel`, and it needs the executors.** The first version used
+ * `Allocation_Withdraw`, reasoning that the agent authorises its own send
+ * allocation. The ledger refused it on DevNet on 2 October:
  *
- * **`Allocation_Withdraw`, not `Allocation_Cancel`.** Cancel is the
- * executors route, and on a governed run the executors are the agent AND the
- * approver - so the agent could not cancel alone, which defeats the purpose.
- * Withdraw is the authorizer route, and the agent authorises its own send
- * allocation. The standard names this exact use: "can for example be used by
- * the authorizer to undo a mistakenly created allocation."
+ *     cannot-withdraw-committed-allocation
  *
- * The receipt allocations are deliberately left alone. They lock nothing, they
- * are the holders standing authorisations for this run, and leaving them means
- * a corrected `prepare` reuses them instead of asking every holder again.
+ * Our send allocation is created **committed**, and the standard is explicit:
+ * "If set to True, then the authorizer cannot withdraw the allocation until
+ * the settlement deadline. Use committed allocations for cases where the
+ * executors need a guarantee that the allocation will be available until
+ * settlement." Withdraw is the authorizer undoing something nobody has relied
+ * on yet; once committed, the ways out are the executors settling, the
+ * executors cancelling, the deadline passing, or the admin expiring it.
+ *
+ * So cancelling is an executors action and `actors` must be the settlement
+ * executors. On an ungoverned run that is the paying agent alone. **On a
+ * governed run it is the agent and the approver**, so the agent cannot release
+ * the cash by itself - which is right rather than inconvenient: the commitment
+ * is what makes an approval worth anything, so undoing it cannot be unilateral
+ * either. The page offers this control only where the agent is the sole
+ * executor; see RunBar.
+ *
+ * Only the send allocation locks anything, so one choice releases the funds
+ * and makes the batch unsettleable. The holders standing authorisations are
+ * left alone: they lock nothing, and a corrected `prepare` reuses them rather
+ * than asking every holder twice.
  */
 export async function cancelRun(
   agent: Ledger,
   sendAllocationCid: ContractId,
+  executors: Party[],
   rulesCid: ContractId,
   factory: DisclosedContract,
 ) {
@@ -316,9 +327,9 @@ export async function cancelRun(
         ExerciseCommand: {
           templateId: I.allocation,
           contractId: sendAllocationCid,
-          choice: "Allocation_Withdraw",
+          choice: "Allocation_Cancel",
           choiceArgument: {
-            actors: [agent.party],
+            actors: executors,
             extraArgs: {
               context: { values: { "testTokenV2/tokenRules": { tag: "AV_ContractId", value: rulesCid } } },
               meta: { values: {} },
