@@ -269,10 +269,12 @@ Worth saying before anyone else says it.
   batch refuses, for everyone, until that holder is onboarded or removed from
   the run. That is a real operational constraint and we say so.
 
-**The full account is in [`docs/production-readiness.md`](docs/production-readiness.md)**:
-the four gaps between this and a company using it with real money, what size
-each one is, and why a pilot is about a quarter away while production is mostly
-not an engineering question.
+**The road beyond the submission is in
+[`docs/production-readiness.md`](docs/production-readiness.md)**: what a
+production build adds, the limits we know about, and why a pilot is about a
+quarter of engineering away while full production is mostly not an engineering
+question. None of it is needed for anything in this repository, which works
+today.
 
 ---
 
@@ -285,7 +287,7 @@ not an engineering question.
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
 | `docs/devnet-run.md` | The DevNet evidence: update id, what it proves and what it does not |
-| `docs/production-readiness.md` | **What stands between this and production**: the four gaps, their sizes, and the difference between a pilot and real money |
+| `docs/production-readiness.md` | **The road after the hackathon**: production hardening, known limits, and the difference between a pilot and real money |
 | `docs/deck.html` | **The pitch deck, 15 slides** - the source of truth for the deck |
 | `docs/Indivisa-pitch.pdf`, `.pptx` | The same deck exported; regenerate both whenever `deck.html` changes |
 | `docs/pitch.md` | The pitch slide by slide, with what to say over each one |

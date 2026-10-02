@@ -157,6 +157,22 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
    coloured as either: nothing has gone wrong and nothing has happened. */
 .outcome.wait { background: #f4f1e6; color: #6b5a2a; border-color: #ddd2ae; }
 
+/* Withdrawing sits inside the amber strip, so it inherits that colour: a
+   quiet link until it is armed, and only then a red button. Nothing about
+   taking back your own request deserves a standing red control. */
+.outcome.wait .linklike { color: #6b5a2a; font-family: var(--mono); font-size: 0.82rem; }
+.outcome.wait .linklike:hover { color: #4a3e1c; }
+.withdraw-confirm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; margin-top: 2px; }
+.withdraw-confirm > span:first-child { flex: 1 1 380px; min-width: 0; }
+.withdraw-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+button.danger {
+  font-family: var(--sans); font-weight: 600; font-size: 0.82rem; padding: 6px 14px; border-radius: 5px;
+  border: 1px solid var(--bad); background: var(--bad); color: #fff; cursor: pointer;
+}
+button.danger:hover:not(:disabled) { background: #8e2020; }
+button.danger:disabled { background: #eef1f4; color: var(--muted); border-color: var(--line); cursor: default; }
+button.danger:focus-visible { outline: 3px solid var(--bad-soft); outline-offset: 2px; }
+
 /* The second command, offered only once the approvers have agreed. It sits
    below the first so the order on screen is the order of events. */
 .action-second { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }

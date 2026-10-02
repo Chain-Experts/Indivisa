@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ledger, LedgerError } from "../ledger/client";
-import { agentState, factoryDisclosure, proposeSettlement, recordRejection, settle, type AgentState } from "../ledger/queries";
+import { agentState, factoryDisclosure, proposeSettlement,
+  withdrawProposal, recordRejection, settle, type AgentState } from "../ledger/queries";
 import type { Config } from "../config";
 
 export const POLL_MS = 2000;
@@ -24,6 +25,8 @@ export interface AgentHandle {
   lastAt: number | null;
   refresh: () => Promise<void>;
   onSettle: () => Promise<void>;
+  /** Archive a request the agent filed by mistake. Only before it executes. */
+  onWithdraw: () => Promise<void>;
   /** The two connections, so the vote can reuse them rather than open its own. */
   ledgers: { agent: Ledger; registry: Ledger };
 }
@@ -105,7 +108,23 @@ export function useAgent(config: Config): AgentHandle {
     }
   }, [agent, registry, refresh, seat.rulesCid, seat.runId, state]);
 
-  return { state, error, pressed, lastAt, refresh, onSettle, ledgers: { agent, registry } };
+  const onWithdraw = useCallback(async () => {
+    if (!state?.proposal) return;
+    setPressed({ kind: "busy" });
+    try {
+      await withdrawProposal(agent, state.proposal.cid);
+      // Back to the state before the button was pressed: the run is prepared,
+      // nothing is outstanding, and the agent may ask again when it is ready.
+      setPressed({ kind: "idle" });
+    } catch (e) {
+      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      setPressed({ kind: "rejected", reason });
+    } finally {
+      refresh();
+    }
+  }, [agent, refresh, state]);
+
+  return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, ledgers: { agent, registry } };
 }
 
 function extractReason(body: string): string {

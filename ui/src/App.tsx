@@ -93,6 +93,54 @@ function SignIn({ auth }: { auth: OperatorAuth }) {
   );
 }
 
+/**
+ * Take back a request that should not have been made.
+ *
+ * A paying agent that can ask for a settlement must be able to stop asking:
+ * the wrong run, the wrong day, a figure noticed too late. Without this the
+ * only remedy is to leave a live request on the ledger and tell the approvers
+ * by other means not to act on it, which is not a control, it is an email.
+ *
+ * Deliberately two presses. One is too few for an action that is visible to
+ * another company, and a confirmation that names what is being withdrawn is
+ * the cheapest possible guard against the wrong click.
+ */
+function Withdraw({ busy, confirmations, onWithdraw }: { busy: boolean; confirmations: number; onWithdraw: () => Promise<void> }) {
+  const [arming, setArming] = useState(false);
+  if (!arming) {
+    return (
+      <div className="outcome-line">
+        <button className="linklike" disabled={busy} onClick={() => setArming(true)}>
+          Withdraw this request
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="outcome-line withdraw-confirm">
+      <span>
+        Withdraw the request? It is archived on the ledger, and both the request and the withdrawal stay in the
+        history.
+        {confirmations > 0 ? (
+          <span className="muted">
+            {" "}
+            {confirmations === 1 ? "One approver has" : `${confirmations} approvers have`} already confirmed; they will
+            see an action that can no longer be executed.
+          </span>
+        ) : null}
+      </span>
+      <span className="withdraw-actions">
+        <button className="danger" disabled={busy} onClick={() => { setArming(false); void onWithdraw(); }}>
+          {busy ? "Withdrawing…" : "Withdraw"}
+        </button>
+        <button className="linklike" disabled={busy} onClick={() => setArming(false)}>
+          Keep it
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function Console({ config, operator, auth }: { config: Config; operator: Operator | null; auth: OperatorAuth | null }) {
   const { seat } = config;
   const agent = useAgent(config);
@@ -244,6 +292,11 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
           ) : voting.error ? (
             <div className="outcome-line muted">The vote could not be read: {voting.error}</div>
           ) : null}
+          <Withdraw
+            busy={agent.pressed.kind === "busy"}
+            confirmations={voting.vote?.confirmations ?? 0}
+            onWithdraw={agent.onWithdraw}
+          />
         </div>
       ) : agent.pressed.kind === "rejected" || (state?.rejections.length && !settled) ? (
         <div className="outcome bad">

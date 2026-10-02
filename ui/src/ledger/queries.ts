@@ -119,7 +119,17 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
     receipt: receiptOut,
     proposal: (() => {
       if (!run) return null;
-      const p = proposals.find((c) => c.createdEvent.createArgument.runCid === run.createdEvent.contractId);
+      // The NEWEST proposal for this run, not the first the ledger happens to
+      // return. `prepare` reuses one DistributionRun per run id, so a
+      // proposal that was filed, confirmed and never executed stays active
+      // and matches the same runCid as a fresh one. Taking either arbitrarily
+      // would put somebody else is vote on screen - the same mistake that
+      // showed an old receipt and a stale refusal, and the same fix: let the
+      // ledger ordering decide.
+      const mine = proposals
+        .filter((c) => c.createdEvent.createArgument.runCid === run.createdEvent.contractId)
+        .sort((x, y) => y.createdEvent.offset - x.createdEvent.offset);
+      const p = mine[0];
       return p ? { cid: p.createdEvent.contractId, description: p.createdEvent.createArgument.description } : null;
     })(),
   };
@@ -163,6 +173,36 @@ export async function proposeSettlement(
           },
           description,
         },
+      },
+    },
+  ]);
+}
+
+/**
+ * Withdraw a request the agent should not have made.
+ *
+ * A request filed by mistake - the wrong run, the wrong moment, a figure
+ * noticed too late - should not have to be left lying on the ledger waiting
+ * for approvers to ignore it. The proposer is the sole signatory of
+ * `SettleRunProposal`, so it can archive it, and archiving is itself a
+ * ledger event: the request and its withdrawal both stay in the history.
+ *
+ * It is the proposer alone who may do this, and only before the settlement
+ * executes. Once executed there is nothing to withdraw - the money has moved.
+ *
+ * Approvers who have already confirmed are not consulted, and should not be:
+ * their confirmation was permission to settle, not an obligation on the agent
+ * to go through with it. What they see is an action that can no longer be
+ * executed, because the contract it points at is gone.
+ */
+export async function withdrawProposal(agent: Ledger, proposalCid: ContractId) {
+  return agent.submitAndWait([
+    {
+      ExerciseCommand: {
+        templateId: T.proposal,
+        contractId: proposalCid,
+        choice: "Archive",
+        choiceArgument: {},
       },
     },
   ]);

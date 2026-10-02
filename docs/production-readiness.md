@@ -1,27 +1,34 @@
-# What stands between this and production
+# From submission to production: the road after the hackathon
 
-Indivisa settles a corporate action on Canton: hundreds of holders paid in one
-transaction, atomically, with no holder seeing another's payment. That part is
-built, measured and has run on a live network.
+**Read this as forward-looking, because that is what it is.** The HackCanton
+submission is complete: the model, the console, the judges one-command Docker
+package, the benchmark, a live DevNet settlement and a governed settlement with
+an independent second operator all exist and work today. Nothing in this
+document is needed for any of that, and nothing here is outstanding work on the
+demo.
 
-This document is about everything else. It exists because the interesting
-question about a hackathon project is not what it does, it is **what would have
-to be true before a paying agent could use it with real money** - and that
-question deserves a straight answer rather than a roadmap slide.
+What follows is the engineering and commercial road **beyond** the submission -
+production hardening, and the limits we know about and would rather state
+ourselves than have someone find.
 
-The short version: **the part that could have failed has not failed.** Nobody
-had published whether a private, atomic, multi-hundred-leg corporate action was
-possible under Token Standard V2, and now there is a measured answer and a live
-settlement. What remains is ordinary product engineering and a regulatory path.
-Neither is research, and the second is longer than the first.
+We publish it for the same reason we publish the benchmark caveats. A team that
+can describe precisely what its product does not yet do is a team that
+understands what it built. The alternative - a roadmap slide with five
+confident bullets - tells a reader nothing.
 
-Sizes below are our estimates, written to be argued with.
+**The headline: the part that could have failed has not failed.** Nobody had
+published whether a private, atomic, multi-hundred-leg corporate action was
+possible under Token Standard V2. There is now a measured answer and a live
+settlement. Everything below is ordinary product engineering and a regulatory
+path - no open research, no unknowns that could invalidate the approach.
+
+Sizes are our own estimates, written to be argued with.
 
 ---
 
-## 1. What is finished
+## 1. What exists today
 
-Stated first, so the gaps are read against something real.
+Stated first, because everything after it is measured against this.
 
 | | |
 |---|---|
@@ -40,8 +47,8 @@ small because the Token Standard does the heavy lifting; that is the point.
 
 ## 2. The ledger and the model
 
-**Smallest of the four gaps.** This is the part most people assume is hardest,
-and it is not.
+**The smallest piece of work ahead**, and the part most people assume is the
+hardest. It is not.
 
 ### Real cash instead of the reference asset
 
@@ -86,32 +93,44 @@ guarantee is per-batch and the operator reconciles. We have not chosen one.
 
 ---
 
-## 3. The application a paying agent would operate
+## 3. The surrounding product
 
-**This is the bulk of the remaining work.** The settlement engine is built;
-almost nothing an operator touches is.
+**This is the bulk of the work ahead, and it is deliberate.** The project set
+out to answer one question - whether this settlement is possible privately and
+atomically on Canton - and built exactly what answers it. The operational
+software that would wrap it is a product build, and a product build is what
+comes after a proof, not before.
 
-Today the register, the instrument and the event all arrive from a script, and
-the console reads them. That is right for a demo and wrong for a product.
+The boundary is a design position, not an omission: **the console settles; it
+does not keep the register.** Holders, positions and the schedule come from
+systems a paying agent already runs, which is why Indivisa works against
+registers that exist today rather than requiring the industry to rebuild them.
+In the demo a script stands in for those systems, and the film says so on a
+card.
 
-| Missing | Why it matters | Size |
+What a production build adds:
+
+| What a product build adds | Why it matters | Size |
 |---|---|---|
-| **Getting the register in** | Holders and positions are generated. Real life means ingesting from the registrar - a file, ISO 20022, or an API - and reconciling it against what is on the ledger | Medium |
-| **Setting up the event** | Rate, denomination, record date, payment date, rounding policy: all script arguments, no screen. A paying agent configures these, and the rounding policy in particular is a commercial decision | Medium |
-| **Firing it automatically** | A payment date should trigger the run without a person. The product today is a button. The scheduled agent was deliberately cut from scope | Small |
-| **Roles, not just sign-in** | An operator now signs in, so "who asked for this settlement" has an answer. There are **no roles**: no maker-checker, where one person prepares a run and a different person releases it. For a payout, that is the first control an auditor asks about | Medium |
-| **Handling the holder who is not ready** | If one holder has not signed the standing agreement, the batch refuses - correctly, for everyone. An operator needs to be told which holder, and to be able to proceed without them or onboard them | Medium |
-| **Reconciliation and reporting** | What was paid, to whom, against what entitlement, in a form an auditor and a regulator accept | Medium |
-| **Onboarding at scale** | Collecting the standing agreement from hundreds of holders is an operational programme, not a screen. It is also the thing that makes every later coupon zero-touch, so it is worth it - but it is front-loaded | Large, and mostly not software |
+| **A register feed** | The demo generates holders and positions. A deployment ingests them from the registrar - a file, ISO 20022, or an API - and reconciles against the ledger | Medium |
+| **An event-setup screen** | Rate, denomination, record date, payment date, rounding policy. The engine takes all of them; the demo passes them as arguments. The rounding policy in particular is a commercial decision an operator should make on a screen | Medium |
+| **The scheduled agent** | A payment date should fire the run without a person. Scoped and costed from the start, then deliberately cut: a daemon is invisible in a two-minute film, and a button demonstrates the same settlement | Small |
+| **Roles on top of sign-in** | An operator signs in, and the check sits in the proxy that holds the credentials, so "who asked for this settlement" has an answer. The next control is maker-checker: one person prepares a run, another releases it. For a payout that is the control an auditor asks about first | Medium |
+| **Scoping a run** | If one holder has not signed the standing agreement the batch refuses, for everyone - which is correct, and is the product working. An operator then wants to settle the rest today and carry that holder into a second run. The model supports it; the workflow and the audit trail that records why are a product build | Medium |
+| **Reconciliation and reporting** | What was paid, to whom, against what entitlement, in the formats an auditor and a regulator accept. The ledger holds the facts; the reports are a build | Medium |
+| **Onboarding at scale** | Collecting the standing agreement from hundreds of holders is an operational programme rather than a screen. It is front-loaded, and it is what makes every coupon after it zero-touch | Large, and mostly not software |
 
-**Size overall: medium-to-large.** Our estimate is one to two quarters of
-ordinary product engineering for a credible first version.
+**Size overall: medium to large**, and none of it is novel. Our estimate is one
+to two quarters of ordinary product engineering for a credible first version.
 
 ---
 
-## 4. Running it
+## 4. Running it in production
 
-| Missing | Size |
+Standard operational work for anything that moves money. Listed because it is
+real, not because any of it is unknown.
+
+| What production adds | Size |
 |---|---|
 | **Key management.** The paying agent's party signs payouts. On MainNet that key belongs in an HSM with a documented ceremony, not in a configuration file | Medium |
 | **One credential per party.** The demo console deliberately holds every party's credential - it is a harness, it says so, and it then shows the nodes still refusing to answer for one another. In production each party sits on its own node with its own credential. The model already supports this; the harness does not | Small, but it changes the demo |
@@ -122,13 +141,16 @@ ordinary product engineering for a credible first version.
 
 ## 5. Regulation and assurance
 
-**The largest gap, and the one no amount of code closes.** If a bank does not
-adopt Indivisa, this is why - not the ledger.
+**The longest road, and the one no amount of code shortens.** It is also the
+one every entrant to this market walks, and it is a commercial path rather
+than a technical risk: nothing here can invalidate the approach, it can only
+take time.
 
-- **A paying agent is a regulated role.** Settling real money on behalf of an
-  issuer needs permissions that a technology provider does not have. The
-  realistic path is to sell this to an institution that already holds them,
-  not to become one.
+- **A paying agent is a regulated role.** Settling real money for an issuer
+  needs permissions a technology provider does not hold. That shapes the
+  go-to-market rather than blocking it: the buyer is an institution that
+  already has them, and Indivisa is software they run - we do not need to
+  become a paying agent to sell to one.
 - **Who owns the authoritative register.** Indivisa reads a register; it does
   not become the golden source by being used. In a real deployment the
   registrar remains authoritative and Indivisa must reconcile against it,
@@ -139,13 +161,15 @@ adopt Indivisa, this is why - not the ledger.
   other participants, which is most of the problem - but a right-to-erasure
   request against a committed contract is a question that needs a lawyer's
   answer before it needs an engineer's.
-- **No independent security audit** of the Daml model. For money, that is not
-  optional, and it should be done by somebody who did not write it.
-- **Testing beyond the proofs.** There is a proof suite and a benchmark. There
-  is no adversarial testing, no fuzzing of the entitlement arithmetic, and no
-  sustained soak against a real network.
+- **An independent security audit** of the Daml model, by somebody who did not
+  write it. Standard before anything moves real money, and something a buyer
+  would commission as a matter of course.
+- **Testing beyond the proofs.** A proof suite and a benchmark exist and pass.
+  A production programme adds adversarial testing, fuzzing of the entitlement
+  arithmetic, and a sustained soak against a real network.
 
-**Size: large, and measured in regulatory timelines rather than sprints.**
+**Size: large, and measured in regulatory timelines rather than sprints.** It
+runs in parallel with the engineering rather than after it.
 
 ---
 
@@ -175,10 +199,12 @@ operational path dominates, and it is not ours alone to walk.
 
 ---
 
-## 7. What we are not claiming
+## 7. What we do not claim
 
-- Not that this is production software. It is a working proof with a live
-  settlement behind it.
+Stated plainly, so nobody has to go looking.
+
+- Not that this is production software. It is a working proof, with a live
+  settlement and a measured benchmark behind it, and it is complete as that.
 - Not that the numbers are MainNet numbers. They are one machine, five nodes in
   one JVM, and a real network adds hops and validators.
 - Not that holders are zero-touch. They are one-touch: they authorise once, at

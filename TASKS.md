@@ -200,6 +200,36 @@ end to end until DevOps creates a **public** Keycloak client in realm
 nothing is at risk. The shape to paste in is in
 `infra/devnet/ui.example.json`.
 
+### The switch-on runbook, so no time is lost when the client lands
+
+1. **Add the block to `infra/devnet/ui.json`** (git-ignored), beside `auth`:
+   ```json
+   "operator": {
+     "issuer": "https://<keycloak-host>/realms/canton-devnet",
+     "clientId": "chain-experts-devnet-indivisa-ui"
+   }
+   ```
+2. **Restart `npm run dev`.** The gate is only registered at startup.
+3. Open `http://localhost:5173`. Expect the sign-in screen, not the console.
+4. Sign in. Expect to land on the console with the operator name and a sign
+   out control at the top right.
+
+**The one failure to expect, and what it looks like.** If the client has no
+**Web origin** of `http://localhost:5173`, the browser is blocked from
+calling Keycloak token endpoint and the page shows a bare network error with
+nothing useful in it; the browser console says CORS. That is a one-field fix
+on the Keycloak client, not a problem with our code. Check it first before
+investigating anything else.
+
+**Two things already proven, so they are not suspects:** the signature check
+works against the live realm keys, and a correctly signed token issued to a
+different client of that realm is refused. Both were measured on 1 October
+with the ledger service account token.
+
+**Then, and only then, the deck.** Slide 13 gains one line (wording ready in
+the session notes) and the PPTX and PDF are re-exported. Held until sign-in
+actually works, so a failed client does not cost a wasted export round trip.
+
 **Unauthenticated deployments are deliberately unchanged.** LocalNet and the
 judges' Docker stack have no identity provider to sign in against and nothing
 but the one machine that can reach them, so they carry no `operator` block

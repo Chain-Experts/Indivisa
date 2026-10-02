@@ -82,9 +82,19 @@ of cash. A second run on the same seat has nothing to pay with, and `prepare`
 fails saying there are no holdings. `fund` tops up the *existing* agent,
 which is the whole point: it avoids a new seat.
 
-### A3. Nothing else
+### A3. Nothing else to run
 
-There is no `propose` and no `disclose` to run. The page does both.
+There is no `propose` and no `disclose`. The page does both.
+
+### A4. Close any other console first
+
+**Only one dev server may run at a time.** Two of them fight over the same
+rotating DecMan refresh token - Keycloak invalidates a refresh token once it
+is used, so the second server kills the first one session and reports
+`invalid_grant: Token is not active`. Since 1 October the port is pinned, so
+a second server fails loudly on `Port 5173 is already in use` rather than
+quietly starting on 5174 where sign-in would not work. If you see that
+message, close the other window; do not change the port.
 
 ---
 
@@ -102,9 +112,9 @@ Seven, already built and verified. In order:
 | 6 | Both agreed. One transaction. Five holders paid. | Settled on Canton DevNet. |
 | 7 | This console settles. It does not keep the register. | Holders, positions and the schedule come from systems a paying agent already runs. Here a script stands in for them. |
 
-If you ever rebuild them, the prompt is `docs/prompts/governed-cards.md` -
-**but note it still describes six slides and the old slide 3 text.** Update
-it before reusing it.
+If you ever rebuild them, the prompt is `docs/prompts/governed-cards.md`,
+which was brought in line with these seven on 1 October. It carries the exact
+text above, so a rebuild reproduces them rather than the old six.
 
 ---
 
@@ -195,7 +205,7 @@ Record ten seconds, check it plays and the text is sharp, delete it.
 
 ---
 
-## Part D. The seven shots
+## Part D. The eight shots
 
 You say nothing. The cards carry the words.
 
@@ -387,3 +397,26 @@ re-run `prepare`, which regenerates it.
 **The strip stays at 0 of 2 after BitSafe confirm.** Their confirmation went
 to a different proposal. Check the action in DecMan's Approvals tab is the
 one the page filed in shot 2.
+
+**The vote never appears at all after pressing the button.** The page is
+showing a proposal that is not the one DecMan knows about, and a dead proposal
+has no vote.
+
+This cannot happen across a settlement: `Run_Settle` consumes the
+`DistributionRun`, so the next `prepare` creates a fresh one and an older
+proposal, which points at the archived run, no longer matches. **It can happen
+when a request is withdrawn and filed again**, because then the run contract
+is the same one and both proposals belong to it. Since 1 October the page
+takes the newest by ledger offset, which settles it. If you ever see an
+outstanding request the approvers do not have, the ordering has regressed.
+
+**Before you call BitSafe, note the action id.** Run:
+
+```powershell
+pwsh infraitsafegovern-devnet.ps1 status -Tag gov1
+```
+
+and send them the `action cid` and `description` it prints, so there is no
+question which action to confirm. Checked on 1 October: DecMan listed **zero**
+pending actions with a stale proposal on the ledger, so their Approvals tab is
+normally clean - but confirm it rather than assume it.
