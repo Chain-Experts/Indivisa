@@ -279,6 +279,58 @@ export async function settle(agent: Ledger, runCid: ContractId, allocationCids: 
   return { ...r, ms: Math.round(performance.now() - t0) };
 }
 
+/**
+ * Cancel a run that has been prepared but not yet asked for.
+ *
+ * This is the earlier of the two ways back out, and the more consequential
+ * one. `prepare` does not merely plan a settlement: it creates the
+ * allocations, and the agent own SEND allocation **locks its cash**. So a
+ * coupon found to be wrong at this stage - the wrong date, a figure noticed
+ * too late, a corporate event that supersedes it - has real money tied up
+ * behind it, before any approver has seen anything at all.
+ *
+ * Only the send allocation locks anything; receiving locks nothing. So one
+ * choice on one contract releases the funds and makes the batch unsettleable,
+ * which is what cancelling a run means.
+ *
+ * **`Allocation_Withdraw`, not `Allocation_Cancel`.** Cancel is the
+ * executors route, and on a governed run the executors are the agent AND the
+ * approver - so the agent could not cancel alone, which defeats the purpose.
+ * Withdraw is the authorizer route, and the agent authorises its own send
+ * allocation. The standard names this exact use: "can for example be used by
+ * the authorizer to undo a mistakenly created allocation."
+ *
+ * The receipt allocations are deliberately left alone. They lock nothing, they
+ * are the holders standing authorisations for this run, and leaving them means
+ * a corrected `prepare` reuses them instead of asking every holder again.
+ */
+export async function cancelRun(
+  agent: Ledger,
+  sendAllocationCid: ContractId,
+  rulesCid: ContractId,
+  factory: DisclosedContract,
+) {
+  return agent.submitAndWait(
+    [
+      {
+        ExerciseCommand: {
+          templateId: I.allocation,
+          contractId: sendAllocationCid,
+          choice: "Allocation_Withdraw",
+          choiceArgument: {
+            actors: [agent.party],
+            extraArgs: {
+              context: { values: { "testTokenV2/tokenRules": { tag: "AV_ContractId", value: rulesCid } } },
+              meta: { values: {} },
+            },
+          },
+        },
+      },
+    ],
+    [factory],
+  );
+}
+
 /** The agent's own record of a refusal, written after the ledger said no. */
 export async function recordRejection(agent: Ledger, runId: string, legsRequested: number, reason: string) {
   return agent.submitAndWait([

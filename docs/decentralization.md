@@ -74,17 +74,46 @@ what loses points.
 
 ### The lifecycle of a request, including the way back out
 
-A governed run has three steps, and only one of them is irreversible.
+A governed run has four steps, and only the last is irreversible. **Each of
+the first three has a way back out, and each is an action on the page.**
 
-| Step | Who | Reversible? |
+| Step | Who | The way out |
 |---|---|---|
-| **Ask** - the agent files a `SettleRunProposal` | the paying agent, alone | yes |
-| **Approve** - each member confirms on its own node | the members, independently | yes, until the threshold executes |
-| **Execute** - the batch settles | whoever executes, once the threshold is met | **no** |
+| **Prepare** - allocations are created and the agent cash is locked | the paying agent | **Cancel the run**: withdraw the send allocation, releasing the cash |
+| **Ask** - the agent files a `SettleRunProposal` | the paying agent, alone | **Withdraw the request**: archive it |
+| **Approve** - each member confirms on its own node | the members, independently | the request can still be withdrawn |
+| **Execute** - the batch settles | once the threshold is met | **none. The money has moved** |
 
-The way back out of the first two is **withdrawal**. The paying agent is the
-sole signatory of the proposal, so it can archive it, and the page offers that
-as an action rather than leaving it as something only a developer could do.
+### Cancelling a prepared run
+
+The earlier control, and the more consequential one. `prepare` does not merely
+plan a settlement: it creates the allocations, and the agent own **send
+allocation locks its cash**. A coupon found to be wrong at this stage - the
+wrong date, a figure noticed too late, a corporate event that supersedes it -
+has real money tied up behind it before any approver has seen anything.
+
+Only the send allocation locks anything; receiving locks nothing. So one
+choice on one contract releases the funds and makes the batch unsettleable,
+which is what cancelling a run means.
+
+The choice is **`Allocation_Withdraw`**, and the distinction from
+`Allocation_Cancel` matters. Cancel is the *executors* route, and on a
+governed run the executors are the agent **and** the approver - so the agent
+could not cancel alone, which would defeat the purpose of a control that
+exists for the stage before anyone has been asked. Withdraw is the
+*authorizer* route, and the agent authorises its own send allocation. The
+Token Standard names this exact use: *"can for example be used by the
+authorizer to undo a mistakenly created allocation."*
+
+The holders standing authorisations are deliberately left in place. They lock
+nothing, and leaving them means a corrected `prepare` reuses them rather than
+asking every holder a second time.
+
+### Withdrawing a request
+
+The paying agent is the sole signatory of the proposal, so it can archive it,
+and the page offers that as an action rather than leaving it as something only
+a developer could do.
 
 This matters more than it looks. A request is visible to another company the
 moment it is filed. Without a control, an agent that filed the wrong run - the

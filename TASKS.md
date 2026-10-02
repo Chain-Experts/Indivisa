@@ -148,6 +148,39 @@ change to every path, including the ones already working. The page path must
 be re-run after anything touching auth - a script passing is not evidence that
 the product does.
 
+## Two ways back out (2 October)
+
+Avraham asked for the first and then found the gap the first one left: **what
+if the agent spots the problem before it has asked anybody?** That stage is not
+idle - `prepare` has already locked the agent cash in the send allocation - so
+it is the more consequential of the two, and it had no control at all.
+
+Both are now page actions, and together they cover every stage before the
+money moves:
+
+| Stage | Control | What it does |
+| --- | --- | --- |
+| Prepared, not yet asked | **Cancel this run** | `Allocation_Withdraw` on the send allocation: releases the cash, makes the batch unsettleable, keeps the holders authorisations |
+| Asked, not yet executed | **Withdraw this request** | archives the `SettleRunProposal` |
+| Executed | none | the money has moved; the correction is a new payment |
+
+**`Allocation_Withdraw`, not `Allocation_Cancel`.** Cancel is the executors
+route, and on a governed run the executors are the agent **and** the approver,
+so the agent could not cancel alone - which defeats a control meant for the
+stage before anyone has been asked. Withdraw is the authorizer route and the
+agent authorises its own send allocation. The Token Standard names the use
+case: *"can for example be used by the authorizer to undo a mistakenly created
+allocation."*
+
+**Only the send allocation locks anything.** Receiving locks nothing, so one
+choice on one contract is the whole cancellation. The receipt allocations are
+left alone deliberately: a corrected `prepare` reuses them instead of asking
+every holder twice.
+
+**Neither has run against a live ledger yet.** Both type-check and build;
+exercising them needs `fund`, `prepare` and a real proposal, so both are
+folded into the dry run.
+
 ## Withdrawing a request (2 October)
 
 Avraham asked for it and the reason is the right one: **the paying agent can

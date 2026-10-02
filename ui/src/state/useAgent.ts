@@ -5,7 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ledger, LedgerError } from "../ledger/client";
 import { agentState, factoryDisclosure, proposeSettlement,
-  withdrawProposal, recordRejection, settle, type AgentState } from "../ledger/queries";
+  withdrawProposal,
+  cancelRun, recordRejection, settle, type AgentState } from "../ledger/queries";
 import type { Config } from "../config";
 
 export const POLL_MS = 2000;
@@ -27,6 +28,8 @@ export interface AgentHandle {
   onSettle: () => Promise<void>;
   /** Archive a request the agent filed by mistake. Only before it executes. */
   onWithdraw: () => Promise<void>;
+  /** Release the cash a prepared run has locked, before it is even asked for. */
+  onCancelRun: () => Promise<void>;
   /** The two connections, so the vote can reuse them rather than open its own. */
   ledgers: { agent: Ledger; registry: Ledger };
 }
@@ -124,7 +127,25 @@ export function useAgent(config: Config): AgentHandle {
     }
   }, [agent, refresh, state]);
 
-  return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, ledgers: { agent, registry } };
+  const onCancelRun = useCallback(async () => {
+    const send = state?.allocations.find((a) => a.isSend);
+    if (!send) return;
+    setPressed({ kind: "busy" });
+    try {
+      // The same disclosure the settle needs: the choice runs the registry own
+      // code, and the executing participant has never seen its rules contract.
+      const factory = await factoryDisclosure(registry, seat.rulesCid);
+      await cancelRun(agent, send.cid, seat.rulesCid, factory);
+      setPressed({ kind: "idle" });
+    } catch (e) {
+      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      setPressed({ kind: "rejected", reason });
+    } finally {
+      refresh();
+    }
+  }, [agent, registry, refresh, seat.rulesCid, state]);
+
+  return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, onCancelRun, ledgers: { agent, registry } };
 }
 
 function extractReason(body: string): string {

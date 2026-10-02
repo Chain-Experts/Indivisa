@@ -172,7 +172,9 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   proxy that holds the ledger credential rather than in the page — two
   identities kept apart: the paying agent is a party, the operator is a
   person. On a run that needs approval the button files a request rather than
-  attempting a payment, and **a request can be withdrawn** until it executes:
+  attempting a payment. **There is a way back out of every stage before the
+  money moves**: a prepared run can be cancelled, which releases the cash its
+  allocations locked, and a request can be withdrawn until it executes:
   the agent is the sole signatory, archiving is itself a ledger event, and the
   request and its withdrawal both stay in the history. After settlement there
   is nothing to withdraw - the correction is a new payment, not an edit, which

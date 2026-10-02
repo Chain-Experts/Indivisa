@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Money } from "../components/Money";
 import { StatusPill } from "../components/StatusPill";
 import { displayName, type Config } from "../config";
@@ -23,6 +24,44 @@ export interface RunSummary {
  * ready it is, and the one command that moves it. Everything here is read
  * from the paying agent's own participant.
  */
+/**
+ * Cancel a prepared run, before anybody has been asked for anything.
+ *
+ * `prepare` locks the agent cash in a send allocation. A coupon found to be
+ * wrong at this stage therefore has real money tied up behind it, and the only
+ * alternative to a control here is a developer with a terminal.
+ *
+ * Two presses, like withdrawing a request: releasing locked funds is not a
+ * thing to do on one click, and naming what happens is the cheapest guard
+ * against the wrong one.
+ */
+function CancelRun({ busy, onCancel }: { busy: boolean; onCancel: () => Promise<void> }) {
+  const [arming, setArming] = useState(false);
+  if (!arming) {
+    return (
+      <button className="linklike cancel-run" disabled={busy} onClick={() => setArming(true)}>
+        Cancel this run
+      </button>
+    );
+  }
+  return (
+    <span className="cancel-confirm">
+      <span>
+        Cancel the run and release the locked cash? Nothing has been asked of anyone yet, and the holders
+        authorisations are kept.
+      </span>
+      <span className="cancel-actions">
+        <button className="danger" disabled={busy} onClick={() => { setArming(false); void onCancel(); }}>
+          {busy ? "Cancelling…" : "Cancel the run"}
+        </button>
+        <button className="linklike" disabled={busy} onClick={() => setArming(false)}>
+          Keep it
+        </button>
+      </span>
+    </span>
+  );
+}
+
 export function RunBar({
   config,
   agent,
@@ -44,6 +83,15 @@ export function RunBar({
   const governed = !!state?.run?.approver;
   const asked = !!state?.proposal || pressed.kind === "proposed";
   const canPress = !!state?.run && !settled && pressed.kind !== "busy" && !(governed && asked);
+  // The send allocation is the one that locks the agent cash; receiving locks
+  // nothing. Its presence is what makes a prepared run cancellable, and its
+  // absence is what a cancelled run looks like.
+  const sendLocked = !!state?.allocations.some((a) => a.isSend);
+  // Deliberately not gated on `busy`: the control stays on screen while the
+  // request is in flight so it can say "Cancelling…", instead of vanishing at
+  // the moment the operator is waiting to see what happened.
+  const cancellable = !!state?.run && !settled && !asked && sendLocked;
+  const cancelled = !!state?.run && !settled && !asked && !sendLocked && (state?.allocations.length ?? 0) > 0;
   const ready = Math.min(haveAllocations, expectedAllocations);
   const pct = expectedAllocations > 0 ? Math.round((ready / expectedAllocations) * 100) : 0;
 
@@ -112,8 +160,15 @@ export function RunBar({
                   : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
           </button>
         )}
+        {cancellable && !config.readOnly ? <CancelRun busy={pressed.kind === "busy"} onCancel={agent.onCancelRun} /> : null}
         <div className="action-note">
-          {config.readOnly
+          {cancelled ? (
+            <span>
+              <b>This run was cancelled.</b> The agent locked cash has been released and the batch can no longer
+              settle. The holders authorisations are untouched, so preparing the run again does not ask them twice:{" "}
+              <code>demo.ps1 prepare -Tag {seat.tag}</code>
+            </span>
+          ) : config.readOnly
             ? settled
               ? "This run has settled. Every holder was paid in the same transaction; this page reads the ledger and cannot change it."
               : "This page reads the ledger and cannot change it. The settlement is run by the paying agent from its own client."
@@ -126,7 +181,7 @@ export function RunBar({
                     ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
                     : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead."
                   : "All or nothing. If any leg cannot settle, nothing moves."}
-          {!settled && missing.length > 0 ? (
+          {!settled && !cancelled && missing.length > 0 ? (
             <span className="warn">
               {" "}
               Waiting for {missing.length <= 3 ? missing.join(", ") : `${missing.slice(0, 2).join(", ")} and ${missing.length - 2} more`}.
