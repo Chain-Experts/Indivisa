@@ -303,7 +303,7 @@ nothing is at risk. The shape to paste in is in
 1. **Add the block to `infra/devnet/ui.json`** (git-ignored), beside `auth`:
    ```json
    "operator": {
-     "issuer": "https://<keycloak-host>/realms/canton-devnet",
+     "issuer": "https://<keycloak host>/realms/canton-devnet",
      "clientId": "chain-experts-devnet-indivisa-ui"
    }
    ```
@@ -799,6 +799,11 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       not `indivisa-0.4.0.dar`; the step to add is written out in
       `infra/README.md` step 2. The pipeline failed on an expired token and
       DevOps uploaded by hand instead.
+      **Removed before going public (4 Oct):** it never worked, it is not
+      part of the submission, and it ran on a self-hosted runner reading
+      cluster credentials from an Actions secret - which is not a thing to
+      carry into a public repository. The file is kept outside the repo; if
+      deployment is ever automated again it belongs in a private one.
       **Checked directly, 23 Sep, and the state is better than feared:**
       all **thirteen** DARs are vetted on the DevNet participant,
       `indivisa-0.4.0` included, so the manual upload was complete. The
@@ -907,7 +912,8 @@ Next, by owner:
 - [x] **Us**: Slack addresses sent and the shared channel is live - we ran the
       whole governed settlement through it on 29 Sep with BitSafe.
 - [x] **Us (DevOps)**: DecMan beside the DevNet validator — **done 25 Sep**
-      at `https://<decman-host>`, Noise listener on 9000.
+      at the DevNet Decentralization Manager host (`decman.url` in the
+      git-ignored `infra/devnet/ui.json`), Noise listener on 9000.
       Verified from outside without credentials: 9000 open (93 ms), 8080
       filtered, and the admin API refuses every path without a token *and*
       rejects a forged one, so it is not running in the accept-anything

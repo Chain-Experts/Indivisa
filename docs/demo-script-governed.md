@@ -152,7 +152,8 @@ text above, so a rebuild reproduces them rather than the old six.
 
 Do this **first**, because the console reads it at startup.
 
-Open `https://<decman-host>`, sign in, press **F12**, click
+Open the Decentralization Manager - its address is `decman.url` in
+`infra\devnet\ui.json` - sign in, press **F12**, click
 **Console**, and paste:
 
 ```js
@@ -211,7 +212,7 @@ whole film depends on it. Re-run `prepare`.
 Two tabs, nothing else:
 
 1. `http://localhost:5173` - the console.
-2. `https://<decman-host>` - the Decentralization Manager, on
+2. The Decentralization Manager (`decman.url` in `infra\devnet\ui.json`), on
    the **Approvals** tab.
 
 Hide the bookmarks bar with **Ctrl+Shift+B**. Press **F11** for full screen.

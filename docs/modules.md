@@ -7,7 +7,6 @@ For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
 Indivisa/
 ├── README.md                      public front door
 ├── TASKS.md                       order of work
-├── .github/workflows/actions.yml  DevOps: upload the DARs to a network's participant (manual, pick the network)
 ├── LICENSE                        Apache-2.0, verbatim
 ├── NOTICE                         our copyright; attribution for the vendored Splice DARs
 ├── multi-package.yaml

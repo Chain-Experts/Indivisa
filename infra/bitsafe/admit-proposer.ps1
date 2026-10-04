@@ -24,7 +24,7 @@
 # configuration casts one confirmation.
 
 param(
-  [string] $DecMan = "https://<decman-host>",
+  [string] $DecMan = "",
   [string] $Party = "indivisa-approvers::1220099c55468768a4f5a449ba7e1388967f9f42b1b03d982d9d375f7a2642bb7b3a",
   [string] $Tag = "gov1",
   [switch] $Confirm
@@ -32,6 +32,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+# The Decentralization Manager URL lives in the network config, which is
+# git-ignored, so no deployment address is committed to this repository.
+# Override with -DecMan for a different instance.
+if (-not $DecMan) {
+  $uiFile = Join-Path $root "infra/devnet/ui.json"
+  if (-not (Test-Path $uiFile)) { throw "no infra/devnet/ui.json; copy ui.example.json and fill in decman.url, or pass -DecMan" }
+  $DecMan = (Get-Content $uiFile -Raw | ConvertFrom-Json).decman.url
+  if (-not $DecMan) { throw "infra/devnet/ui.json has no decman.url; add it, or pass -DecMan" }
+}
+
 $seatFile = Join-Path $root "infra/devnet/demo/seat-$Tag.json"
 if (-not (Test-Path $seatFile)) { throw "no seat '$Tag'; nothing to admit a proposer for" }
 $agent = (Get-Content $seatFile -Raw | ConvertFrom-Json).payingAgent

@@ -32,7 +32,7 @@
 # settle alone - and this script is never needed again.
 
 param(
-  [string] $DecMan = "https://<decman-host>",
+  [string] $DecMan = "",
   [string] $Party = "indivisa-approvers::1220099c55468768a4f5a449ba7e1388967f9f42b1b03d982d9d375f7a2642bb7b3a",
   # The member to confirm AS: the stray party, which has no node.
   [string] $As = "Meridian-Paying-Agent-dev2-20260925111042638899-4f1df03a::1220d41692257b6921b95b7a4f8e76bb30dd0c6da92718b1758a559f842e8a2ba553",
@@ -46,6 +46,18 @@ $ErrorActionPreference = "Stop"
 $token = $env:DECMAN_TOKEN
 if (-not $token) { throw "set DECMAN_TOKEN first: on the DecMan tab, sessionStorage.getItem(`"dec_party_manager_token`")" }
 $headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+# The Decentralization Manager URL lives in the network config, which is
+# git-ignored, so no deployment address is committed to this repository.
+# Override with -DecMan for a different instance.
+if (-not $DecMan) {
+  $uiFile = Join-Path $root "infra/devnet/ui.json"
+  if (-not (Test-Path $uiFile)) { throw "no infra/devnet/ui.json; copy ui.example.json and fill in decman.url, or pass -DecMan" }
+  $DecMan = (Get-Content $uiFile -Raw | ConvertFrom-Json).decman.url
+  if (-not $DecMan) { throw "infra/devnet/ui.json has no decman.url; add it, or pass -DecMan" }
+}
+
 $base = $DecMan.TrimEnd("/")
 $enc = [uri]::EscapeDataString($Party)
 
