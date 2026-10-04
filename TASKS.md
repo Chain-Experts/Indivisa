@@ -996,9 +996,11 @@ Next, by owner:
       the synchronizer runs, DecMan works against it. Asking BitSafe to
       confirm the synchronizer id is still worth doing, because parties
       cannot span two synchronizers.
-- [ ] Commit `indivisa-governance-v0-0.1.0.dar` and
-      `governance-settlement-v0-0.1.0.dar` so CI can upload them, the way
-      `indivisa-0.4.0.dar` is committed.
+- [x] Commit `indivisa-governance-v0-0.1.0.dar` and
+      `governance-settlement-v0-0.1.0.dar` - both are in the repository, in
+      their own package directories rather than `daml/dars/`. The "so CI can
+      upload them" half is moot: the deploy workflow was removed before the
+      repository went public.
 
 Done:
 
@@ -1085,7 +1087,7 @@ Done:
       things that each cost hours — as another. Branch names, commit types and
       draft descriptions follow their `docs/CONTRIBUTING.md`. Send the docs
       one first. **Still to do: open the two PRs.**
-- [ ] **Two pull requests to BitSafe, prepared and not yet opened.**
+- [x] **Two pull requests to BitSafe - both open, #516 and #517 (4-5 Oct).**
       `contrib/bitsafe/`: the `governance-settlement-v0` module, and
       `INTEGRATING.md`, now **nine** findings after the DevNet run added the
       member-with-no-node lockout. Send the documentation one first - it is
