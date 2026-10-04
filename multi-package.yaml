@@ -4,4 +4,5 @@ packages:
   - daml/indivisa-test
   - daml/governance-settlement
   - daml/indivisa-governance
+  - daml/governance-settlement-test
   - daml/indivisa-governance-test
