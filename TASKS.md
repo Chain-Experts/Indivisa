@@ -250,10 +250,57 @@ approved like the settlement. The ledger supports it; the console does not.
 2. **A refused cancellation announced "SETTLEMENT REJECTED"** - wrong strip,
    wrong word, and it is what made the failure confusing. It has its own line
    now.
-3. **DecMan still shows a dead action** (`003a5d6160b5ac07`) that is on no
-   ledger and errors on confirm. Reported to BitSafe with a request to remove
-   it, plus a suggestion that a proposer be able to retire its own pending
-   action. **Until it is gone, tell BitSafe the exact proposal id on the day.**
+3. **A second action on DecMan's board that could not be confirmed**
+   (`003a5d6160b5ac07`). **Cleared 5 October** - see below. Even so, the
+   habit stands: tell BitSafe the exact proposal id on the day, because the
+   page matching the right one is not the same as a human clicking the right
+   card.
+
+### The stuck action, and two things we had wrong about it (5 October)
+
+Reported to BitSafe. Richard traced it, and **both halves of our diagnosis
+were wrong**:
+
+| We said | Actually |
+| --- | --- |
+| The contract it points at is no longer active | It was live on **both** participants; ACS commitments matched for the week |
+| There is no way for a proposer to retract its own action | `GovernableAction_ProposerCancel` exists in their interface, controlled by the proposer, documented for exactly this |
+
+The real cause: its proposer is the **gov2** paying agent, and the live
+`GovernanceRules` authorises only **gov1** plus the two members. So every
+confirmation was refused for an authorisation reason, not a missing-contract
+one. An error we read as "stale" was an error about who was asking.
+
+**Cleared** by exercising `GovernableAction_ProposerCancel` as the gov2
+party, which our ledger user still holds `CanActAs` on - update id
+`1220d9edfd00...`.
+
+### What this means for our withdraw control
+
+**It does not do what BitSafe think it does.** Richard wrote "your withdraw
+control runs the same choice"; it does not. Ours exercises `Archive` on our
+own `SettleRunProposal` template. Same outcome - the contract is consumed -
+but a different route.
+
+`GovernableAction_ProposerCancel` is the better one: it is their published
+interface rather than our template, it is what they expect, and it works for
+any `GovernableAction` rather than only ours. **Not changed before the
+submission**: the control is filmed-adjacent and the change needs testing on
+DevNet, which is not a thing to do on recording day.
+
+**And the documents overstate the gap.** `decentralization.md` presents the
+withdraw as filling a hole in the Decentralization Manager. The hole was
+narrower: the *choice* existed, and what was missing was a *button*. Correct
+that when the control is changed.
+
+**BitSafe's own follow-ups**, from the same reply:
+
+- They will mark cards whose proposer the rules no longer authorise as
+  "proposer not authorised" and remove the Confirm button.
+- *"A member-governed cancel for proposals whose proposer can no longer act
+  is a bigger change, and we would welcome your write-up for it."* - an
+  invitation, in writing, for a third contribution. Worth taking after the
+  9th.
 
 ### Also corrected in the documents
 
@@ -1146,6 +1193,17 @@ Done:
 - [ ] Dividend and redemption as second and third event types, to show the
       engine generalises.
 - [ ] Post the benchmark to the Canton forum.
+- [ ] **Withdraw through `GovernableAction_ProposerCancel`** rather than
+      archiving `SettleRunProposal` directly. Same outcome, but it is
+      BitSafe's published interface rather than our template, it is what they
+      assume we already do, and it would work for any `GovernableAction`.
+      Needs a DevNet test, so it was deliberately not done on recording day.
+      Then correct `decentralization.md`, which still implies the mechanism
+      was missing when only the button was.
+- [ ] **Write up member-governed cancel for BitSafe** - retiring a proposal
+      whose proposer can no longer act. They invited it in writing on
+      5 October: *"a bigger change, and we would welcome your write-up for
+      it."* A third contribution, after the 9th.
 
 ---
 
