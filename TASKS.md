@@ -32,7 +32,16 @@ requests and making the repository public.
    That mattered - teams on the old single BitSafe challenge were moved to
    Contribution Pool automatically, so the Telegram application for Gold
    would not have shown there on its own.
-2. **The two BitSafe pull requests - the only thing left that needs doing.**
+2. **The two BitSafe pull requests - submitted 4 October.** The documentation
+   went first as [#516](https://github.com/DLC-link/decentralization-manager/pull/516);
+   the module followed on `feat/daml/batch-settlement`. The module's test was
+   cut loose from Indivisa's fixtures first - a module claiming no application
+   dependencies cannot be tested by one that has them - into
+   `daml/governance-settlement-test`, which builds and passes **inside
+   BitSafe's own repository** at their SDK 3.4.11. The PR adds six Token
+   Standard V2 DARs they do not vendor, and says so in its second paragraph.
+
+   The original note, kept because the plan was right and the detail was not:
    Prepared in `contrib/bitsafe/` and not opened. BitSafe's instruction
    (30 Sep): focused PRs **against `main`**, one for the documentation and
    one for the module, and **a proposed contribution does not need to be

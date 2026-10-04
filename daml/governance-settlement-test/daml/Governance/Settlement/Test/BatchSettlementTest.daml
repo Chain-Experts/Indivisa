@@ -1,11 +1,13 @@
 -- | The generic module on its own: a Token Standard V2 batch settlement
--- with no Indivisa in it, governed by BitSafe's rules. Three receivers, a
--- proposer who is the batch's executor, a decentralised party named as the
--- other executor. Below threshold nothing executes; the proposer alone
--- cannot settle; at threshold the batch settles.
+-- with no application-specific code in it, governed by BitSafe's rules.
+-- Three receivers, a proposer who is the batch's executor, and a
+-- decentralised party named as the other executor. Below threshold nothing
+-- executes; the proposer alone cannot settle; at threshold the batch settles.
 --
--- Only the cash fixtures (a TestTokenV2 registry, minting, balances) come
--- from Indivisa's test package; the contracts under test do not.
+-- Self-contained: the cash fixtures (a TestTokenV2 registry, minting,
+-- balances) are in Governance.Settlement.TestUtils beside this file, so the
+-- package depends on the governance layer and the Token Standard and on
+-- nothing else.
 module Governance.Settlement.Test.BatchSettlementTest where
 
 import DA.Assert ((===))
@@ -22,14 +24,12 @@ import Governance.ExecutionResult
 import Governance.Rules
 import Governance.Settlement.BatchSettlement
 import Splice.Api.Token.MetadataV1 (emptyMetadata)
-import Splice.Api.Token.HoldingV2 qualified as V2
 import Splice.Api.Token.AllocationV2 qualified as V2
 import Splice.Api.Token.AllocationInstructionV2 qualified as V2
 import Splice.TokenStandard.Utils (basicAccount)
 import Splice.Testing.Tokens.TestTokenV2.Holding qualified as TestTokenV2
 
-import Indivisa.Test.Agent (receiptAllocationSpec, sendAllocationSpec)
-import Indivisa.Test.Fixtures
+import Governance.Settlement.TestUtils
 
 data Batch = Batch
   with
@@ -48,9 +48,9 @@ data Batch = Batch
 -- | A batch of three legs, allocated on both sides, proposed.
 proposeBatch : Script Batch
 proposeBatch = do
-  (cast, cash) <- setup
-  let proposer = cast.payingAgent
-      receivers = [cast.alice, cast.bob, cast.charlie]
+  (_, cash) <- setupCash
+  proposer <- allocateParty "Proposer"
+  receivers <- forA ["Receiver1", "Receiver2", "Receiver3"] allocateParty
   dp <- allocateParty "Approvers"
   members <- forA ["Member1", "Member2", "Member3"] allocateParty
   rulesCid <- submit dp $ createCmd GovernanceRules with
