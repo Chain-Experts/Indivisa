@@ -39,6 +39,8 @@ Indivisa/
 │   │       ├── Scale.daml                 proof 5 harness
 │   │       └── Demo.daml                  seat a realistic holder base, run the day, arm the failure
 │   │
+│   ├── governance-settlement-test/ self-contained tests for the above: no Indivisa, so the package
+│   │                              lifts into BitSafe's repo as it stands
 │   ├── governance-settlement/     package `governance-settlement-v0`: a V2 batch settlement as a
 │   │   └── daml/Governance/Settlement/BatchSettlement.daml     governed action; no Indivisa in it (for BitSafe's repo)
 │   ├── indivisa-governance/       package `indivisa-governance-v0`: SettleRunProposal over Run_Settle
@@ -226,12 +228,14 @@ Two pull requests prepared for
 
 | File | Does |
 |---|---|
-| `README.md` | Both PRs: branch names, where each file goes in their tree, and a draft description for each |
-| `INTEGRATING.md` | The documentation PR itself — six things not in their docs, each found the hard way while pointing DecMan at our own Canton |
-| `module/` | The code PR: `governance-settlement-v0`, its `daml.yaml` and its test, laid out as they would sit in their repo |
+| `README.md` | What was submitted, when, and the decisions behind each PR |
+| `INTEGRATING.md` | The documentation PR itself — seven things not in their docs, each found the hard way while pointing DecMan at our own Canton |
 
-The module is the copy that would be contributed; the one that builds is
-`daml/governance-settlement/`. Keep them in step if either changes.
+**There is no copy of the module here.** An earlier draft kept one under
+`contrib/bitsafe/module/` and it drifted: its test still imported Indivisa's
+fixtures after the submitted one had been cut loose from them. The code that
+was contributed is the code that builds — `daml/governance-settlement/` and
+`daml/governance-settlement-test/` — and nothing is kept in step by hand.
 
 ## Not built, deliberately
 
