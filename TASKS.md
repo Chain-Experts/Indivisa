@@ -150,7 +150,7 @@ the product does.
 
 ## The ways back out, and the dry run that corrected them (2 October)
 
-Avraham asked for a withdraw control, then found the gap it left: **what if the
+The operator asked for a withdraw control, then found the gap it left: **what if the
 agent spots the problem before it has asked anybody?** That stage is not idle -
 `prepare` has already locked the agent cash - so it looked like the more
 important of the two. Building it taught us something better.
@@ -226,7 +226,7 @@ focused engineering**; full production is mostly not an engineering question.
 
 ## Operator sign-in
 
-**Decided 1 October, at Avraham's insistence and against my earlier
+**Decided 1 October, at the operator's insistence and against the earlier
 position.** I had argued a login was out of scope for a hackathon demo. The
 objection that settled it: *an application that settles money without a login
 is not a thing you can show as secure, and a judge is entitled to read that
@@ -886,7 +886,7 @@ write-up). Kill criteria from the brief, with status:
 | Refusal below threshold and success at threshold | 1 Oct | **passed 22 Sep**: 1 of 3 refused ("Enough confirmations..."), 2 of 3 executed; audit trail written |
 | Gold application decision | 4 Oct | checkpoint 30 Sep: our DecMan on DevNet, BitSafe confirmed as the second node. **Their half is done** (call, 23 Sep); ours is the deployment |
 
-**Call with BitSafe, 23 September** (BitSafe, BitSafe).
+**Call with BitSafe, 23 September.**
 Outcome, and it confirms the plan rather than changing it:
 
 - **A DevNet PoC with a 2-of-2 party is enough for the hackathon.** No
@@ -905,8 +905,7 @@ Outcome, and it confirms the plan rather than changing it:
 Next, by owner:
 
 - [x] **Us**: Slack addresses sent and the shared channel is live - we ran the
-      whole governed settlement through it on 29 Sep with BitSafe, BitSafe and
-      BitSafe.
+      whole governed settlement through it on 29 Sep with BitSafe.
 - [x] **Us (DevOps)**: DecMan beside the DevNet validator — **done 25 Sep**
       at `https://<decman-host>`, Noise listener on 9000.
       Verified from outside without credentials: 9000 open (93 ms), 8080
@@ -925,7 +924,7 @@ Next, by owner:
       participant id and public key are well formed, and all three of their
       A records accept TCP on 9000. One field to confirm with them, the
       `name`, which arrived as a truncated UI string.
-- [x] **BitSafe**: shared Slack channel created (BitSafe) and in daily use.
+- [x] **BitSafe**: shared Slack channel created by BitSafe and in daily use.
 - [x] **Protocol version: answered by the deployment itself** (25 Sep). The
       worry was that DecMan pins protocol version 35. It is now running
       against our DevNet participant and reading its identity from it — the

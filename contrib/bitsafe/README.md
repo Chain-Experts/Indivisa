@@ -13,7 +13,7 @@ Their conventions, from `docs/CONTRIBUTING.md`:
 | Types | `feat`, `fix`, `docs`, `style`, `refact`, `perf`, `test`, `chore` |
 | Staging | `git add <file>`, deliberately — not `git add .` |
 
-**How to submit, from BitSafe of BitSafe, 30 September:** open
+**How to submit, from BitSafe, 30 September:** open
 focused pull requests **against `main`**, one for the documentation and one
 for the module. Whether we submit the documentation, the module or both is
 our choice. They will not pre-approve the module or commit the repository to
@@ -78,7 +78,7 @@ The namespace already matches their layout (`daml/<package>/daml/Governance/<Are
 That last point is why this is a question and not a pull request. Adding
 Token Standard V2 to their dependencies is a decision about where their
 product goes, not a code review, and it should be theirs to make before we
-put it in a diff. BitSafe said "feel free to add as PR" before we knew it, so
+put it in a diff. BitSafe invited a PR before we knew it, so
 ask again with the specifics.
 
 **Two things to say in the PR description, because a reviewer will ask:**

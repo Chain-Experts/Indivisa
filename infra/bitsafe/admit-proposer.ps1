@@ -11,7 +11,7 @@
 # proposer. Admitting the agent is `SelfAction_AddAdditionalProposer`, which
 # exists in BitSafe's Daml (`Governance/Rules.daml`) and in their Rust action
 # catalog, and has no path in their web UI at v1.8.0. Confirmed by reading
-# their frontend: zero references. BitSafe (BitSafe, 29 Sep) say they will
+# their frontend: zero references. BitSafe (29 Sep) say they will
 # add one; until then it is this endpoint.
 #
 # The token is the one the UI holds. In the browser, on the DecMan tab:
