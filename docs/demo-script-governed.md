@@ -7,6 +7,18 @@ Target length **about two minutes**. Everything is driven from the page.
 
 ---
 
+## Rehearsed on DevNet, 2 October
+
+Everything in Part D except BitSafe own confirmation has been run end to end
+against the real network: `fund`, `prepare`, the page filing the request, our
+own confirmation moving it to 1 of 2, the green button correctly **not**
+appearing, and the request withdrawn again cleanly. The DecMan token, the
+vote, and operator sign-in all worked.
+
+Three things the rehearsal changed, and they are in the script below: tell
+BitSafe which action to confirm (A3b), sign-in is now a real shot rather than
+a maybe (Part F), and the withdraw link is on screen from shot 2 (Part F2).
+
 ## What changed on 1 October, and why this script was rewritten
 
 The previous version of this film had the paying agent press its own button
@@ -85,6 +97,22 @@ which is the whole point: it avoids a new seat.
 ### A3. Nothing else to run
 
 There is no `propose` and no `disclose`. The page does both.
+
+### A3b. Tell BitSafe which action to confirm
+
+**Do this before they start, every time.** Run:
+
+```powershell
+pwsh infraitsafegovern-devnet.ps1 status -Tag gov1
+```
+
+and send them the `action cid` and `description` it prints.
+
+This is not belt-and-braces. On 2 October their Approvals tab carried a
+**second, dead action** (`003a5d6160b5ac07`) that is on no ledger and errors
+when confirmed - a leftover we have asked BitSafe to remove. If they confirm
+that one instead, the page sits at 0 of 2 and nothing on screen explains why,
+while they believe they have acted. Naming the action removes the guess.
 
 ### A4. Close any other console first
 
@@ -165,7 +193,9 @@ Leave this window alone - it is serving the page.
 
 ### C3. Check the page before you record
 
-Open `http://localhost:5173` in Chrome. You should see:
+Open `http://localhost:5173` in Chrome. **On DevNet it asks you to sign in
+first** - that is the gate working, and it is shot 0 (Part F). Sign in, then
+check the console shows:
 
 - HOLDERS **5**, TOTAL DUE **8,421.88 USD**, ALLOCATIONS **6 / 6**,
   RUN **PREPARED**.
@@ -206,6 +236,10 @@ Record ten seconds, check it plays and the text is sharp, delete it.
 ---
 
 ## Part D. The eight shots
+
+**Film shot 0 first - it is described in Part F**, because it only exists now
+that sign-in works and it would have broken the numbering to insert it here.
+Everything below assumes you are signed in and looking at the console.
 
 You say nothing. The cards carry the words.
 
@@ -309,6 +343,7 @@ Timeline 1920x1080, 30 fps.
 
 | Order | Clip | Length |
 |---|---|---|
+| 0 | Shot 0 - signing in | 8 s |
 | 1 | Card 1 | 3 s |
 | 2 | Card 2 | 3 s |
 | 3 | Shot 1 | 8 s |
@@ -325,7 +360,7 @@ Timeline 1920x1080, 30 fps.
 | 14 | Shot 8 | 8 s |
 | 15 | Card 7 | 4 s |
 
-That is **about 1 minute 38 seconds**. Trim the holds rather than the cards
+That is **about 1 minute 46 seconds** with shot 0, or 1 minute 38 without it. Trim the holds rather than the cards
 if it runs long: the cards are the only words in the film.
 
 - Cross dissolve, 12 frames, between every clip.
@@ -340,28 +375,49 @@ worth more than another second of success.
 
 ---
 
-## Part F. If operator sign-in is working by then
+## Part F. Shot 0 - signing in (about 8 seconds)
 
-If DevOps has created the public Keycloak client and
-`infra\devnet\ui.json` carries an `operator` block, the page asks you to sign
-in before it will read or write anything.
+**Operator sign-in works on DevNet.** Verified 2 October: signed in as a real
+Keycloak account, the proxy accepting the token, and a reload keeping the
+session. It is no longer conditional.
 
-**Optional shot 0**, about 8 seconds, at the very front:
+**Film it, at the very front, before card 1.** A judge watching an application
+that moves money is entitled to ask who is allowed to press the button, and
+eight seconds answers it better than any sentence on a card.
 
-- The sign-in screen: *"This console settles money. Sign in before it will
-  read or write anything."*
-- Click **Sign in**, let Keycloak take you through, land on the console.
+- Start on the sign-in screen: *"This console settles money. Sign in before it
+  will read or write anything."*
+- Click **Sign in**. Keycloak takes over.
+- Type the credentials **off camera if you prefer** - pause the recording, sign
+  in, resume on the console. Nothing is lost: the shot is the gate and the
+  arrival, not the typing.
+- Land on the console, with the operator name visible at the top right.
 
-It answers a question a judge is entitled to ask about an application that
-moves money, and it costs eight seconds. Add it if it works on the day;
-leave it out rather than fight it.
+**Two things not to claim.** No card, and no caption beyond what the screen
+says. There are no roles yet and no maker-checker, so anything implying a
+permission model would be overclaiming; that gap is written down in
+`production-readiness.md` and on deck slide 13. And the Keycloak page title
+currently reads **"Chian Experts Canton Devnet"** - a typo in the realm
+display name, reported to DevOps. If it has not been fixed by the day, either
+accept it or keep the Keycloak page off camera by pausing as above.
 
-**If you include it,** say nothing more about it on a card. The screen says
-enough, and a card claiming more than sign-in exists would be overclaiming:
-there are no roles and no maker-checker yet. That gap is written down in
-`docs/production-readiness.md`.
+## Part F2. The withdraw link, which is on screen whether you use it or not
 
----
+From shot 2 onwards the amber strip carries **"Withdraw this request"**. It is
+a real control: the paying agent signs the request, so it can take it back,
+and doing so clears the action from the approvers' board.
+
+**The recommendation is to leave it visible and not make a beat of it.** This
+film makes one argument - that a coupon can need an approval nobody at our
+company can give - and every second spent elsewhere dilutes it. The control is
+already on deck slide 11 and written up in `decentralization.md`, which is
+where a judge who wants it will look.
+
+**If you do want it in the film**, the place is shot 4, where the page is
+otherwise static at 1 of 2: hover the link for two seconds without clicking,
+and let it speak for itself. Do not click it - a withdrawal mid-film would
+need a re-ask, and the run would have to be rebuilt on camera.
+
 
 ## Part G. What a caption may and may not claim
 
