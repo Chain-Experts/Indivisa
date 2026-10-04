@@ -32,16 +32,42 @@ requests and making the repository public.
    That mattered - teams on the old single BitSafe challenge were moved to
    Contribution Pool automatically, so the Telegram application for Gold
    would not have shown there on its own.
-2. **The two BitSafe pull requests - submitted 4 October.** The documentation
-   went first as [#516](https://github.com/DLC-link/decentralization-manager/pull/516);
-   the module followed on `feat/daml/batch-settlement`. The module's test was
-   cut loose from Indivisa's fixtures first - a module claiming no application
-   dependencies cannot be tested by one that has them - into
-   `daml/governance-settlement-test`, which builds and passes **inside
-   BitSafe's own repository** at their SDK 3.4.11. The PR adds six Token
-   Standard V2 DARs they do not vendor, and says so in its second paragraph.
+2. ~~The two BitSafe pull requests~~ - **both open, 4-5 October.**
 
-   The original note, kept because the plan was right and the detail was not:
+   | PR | What | Size |
+   | --- | --- | --- |
+   | [#516](https://github.com/DLC-link/decentralization-manager/pull/516) | `docs(api)`: `docs/INTEGRATING.md`, the seven things not in their documentation | 1 file, +198 / -0 |
+   | [#517](https://github.com/DLC-link/decentralization-manager/pull/517) | `feat(daml)`: `governance-settlement-v0` and its self-contained tests | 13 files, +623 / -0 |
+
+   Both are **purely additive** - nothing of theirs is touched, which is the
+   easiest shape to review and the easiest to decline without awkwardness.
+
+   The documentation went first, deliberately: smaller, useful whatever they
+   decide about the module, and it establishes that we used the thing before
+   proposing additions to it.
+
+   **The module's test had to be cut loose from Indivisa first.** It used our
+   cash fixtures, and a module whose claim is that it has no application
+   dependencies cannot be tested by a package that has them. The fixtures it
+   needed went into `Governance/Settlement/TestUtils.daml` beside the tests,
+   following the shape of their own `governance-token-custody-test`. The
+   result is `daml/governance-settlement-test`, which builds and passes
+   **inside BitSafe's own repository** - their `governance-action-v1` and
+   `governance-core` compiled from source first, at their SDK 3.4.11, LF 2.2,
+   no warnings. Verified 4 October, so the PR claims it rather than hoping.
+
+   **#517 adds six Token Standard V2 DARs they do not vendor** (~3.9 MB), and
+   says so in its second paragraph with "no" named as a perfectly good answer.
+   That dependency is the real question in the PR and should not be something
+   a reviewer discovers.
+
+   Two decisions were left to them rather than assumed: the package name
+   (`-v0` is ours, `-v1` is their convention, and the name is the Smart
+   Contract Upgrade identity rather than a label) and whether `TestUtils.daml`
+   belongs beside the tests or somewhere shared.
+
+   The original note, kept because the plan was right and two details were
+   not - the test package layout, and how many DARs it would take:
    Prepared in `contrib/bitsafe/` and not opened. BitSafe's instruction
    (30 Sep): focused PRs **against `main`**, one for the documentation and
    one for the module, and **a proposed contribution does not need to be
@@ -54,12 +80,35 @@ requests and making the repository public.
    See "The terminal gap" below.
 4. **Operator sign-in** - built 1 October, **working on DevNet 2 October**.
    See "Operator sign-in" below.
-5. **Re-shoot the governed video.** The script is rewritten for the
-   page-driven flow and all seven cards are exported and verified; what is
-   left is a dry run on our side and a time agreed with BitSafe, who hold one
-   of the two approvals.
-6. **The repo goes public - last.** Branch protection requiring a pull
-   request before anyone can push.
+5. **Re-shoot the governed video - the only thing left, and not ours to
+   schedule.** The script is rewritten for the page-driven flow, all seven
+   cards are exported and verified, and the sequence was **rehearsed end to
+   end on DevNet on 2 October**: fund, prepare, the page filing the request,
+   our own confirmation moving it to 1 of 2, the green button correctly
+   absent, and the request withdrawn cleanly. Everything except BitSafe's own
+   confirmation has now run against the real network. What is missing is a
+   time in their calendar.
+6. ~~The repo goes public~~ - **public on 4 October**, with a ruleset on
+   `main` requiring a pull request and blocking force pushes.
+
+   Before publishing: partner names replaced by the organisation throughout,
+   the three DevNet hostnames moved into git-ignored config, and the deploy
+   workflow removed (it read cluster credentials on a self-hosted runner,
+   which is not a thing to carry into a public repository - and it had never
+   worked).
+
+   **Then the part that is easy to get wrong.** Scrubbing the files does
+   nothing for history, and force-pushing a scrubbed history does nothing for
+   GitHub's pull-request refs: PR #1 kept the pre-scrub commits readable at
+   their old SHAs even after `main` was rewritten. The fix was to push the
+   scrubbed history to a new repository, which has no PR refs, then rename it
+   into place - so the URL on deck slide 15 never changed. The old repository
+   survives as `Indivisa-Old`, **private, and it must stay private**: PR #1
+   there still serves the original commits.
+
+   Verified from an anonymous clone afterwards: 63 commits, 146 files, no
+   hostnames and no partner names in files or history, no forks taken during
+   the window when either was briefly public.
 
 ## The terminal gap, and the plan to close it
 
