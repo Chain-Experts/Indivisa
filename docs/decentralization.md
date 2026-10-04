@@ -94,6 +94,15 @@ The paying agent is the sole signatory of the proposal, so it archives it, and
 the page offers that as an action rather than leaving it to a developer with a
 terminal.
 
+**To be precise about what was missing, because it is narrower than it looks.**
+BitSafe's `GovernableAction` interface already carries
+`GovernableAction_ProposerCancel`, controlled by the proposer and documented
+for exactly this case. The mechanism was there; what was absent was a way to
+reach it without a terminal. Our control currently archives the proposal
+template directly rather than exercising that interface choice - the same
+outcome by a different route, and the interface choice is the better one. We
+learned this from BitSafe on 5 October and it is a correction, not a feature.
+
 Measured: the proposal left the ledger, and **the Decentralization Manager
 dropped the action from its Approvals tab by itself**. An earlier draft of
 this document said a confirming approver would be left looking at an action

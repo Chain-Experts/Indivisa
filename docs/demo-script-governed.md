@@ -103,16 +103,21 @@ There is no `propose` and no `disclose`. The page does both.
 **Do this before they start, every time.** Run:
 
 ```powershell
-pwsh infraitsafegovern-devnet.ps1 status -Tag gov1
+pwsh infra\bitsafe\govern-devnet.ps1 status -Tag gov1
 ```
 
 and send them the `action cid` and `description` it prints.
 
 This is not belt-and-braces. On 2 October their Approvals tab carried a
-**second, dead action** (`003a5d6160b5ac07`) that is on no ledger and errors
-when confirmed - a leftover we have asked BitSafe to remove. If they confirm
-that one instead, the page sits at 0 of 2 and nothing on screen explains why,
-while they believe they have acted. Naming the action removes the guess.
+**second action that could not be confirmed** (`003a5d6160b5ac07`): its
+proposer was an old `gov2` paying agent the live rules do not authorise, so
+every confirmation was refused. **Cleared on 5 October** by exercising
+`GovernableAction_ProposerCancel` as that party, so the board should now show
+exactly one card.
+
+The habit stands anyway. If an approver confirms the wrong card the page sits
+at 0 of 2, nothing on screen explains why, and they believe they have acted.
+Naming the action costs one line and removes the guess.
 
 ### A4. Close any other console first
 
@@ -470,7 +475,7 @@ outstanding request the approvers do not have, the ordering has regressed.
 **Before you call BitSafe, note the action id.** Run:
 
 ```powershell
-pwsh infraitsafegovern-devnet.ps1 status -Tag gov1
+pwsh infra\bitsafe\govern-devnet.ps1 status -Tag gov1
 ```
 
 and send them the `action cid` and `description` it prints, so there is no
