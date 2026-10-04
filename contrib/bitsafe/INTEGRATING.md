@@ -5,11 +5,11 @@
 placeholder action, `disclosed_contracts`, granting propose-only rights. It
 assumes Decentralization Manager is already talking to your participant.
 
-This page is about getting to that point, and about two things that bite
-afterwards. Six items. Four are configuration on the Canton side, where the
+This page is about getting to that point, and about the things that bite
+afterwards. Seven items. Four are configuration on the Canton side, where the
 errors name the vote rather than the config and so read as governance
-faults. Two are operational, and both arrive long after the step that caused
-them.
+faults. Three are operational, and each arrives long after the step that
+caused it.
 
 Everything here was found by doing it: first against our own
 five-participant Canton, then on DevNet against a party shared with the
