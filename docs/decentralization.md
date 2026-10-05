@@ -294,7 +294,7 @@ allocate, as the sandbox's own seed script does.
   brings up three Decentralization Manager nodes beside the ledger, and
   `govern confirm` / `govern execute` hold the vote. One confirmation is
   refused by the ledger; two settle. No account, no toolchain, no sandbox
-  of ours to trust — see `judge/README.md`.
+  of ours to trust. See `judge/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).**
   A coupon settled through the decentralised party at 2 of 2: our
   confirmation and theirs, on their own node.

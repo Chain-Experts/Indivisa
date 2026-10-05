@@ -11,7 +11,7 @@ Their conventions, from `docs/CONTRIBUTING.md`:
 | Commit | `<type>(<scope>): <subject>`, past tense |
 | Branch | `<type>/<scope>/<subject>` |
 | Types | `feat`, `fix`, `docs`, `style`, `refact`, `perf`, `test`, `chore` |
-| Staging | `git add <file>`, deliberately — not `git add .` |
+| Staging | `git add <file>`, deliberately, not `git add .` |
 
 **How to submit, from BitSafe, 30 September:** open
 focused pull requests **against `main`**, one for the documentation and one
