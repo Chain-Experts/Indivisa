@@ -4,8 +4,9 @@
 
 ## Where we stand
 
-Every deliverable exists and is recorded. What is left is two pull
-requests and making the repository public.
+**Every deliverable is finished.** Repository public and clean, both
+contributions open, the video cut, the deck in sync. Nothing is outstanding
+for the 9 October submission.
 
 **Done and verifiable by someone else:**
 
@@ -16,7 +17,7 @@ requests and making the repository public.
 | Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
 | Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
 | **Governed, independently** | **DevNet, twice: 29 and 30 Sep, 2 of 2 - ours and BitSafe's, on their node.** The second is the one filmed, update id `1220eb43...c6ac`. Chain-Experts could not have produced either transaction alone |
-| The video | `Indivisa-HackCanton-S3.mp4`, **2 m 27 s**, 1920x1080, and it now carries the governed settlement filmed on DevNet. Every figure checked against the ledger afterwards |
+| The video | **`Indivisa-S3.mp4`, 2 m 45 s**, 1920x1080, cut 5 October. One film on DevNet throughout: sign-in, a coupon refused because one holder was not ready, each holder seeing only its own line, the fix, the settlement, then a second coupon that needed two companies to agree. Thirteen cards, no narration, no music. Every figure checked against the ledger. **Supersedes `Indivisa-HackCanton-S3.mp4`** (2 m 27 s, 30 Sep), kept only as history |
 | The deck | 15 slides; `deck.html`, `.pdf` and `.pptx` in sync; three unsourced claims removed 29 Sep |
 | The cash-asset question | Asked in the channel and answered: no required asset, and our reason endorsed |
 
@@ -80,14 +81,41 @@ requests and making the repository public.
    See "The terminal gap" below.
 4. **Operator sign-in** - built 1 October, **working on DevNet 2 October**.
    See "Operator sign-in" below.
-5. **Re-shoot the governed video - the only thing left, and not ours to
-   schedule.** The script is rewritten for the page-driven flow, all seven
-   cards are exported and verified, and the sequence was **rehearsed end to
-   end on DevNet on 2 October**: fund, prepare, the page filing the request,
-   our own confirmation moving it to 1 of 2, the green button correctly
-   absent, and the request withdrawn cleanly. Everything except BitSafe's own
-   confirmation has now run against the real network. What is missing is a
-   time in their calendar.
+5. ~~Re-shoot the governed video~~ - **done 5 October, and it became one
+   film rather than two.**
+
+   `Indivisa-S3.mp4`, **2 m 45 s**, replaces the 30 September cut entirely.
+   Everything in it is DevNet, one coupon size throughout, current UI.
+
+   | Shows | Verified |
+   | --- | --- |
+   | An operator signing in | Keycloak, OIDC with PKCE |
+   | A coupon refused because one holder was not ready | `SettlementRejected` on the ledger, 5 legs requested, **0 executed** |
+   | Each holder's own line, and zeros for everyone else | read as that party alone |
+   | The fix, then the settlement | update id `12208eca...`, 5 of 5, 8,421.88 |
+   | A second coupon needing two companies to agree | 1 of 2, no button; 2 of 2, settled |
+   | That settlement | update id `122046e2...`, 5 of 5, 8,421.88 |
+
+   **Why one film and not two.** The governed cut (1 m 44 s) was finished
+   first and was good, but it argued only one point. It showed nothing of
+   atomicity or privacy - the two claims the project rests on, and the answer
+   to the organisers' own test about a transparent chain. Submitting it alone
+   would have meant a video that never demonstrated what Indivisa is for.
+
+   **What that cost:** one more shoot, alone, about forty minutes - an
+   ungoverned five-holder run on DevNet with one holder withheld. Deliberately
+   ungoverned: with no approver the button is a real settlement attempt and
+   the ledger's refusal is the atomicity guarantee being shown, rather than an
+   operator filing a request that could never succeed.
+
+   **Two things learned in the cutting room.** The privacy shot belongs
+   **after** the settlement, not before - "each holder sees only its own line"
+   means little until money has moved. And the old privacy card said *"not
+   filtered: never delivered"*, which is true of the five-participant local
+   run and **false on DevNet**, where every participant name points at one
+   validator. A new thirteen-card set was built from scratch rather than
+   reusing cards across films, precisely so a wrong one could not be grabbed.
+
 6. ~~The repo goes public~~ - **public on 4 October**, with a ruleset on
    `main` requiring a pull request and blocking force pushes.
 
@@ -205,6 +233,52 @@ changes what a returning browser loads.
 change to every path, including the ones already working. The page path must
 be re-run after anything touching auth - a script passing is not evidence that
 the product does.
+
+## Two fixes found while filming (5 October)
+
+### The approvers are a release control, not a data check
+
+Avraham's question, and it is the right one: *if a holder's details are
+missing, why would we ask the approvers at all? They should be approving a
+payment, not checking our data.*
+
+He is right. The approvers decide **whether the payment goes out**. A request
+filed with an allocation missing spends their attention on something that
+would fail at execute - after they had agreed to it.
+
+The page used to allow it. It showed the problem (`ALLOCATIONS 5 / 6` and
+"Waiting for <holder>") but did not stop the ask. Now, on a **governed** run,
+the button is disabled while allocations are incomplete, and says why:
+
+> "This run is not ready to ask about: one holder's allocation is not on the
+> ledger yet, so the settlement would fail after the approvers had agreed to
+> it. Their job is to decide whether the payment goes out, not to check the
+> data."
+
+**Deliberately not applied to an ungoverned run.** There the button is a real
+settlement attempt, the ledger refuses it, and that refusal is the atomicity
+guarantee being demonstrated - not an operator mistake. It is also the shot
+the film needs.
+
+### Seating a new tag on DevNet failed on an expired token
+
+`demo.ps1 seat -Tag atom1` died with a bare `UNAUTHENTICATED` from the gRPC
+Ledger API.
+
+**Cause.** `participants-with-parties.ps1` mints a token, then resolves the
+party map, then writes the file. For an existing tag the seat file narrows the
+lookup and it takes seconds. **For a brand-new tag there is no seat file**, so
+it pages the whole synchronizer's party list - thousands of parties shared
+with every other team - and that outlives the 300-second token. Measured: the
+map was written at 12:26 carrying a token that had expired at 12:26:26, and
+the runner was dead by 12:26:37.
+
+**Fix.** Mint again immediately before writing the file, so the runner always
+opens with a full lifetime. One extra request.
+
+**Why it had never bitten before:** every run since 29 September used `gov1`
+or `gov2`, which already had seat files. It only appears on the first seat of
+a new tag - which is exactly when someone is least expecting it.
 
 ## The ways back out, and the dry run that corrected them (2 October)
 

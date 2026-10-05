@@ -82,7 +82,18 @@ export function RunBar({
   // until the approvers have voted.
   const governed = !!state?.run?.approver;
   const asked = !!state?.proposal || pressed.kind === "proposed";
-  const canPress = !!state?.run && !settled && pressed.kind !== "busy" && !(governed && asked);
+  // A run whose allocations are not all on the ledger cannot settle, and on a
+  // GOVERNED run the agent should not ask anyone to approve one that cannot.
+  // The approvers are a release control - "should this payment go out" - not a
+  // data check. Filing a request with a holder missing spends their attention
+  // on something that would fail at execute, after they had approved it.
+  //
+  // Deliberately NOT applied to an ungoverned run. There the button is a real
+  // settlement attempt, the ledger refuses it, and that refusal is the
+  // atomicity guarantee being demonstrated rather than an operator mistake.
+  const incomplete = haveAllocations < expectedAllocations;
+  const canPress =
+    !!state?.run && !settled && pressed.kind !== "busy" && !(governed && asked) && !(governed && incomplete);
   // The send allocation is the one that locks the agent cash; receiving locks
   // nothing. Its presence is what makes a prepared run cancellable, and its
   // absence is what a cancelled run looks like.
@@ -190,7 +201,9 @@ export function RunBar({
                 : governed
                   ? asked
                     ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
-                    : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead. The cash these allocations lock is committed to the approvers too, so releasing it is their decision as much as the agent's."
+                    : incomplete
+                      ? "This run is not ready to ask about: one holder's allocation is not on the ledger yet, so the settlement would fail after the approvers had agreed to it. Their job is to decide whether the payment goes out, not to check the data."
+                      : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead. The cash these allocations lock is committed to the approvers too, so releasing it is their decision as much as the agent's."
                   : "All or nothing. If any leg cannot settle, nothing moves."}
           {!settled && !cancelled && missing.length > 0 ? (
             <span className="warn">

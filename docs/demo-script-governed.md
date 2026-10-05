@@ -254,13 +254,23 @@ then costs one shot, not the session.
 
 ### Shot 1 - the run, waiting (about 10 seconds)
 
-Console tab, at the top of the page.
+Console tab, at the top of the page. **One still frame, held about eight
+seconds.** No scrolling and no clicking: at five holders the whole run is on
+screen at once, and the only thing a moving cursor would do is pull the eye
+away from the figures. (The 250-holder film scrolls because it has to; this
+one does not.)
 
-- Hold still for three seconds on the figures.
-- Scroll slowly down the holder cards and back up.
+**What the viewer must see, and all three matter:**
 
-**What the viewer must see:** five holders, 8,421.88 USD, and an approver
-named under the button.
+- the figures - 5 holders, 8,421.88 USD, 6 / 6 allocations, PREPARED
+- all five holder cards READY
+- **the approver named under the button** - the setup for the whole film
+
+Check that last line is legible at 1920x1080 before you record it. It is the
+smallest text on screen and the most important.
+
+If you want emphasis, put a slow push-in on the figures in the edit. It looks
+deliberate where a wandering mouse pointer looks like a screen share.
 
 ### Shot 2 - the agent asks (about 12 seconds)
 

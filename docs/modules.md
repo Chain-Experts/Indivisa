@@ -98,7 +98,8 @@ Indivisa/
 ├── infra/
 │   ├── README.md                  what any network needs; LocalNet; DevNet handover
 │   ├── demo.ps1                   seat / prepare / attempt, the demo from a shell (-Network)
-│   ├── participants-with-parties.ps1   adds every existing party to the runner's map
+│   ├── participants-with-parties.ps1   adds every existing party to the runner's map,
+│   │                              minting the token twice: once to walk the map, once before writing it
 │   ├── settle.ps1                 prepare N legs by script, settle over the JSON API from Node, time it
 │   ├── publish-ui.ps1             build the console and gather the read-only deployment into one folder
 │   ├── pitch/build-pitch.mjs      regenerates docs/Indivisa-pitch.pptx from the content in docs/pitch.md
@@ -192,7 +193,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `state/useVote.ts` | Polls DecMan every three seconds while a request is outstanding. On repeated failure it sets the error **and clears the stale count** - a number nobody can refresh is worse than no number. |
 | `state/useHolders.ts` | The grid's poll — one request set per participant, not per holder — and `useNodeProbe`, the deliberately separate per-party read that proves the claim. |
 | `App.tsx` | The shell: a three-stage boot (learn whether sign-in is required, complete it, then read the ledger), the sign-in gate, header, working header, outcome strip, four tabs, and the withdraw control. Derives each holder leg state from the allocations actually on the ledger. |
-| `panes/RunBar.tsx` | Instrument, holders, per unit, total due, an allocations meter, the run state, the button, and - on an ungoverned run - the cancel control. A run with no send allocation but holders authorisations still in place is a cancelled run, and says so. A refused cancellation gets its own line rather than the settlement strip: a cancellation that was declined is not a settlement that was rejected. |
+| `panes/RunBar.tsx` | Instrument, holders, per unit, total due, an allocations meter, the run state, the button, and - on an ungoverned run - the cancel control. On a governed run the ask button is disabled while allocations are incomplete: approvers decide whether a payment goes out, not whether the data is ready. A run with no send allocation but holders authorisations still in place is a cancelled run, and says so. A refused cancellation gets its own line rather than the settlement strip: a cancellation that was declined is not a settlement that was rejected. |
 | `panes/Holders.tsx` | A card per holder with search, filter and sort, and the drawer that asks one node as one party. |
 | `panes/Privacy.tsx` | The same question once per participant, refreshed continuously. |
 | `panes/Activity.tsx` | The settlement and every refusal, read back as contracts. |

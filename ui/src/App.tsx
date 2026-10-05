@@ -373,6 +373,19 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
 }
 
 /** How fresh the figures are, and a way to ask again now. */
+/**
+ * How long since the last successful read, in units a person reads at a
+ * glance. Seconds up to a minute, then m:ss - "400s ago" is a number you have
+ * to divide, and this sits in the header of a page being filmed.
+ */
+function elapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 60) return `${m}:${String(s).padStart(2, "0")}`;
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 function Live({ lastAt, onRefresh }: { lastAt: number | null; onRefresh: () => void }) {
   const [, tick] = useState(0);
   useEffect(() => {
@@ -384,7 +397,7 @@ function Live({ lastAt, onRefresh }: { lastAt: number | null; onRefresh: () => v
   return (
     <button className="live" onClick={onRefresh} title="Read the ledger again now">
       <span className={`live-dot${stale ? " stale" : ""}`} />
-      {ago == null ? "connecting" : ago <= 2 ? "live" : `${ago}s ago`}
+      {ago == null ? "connecting" : ago <= 2 ? "live" : `${elapsed(ago)} ago`}
     </button>
   );
 }

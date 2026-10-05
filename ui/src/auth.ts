@@ -161,7 +161,26 @@ export function resumeSession(auth: OperatorAuth): Operator | null {
  * and state are stripped from the address bar either way: a leftover
  * authorization code in history is a credential lying in the open.
  */
-export async function completeSignIn(auth: OperatorAuth): Promise<boolean> {
+let inFlight: Promise<boolean> | null = null;
+
+/**
+ * Finish a sign-in exactly once per page load.
+ *
+ * React StrictMode runs effects twice in development, and this one is not
+ * naturally idempotent: it consumes the PKCE verifier and the state from
+ * session storage, so a second invocation finds them gone and reports a
+ * mismatch that never happened - on screen, during a sign-in that actually
+ * succeeded. The same would be true of any future double render.
+ *
+ * One promise per page load settles it: the second caller waits on the first
+ * rather than racing it. Found while filming, 5 October.
+ */
+export function completeSignIn(auth: OperatorAuth): Promise<boolean> {
+  if (!inFlight) inFlight = completeSignInOnce(auth);
+  return inFlight;
+}
+
+async function completeSignInOnce(auth: OperatorAuth): Promise<boolean> {
   const s = store();
   const params = new URLSearchParams(window.location.search);
   const code = params.get("code");

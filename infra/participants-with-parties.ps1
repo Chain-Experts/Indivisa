@@ -119,6 +119,20 @@ foreach ($party in $candidates.Keys) {
   $map[$party] = $pick
 }
 
+# Mint AGAIN, now that the slow part is done.
+#
+# The first mint (above) is what this script uses to walk the party list. On a
+# shared network with no seat to narrow it, that walk pages the whole
+# synchronizer and can take minutes - longer than the 300 seconds a DevNet
+# token lives. The runner would then start with a token that expired while the
+# map was being built, and fail on its first call with a bare UNAUTHENTICATED.
+#
+# Measured 5 October, seating a new tag: map written at 12:26 carrying a token
+# that had expired at 12:26:26, runner dead at 12:26:37. Re-minting here costs
+# one request and guarantees the runner opens with a full lifetime.
+$restamp = & (Join-Path $PSScriptRoot "token.ps1") -Network $Network
+if ($restamp) { $fresh = $restamp }
+
 # Stamp the fresh token onto every participant, and onto the default, so
 # the runner never reads a stale access_token out of participants.json.
 if ($fresh) {
