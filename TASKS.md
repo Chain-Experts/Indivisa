@@ -4,9 +4,13 @@
 
 ## Where we stand
 
-**Every deliverable is finished.** Repository public and clean, both
-contributions open, the video cut, the deck in sync. Nothing is outstanding
-for the 9 October submission.
+**Submitted on the platform, and approved by BitSafe on 5 October** - four
+days before the deadline. Repository public and scrubbed, three contributions
+open in their repo, the film cut, the deck in sync.
+
+Nothing is outstanding. What remains is the Grand Final on 21 October, if the
+project is one of the ten announced on the 19th: a five-minute pitch and two
+minutes of questions.
 
 **Done and verifiable by someone else:**
 
