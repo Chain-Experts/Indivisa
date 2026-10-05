@@ -42,7 +42,7 @@ minutes of questions.
    | | What | Size |
    | --- | --- | --- |
    | [#516](https://github.com/DLC-link/decentralization-manager/pull/516) | `docs(api)`: `docs/INTEGRATING.md`, the seven things not in their documentation | 1 file, +198 / -0 |
-   | [#517](https://github.com/DLC-link/decentralization-manager/pull/517) | `feat(daml)`: `governance-settlement-v0` and its self-contained tests | 13 files, +623 / -0 |
+   | [#517](https://github.com/DLC-link/decentralization-manager/pull/517) | `feat(daml)`: `governance-settlement-v1` and its self-contained tests | 13 files, +623 / -0, revised after review |
    | [#518](https://github.com/DLC-link/decentralization-manager/issues/518) | Design issue: retiring a proposal whose proposer can no longer act | raised at their invitation |
 
    **#518 is an issue, not a pull request, and that was a decision.** It asks
@@ -85,6 +85,45 @@ minutes of questions.
    (`-v0` is ours, `-v1` is their convention, and the name is the Smart
    Contract Upgrade identity rather than a label) and whether `TestUtils.daml`
    belongs beside the tests or somewhere shared.
+
+   **Both were reviewed on 5 October and both revised the same day.**
+   `schronck` requested changes on each: six items on #516, six on #517 plus
+   six inline comments. Leaving the name to them was the right call, since the
+   first thing they asked for was `-v1`.
+
+   Three of the #517 findings were worth more than the fix.
+
+   - **Our negative test passed on anything.** It called
+     `SettlementFactory_SettleBatch` directly, so the proposal was never
+     involved, and it only `debug`'d the error rather than asserting it. A
+     missing disclosure would have passed it too. It was testing TestTokenV2,
+     not our module. Its replacement exercises `GovernableAction_Execute` on
+     the proposal as the proposer and expects the refusal, which is the one
+     property this module adds. **A negative test that does not assert the
+     reason is not a test.**
+   - **`ensure` checked the wrong direction.** It required the governance
+     party and the proposer to be among the executors, and said nothing about
+     any others. `executeImpl` holds exactly those two authorities, so a
+     settlement with a third executor passed creation, passed the vote, and
+     failed at execution. Their suggested clause rejects it at creation. They
+     reproduced it before reporting it.
+   - **Their one optional suggestion rested on a wrong fact, and we said so.**
+     They proposed binding `factoryCid` to the admin "the legs carry". In V2
+     as released, `TransferLeg.instrumentId` is a `Text`; the admin is on the
+     allocation, not the leg. And the standard's own
+     `fetchAndValidateAllocations` already checks every allocation's admin
+     against the factory's. We built it, found both facts, reverted it, and
+     put the residual gap in the README instead: the refusal happens at
+     execution rather than at filing.
+
+   **The rename stops at their repository.** The contributed package is
+   `governance-settlement-v1`; ours stays `governance-settlement-v0`, because
+   that is the name vetted on DevNet, the DAR the judges' image uploads
+   (`judge/canton.Dockerfile`, `bootstrap.canton`) and the name in
+   `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. The tests diverge
+   too: theirs are written in `testlib`'s given/when/then harness, which exists
+   only in their repository. Adopting either change here would have broken the
+   judge package to tidy a name.
 
    The original note, kept because the plan was right and two details were
    not - the test package layout, and how many DARs it would take:
