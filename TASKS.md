@@ -1336,6 +1336,17 @@ Done:
       whose proposer can no longer act. They invited it in writing on
       5 October: *"a bigger change, and we would welcome your write-up for
       it."* A third contribution, after the 9th.
+- [ ] **Adopt the reviewer's `ensure` fix here, as a real
+      `governance-settlement-v1`.** Their clause rejects a settlement naming a
+      third executor at creation instead of after the vote. A changed `ensure`
+      is a new package lineage rather than a version bump, so the rename has to
+      ripple through `judge/canton.Dockerfile`, `judge/bootstrap.canton`,
+      `infra/bitsafe/distribute.ps1`, `verify-packages.ps1`, three `daml.yaml`
+      files and four documents, then a fresh DevNet upload and a re-verified
+      judge package. **Not before the Grand Final:** the configuration it
+      rejects is one Indivisa cannot create (`runExecutors run = payingAgent ::
+      approver` is exactly two parties, and the product settles through
+      `SettleRunProposal`). Reasoning in `contrib/bitsafe/README.md`.
 
 ---
 
