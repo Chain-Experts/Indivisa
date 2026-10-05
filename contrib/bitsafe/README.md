@@ -1,4 +1,4 @@
-# Two contributions to BitSafe's Decentralization Manager
+# Three contributions to BitSafe's Decentralization Manager
 
 Both submitted on 4 October 2026 to `github.com/DLC-link/decentralization-manager`.
 Both are finished work, used and tested here first; nothing was written for
@@ -37,11 +37,12 @@ module.
 Both contributions were submitted on 4 October 2026. The module and its tests
 are **packages in this repository**, not copies kept in this folder:
 
-| In this repo | Submitted to theirs as |
+| In this repo | Submitted as |
 | --- | --- |
-| `daml/governance-settlement/` | `daml/governance-settlement/` |
-| `daml/governance-settlement-test/` | `daml/governance-settlement-test/` |
-| `contrib/bitsafe/INTEGRATING.md` | `docs/INTEGRATING.md` |
+| `daml/governance-settlement/` | PR [#517](https://github.com/DLC-link/decentralization-manager/pull/517), `daml/governance-settlement/` |
+| `daml/governance-settlement-test/` | PR #517, `daml/governance-settlement-test/` |
+| `contrib/bitsafe/INTEGRATING.md` | PR [#516](https://github.com/DLC-link/decentralization-manager/pull/516), `docs/INTEGRATING.md` |
+| `contrib/bitsafe/member-governed-cancel-design.md` | Issue [#518](https://github.com/DLC-link/decentralization-manager/issues/518) |
 
 An earlier draft kept a second copy of the module under `contrib/bitsafe/module/`.
 It was removed once the packages existed, because a duplicate that drifts is
@@ -147,6 +148,37 @@ The seven that stand:
    `CONTRACT_NOT_FOUND` naming a contract rather than a missing parameter
 
 ---
+
+---
+
+## PR 3 - issue #518, retiring a stranded proposal
+
+Raised at BitSafe's invitation after they traced an action on our shared party
+that could not be confirmed.
+
+**An issue rather than a pull request, deliberately.** It asks five design
+questions, and a pull request implicitly says "merge this" when the honest
+position is "tell us which way and we will build it". Their
+`CONTRIBUTING.md` points new proposals at the issue templates, so it follows
+`feature_request.yml` section by section and carries the `enhancement` label.
+
+**The gap.** A `GovernableAction` whose proposer the live `GovernanceRules`
+no longer authorises can never reach threshold, and only that proposer may
+remove it. Ours was clearable only because the proposer was still a party we
+controlled. `GovernableAction_Cancel` exists for exactly this and `Rules.daml`
+says it is reached *"typically via the standard vote flow as a
+`GovernableAction` itself"* - but no action implements it, so that path has
+no door.
+
+**Searching first mattered**, and their guidelines ask for it. It turned up
+[#92](https://github.com/DLC-link/decentralization-manager/issues/92), a
+Quantstamp pre-audit finding - *"Proposers cannot cancel their own
+proposals"* - which is why `GovernableAction_ProposerCancel` exists. Ours is
+its successor, and says so.
+
+**It also puts their smaller fix above our bigger one.** Removing Confirm from
+cards the rules will reject needs no new Daml and would have saved us days.
+If only one happens, it should be that one.
 
 ---
 

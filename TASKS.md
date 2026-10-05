@@ -33,12 +33,27 @@ for the 9 October submission.
    That mattered - teams on the old single BitSafe challenge were moved to
    Contribution Pool automatically, so the Telegram application for Gold
    would not have shown there on its own.
-2. ~~The two BitSafe pull requests~~ - **both open, 4-5 October.**
+2. ~~The two BitSafe pull requests~~ - **three contributions, all open, 4-5 October.**
 
-   | PR | What | Size |
+   | | What | Size |
    | --- | --- | --- |
    | [#516](https://github.com/DLC-link/decentralization-manager/pull/516) | `docs(api)`: `docs/INTEGRATING.md`, the seven things not in their documentation | 1 file, +198 / -0 |
    | [#517](https://github.com/DLC-link/decentralization-manager/pull/517) | `feat(daml)`: `governance-settlement-v0` and its self-contained tests | 13 files, +623 / -0 |
+   | [#518](https://github.com/DLC-link/decentralization-manager/issues/518) | Design issue: retiring a proposal whose proposer can no longer act | raised at their invitation |
+
+   **#518 is an issue, not a pull request, and that was a decision.** It asks
+   five design questions; a pull request implicitly says "merge this", and the
+   honest position is "tell us which way and we will build it". Their
+   `CONTRIBUTING.md` points new proposals at the issue templates, so it was
+   written to `feature_request.yml`'s sections and labelled `enhancement`.
+
+   **Searching first paid for itself.** Their guidelines ask it, and it turned
+   up [#92](https://github.com/DLC-link/decentralization-manager/issues/92) -
+   a Quantstamp pre-audit finding, *"Proposers cannot cancel their own
+   proposals"*, which is why `GovernableAction_ProposerCancel` exists.
+   Opening ours without that reference would have read as rediscovering solved
+   ground. It now reads as the successor: #92 gave a proposer a way to retract
+   its own proposal; it did not cover a proposer that can no longer act.
 
    Both are **purely additive** - nothing of theirs is touched, which is the
    easiest shape to review and the easiest to decline without awkwardness.
