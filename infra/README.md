@@ -6,7 +6,7 @@ this page is written so that handover needs no Daml knowledge.
 
 A third way to run the whole thing needs none of this: `judge/` packages the
 network, the seat and the console into `docker compose up`. It is for
-someone who wants to see it work, not for development or for evidence —
+someone who wants to see it work, not for development or for evidence,
 LocalNet is faster to iterate on and DevNet is what a judge will believe.
 
 ```
@@ -27,7 +27,7 @@ DevOps path: run it by hand from the Actions tab, pick the network, and it
 takes a token from Keycloak and POSTs each DAR to that network's participant
 at `/v2/dars` (a real route on the JSON Ledger API; the participant ignores
 the content type). It uploads the ten Splice DARs and BitSafe's two. It does
-**not** upload ours — `indivisa-0.4.0.dar` is committed at
+**not** upload ours: `indivisa-0.4.0.dar` is committed at
 `daml/indivisa/indivisa-0.4.0.dar` for exactly this, but no step references
 it, and nothing settles without it. See step 2 below.
 
@@ -90,11 +90,11 @@ pwsh infra/localnet/proofs.ps1         # the six proofs and the coupon chain, on
 
 Files:
 
-- `localnet/localnet.conf` — the topology. Ports as above; `storage.type = memory`.
-- `localnet/bootstrap.canton` — starts the nodes, bootstraps the synchronizer,
+- `localnet/localnet.conf`: the topology. Ports as above; `storage.type = memory`.
+- `localnet/bootstrap.canton`: starts the nodes, bootstraps the synchronizer,
   connects every participant, uploads the DARs, pings across.
-- `localnet/participants.json`, `localnet/ui.json` — as above, no tokens.
-- `localnet/log/` — `canton.log`, stdout, stderr, pid, proof logs. Ignored by git.
+- `localnet/participants.json`, `localnet/ui.json`: as above, no tokens.
+- `localnet/log/`: `canton.log`, stdout, stderr, pid, proof logs. Ignored by git.
 
 To run one proof by hand (from `daml/indivisa-test`, after `dpm build --all`):
 
@@ -210,7 +210,7 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
    current version is in `daml/indivisa/daml.yaml`). Either through the
    validator's console (`participant.dars.upload`, as
    `localnet/bootstrap.canton` does) or over the JSON Ledger API,
-   `POST <jsonApi>/v2/packages` or `/v2/dars` with the bearer token — both
+   `POST <jsonApi>/v2/packages` or `/v2/dars` with the bearer token: both
    routes work on Canton 3.5. Repeat on every validator.
 
    The CI workflow does the twelve third-party DARs and stops there, so
@@ -223,7 +223,7 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
        curl -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @daml/indivisa/indivisa-0.4.0.dar --expand-url "http://participant.${{ github.event.inputs.net_name }}.svc.cluster.local:7575/v2/dars"
    ```
 
-   The BitSafe challenge needs two more on top —
+   The BitSafe challenge needs two more on top:
    `indivisa-governance-v0-0.1.0.dar` and `governance-settlement-v0-0.1.0.dar`
    from `daml/*/.daml/dist/`. Neither is committed yet, so commit them the
    same way before adding their steps.

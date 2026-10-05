@@ -3,24 +3,24 @@
 **Corporate actions, settled in one atomic batch, without exposing the register.**
 
 A bond pays its coupon to hundreds of holders. The paying agent fires one
-transaction. Every holder is paid at the same instant or nobody is — and no
+transaction. Every holder is paid at the same instant or nobody is, and no
 holder sees another's payment.
 
 Built by Chain-Experts for HackCanton Season 3.
 
 ## Demo
 
-- **Run it yourself** — `cd judge && docker compose up`, then
+- **Run it yourself**: `cd judge && docker compose up`, then
   http://localhost:8080. A real five-participant Canton network, the real
   contracts, a coupon that is refused until every holder is ready. Nothing to
   install but Docker, about five minutes: [`judge/README.md`](judge/README.md).
 - **It runs on the real network.** A coupon settled on Canton DevNet on
   24 September 2026, five holders in one transaction, update id
   `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
-  — [`docs/devnet-run.md`](docs/devnet-run.md) has the whole record.
-- **The recording** — 2 minutes 27 seconds: a coupon paid to 250 holders in one transaction; the same run refused when one holder is not ready, and the retry once she is; then the same engine with an **approver** named, where the paying agent's own button is refused until an independent second party agrees. Every figure on screen is read live from a Canton ledger, and each was checked against the ledger afterwards.
-- **The story, for anyone** — [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
-- **The numbers** — [`docs/benchmark.md`](docs/benchmark.md): how many legs fit in one CIP-112 batch settlement, measured on real participants, with the method and the caveats.
+  ([`docs/devnet-run.md`](docs/devnet-run.md) has the whole record).
+- **The recording**: 2 minutes 45 seconds, on Canton DevNet throughout. An operator signs in; a coupon is refused because one holder is not ready; each holder is shown seeing only its own line; the holder is made ready; the coupon settles; then a second coupon that no single company could release, needing two to agree. Thirteen cards, no narration. Every figure on screen is read live from the ledger, and each was checked against the ledger afterwards.
+- **The story, for anyone**: [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
+- **The numbers**: [`docs/benchmark.md`](docs/benchmark.md) measures how many legs fit in one CIP-112 batch settlement, on real participants, with the method and the caveats.
 
 ---
 
@@ -34,7 +34,7 @@ own post-trade research:
 | **3.7m** | event announcements processed in 2023 by holders of American securities |
 | **$3.42m** | average annual cost of asset-servicing errors, per market participant |
 | **~10%** | of a broker's annual operating costs, lost to those errors |
-| **3–10%** | error rates — described as routine, at *"levels considered unacceptable elsewhere in capital markets"* |
+| **3–10%** | error rates, described as routine, at *"levels considered unacceptable elsewhere in capital markets"* |
 | **71% / <40%** | straight-through processing for mandatory and income events / for voluntary events |
 | **+23%** | annual growth in investors' asset-servicing costs |
 
@@ -82,7 +82,7 @@ obstacle: a holder signs one standing agreement with the paying agent, and from
 then on the paying agent alone creates the holder's receipt allocation for every
 coupon. The delegation is guarded by the standard's own
 `ensureIsReceiptAllocation` check, so it can authorise receipts and nothing
-else — never a debit.
+else, never a debit.
 
 It is the same pattern the standard's authors use for the venue in their
 reference trading app. It is also how the real world works: you give your
@@ -93,7 +93,7 @@ paying agent your account details once, not per coupon.
 Only the **cash** is a Token Standard V2 asset. The register is an ordinary Daml
 template.
 
-That is deliberate. Indivisa works against registers that already exist — the
+That is deliberate. Indivisa works against registers that already exist, and the
 securities industry does not have to tokenize every bond before this is useful.
 If the instrument happens to be Canton-native later, the engine consumes that
 ownership data directly instead.
@@ -106,7 +106,7 @@ The test the HackCanton organisers published: *if this moved to a globally
 transparent chain tomorrow, what would stop working?*
 
 **Everything.** Every holder's position size becomes public the moment the coupon
-pays, and the register — confidential by law and commercially sensitive — is
+pays, and the register, confidential by law and commercially sensitive, is
 published to the world.
 
 ### What changed in June
@@ -122,7 +122,7 @@ visibility model:
 | The executor | all legs |
 
 Under V1 there was no mechanism for multi-tier accounting where intermediate
-parties stay invisible — the CIP notes that in traditional finance *"neither the
+parties stay invisible: the CIP notes that in traditional finance *"neither the
 `sender` nor the `receiver` see the intermediate steps."*
 
 **CIP-112 did not design this use case. It enabled it.** Its worked example is a
@@ -165,11 +165,11 @@ On top of the proofs, built and running on LocalNet (18 Sep):
 - **The settlement console** (`ui/`): the whole distribution and one button;
   a card for every holder, each read live from the participant that hosts
   it over the JSON Ledger API; and, on any card, the same node asked as
-  that holder alone — which answers with its own line and six zeros for
+  that holder alone, which answers with its own line and six zeros for
   everyone else.
   On a deployment that names an identity provider, **an operator signs in
   before the console reads or writes anything**, and the check sits in the
-  proxy that holds the ledger credential rather than in the page — two
+  proxy that holds the ledger credential rather than in the page: two
   identities kept apart: the paying agent is a party, the operator is a
   person. On a run that needs approval the button files a request rather than
   attempting a payment, and **a request can be withdrawn** until it executes:
@@ -182,9 +182,9 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   governed run those are the agent *and* the approver. The commitment is
   symmetric, which is what makes an approval worth anything.
 - **A one-command package for anyone who wants to run it** (`judge/`, 23 Sep):
-  `docker compose up` gives the whole thing — five participants, the nine
+  `docker compose up` gives the whole thing (five participants, the nine
   packages, twenty seated holders with one allocation deliberately withheld,
-  and the console — on a machine with nothing installed but Docker. Verified
+  and the console) on a machine with nothing installed but Docker. Verified
   end to end: refused, then `docker compose run --rm prepare`, then settled
   in under a second.
 
@@ -213,9 +213,9 @@ approver**; see [`docs/decentralization.md`](docs/decentralization.md).
   the difference between a threshold that exists and one that constrains
   anybody.
 
-Still to come: the recording (`docs/demo-script.md`), the deck, and one clean
-`docker compose up` on a machine other than the one it was built on — this one
-intercepts TLS, so `judge/`'s two download paths could not be exercised here.
+Still to come: one clean `docker compose up` on a machine other than the one it
+was built on. This one intercepts TLS, so `judge/`'s two download paths could
+not be exercised here.
 
 ---
 
@@ -243,7 +243,7 @@ pwsh infra/demo.ps1 prepare -Tag t1 -Withhold 1    # allocations, one holder del
 cd ui && npm install && INDIVISA_TAG=t1 npm run dev   # http://localhost:5173, press the button
 ```
 
-Or with Docker, needing none of the above — the same topology, the same
+Or with Docker, needing none of the above: the same topology, the same
 contracts, seated and served:
 
 ```bash
@@ -265,7 +265,7 @@ Worth saying before anyone else says it.
   deliberately rather than for convenience: its `Token` is signed by owner
   **and** admin, so it forces the same receiver-authorisation case as Canton
   Coin instead of skipping it. And because settlement goes through the Token
-  Standard interface — the model never names an asset — moving to Canton Coin
+  Standard interface (the model never names an asset), moving to Canton Coin
   or a stablecoin is a configuration change, not a redesign;
   [`docs/canton-coin.md`](docs/canton-coin.md) sets out exactly what changes.
   Every demo component is labelled real, simulated or planned.
@@ -279,7 +279,7 @@ Worth saying before anyone else says it.
   and will differ.
 - **Holders are not zero-touch; they are one-touch.** The standard requires the
   receiver's authority on every leg. Indivisa collects it once, in a standing
-  agreement, and never again. A holder who has not signed cannot be paid — the
+  agreement, and never again. A holder who has not signed cannot be paid: the
   batch refuses, for everyone, until that holder is onboarded or removed from
   the run. That is a real operational constraint and we say so.
 

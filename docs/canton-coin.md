@@ -127,7 +127,7 @@ with the same instrument admin"*, and validates that the allocation's admin
 matches the factory's.
 
 So **one batch settles one registry's assets.** Several currencies
-administered by the same registry are fine — the batch is keyed by
+administered by the same registry are fine: the batch is keyed by
 `instrumentId.id`. Paying some holders in Canton Coin and others in a
 commercial bank's token is two batches, and Indivisa does not give atomicity
 across them.

@@ -344,7 +344,7 @@
     <div class="no"><span>One approval</span><span class="arrow">→</span><span>the ledger refuses</span></div>
     <div class="yes"><span>Two of three</span><span class="arrow">→</span><span>settles</span></div>
   </div>
-  <p class="foot">The threshold is enforced by the ledger, not by our code. In the local demo all three nodes are ours; on DevNet the second is BitSafe's. Four-eyes needs a way back out: a request can be withdrawn until it executes, and both the asking and the withdrawal stay in the ledger history. After settlement there is nothing to withdraw &mdash; the correction is a new payment, not an edit.</p>
+  <p class="foot">The threshold is enforced by the ledger, not by our code. In the local demo all three nodes are ours; on DevNet the second is BitSafe's. Four-eyes needs a way back out: a request can be withdrawn until it executes, and both the asking and the withdrawal stay in the ledger history. After settlement there is nothing to withdraw: the correction is a new payment, not an edit.</p>
 </section>
 
 <!-- 12 HONESTY -->
@@ -366,8 +366,8 @@
   <h2 class="wide">Scoping a run is the first thing we build next.</h2>
   <p class="lede" style="margin-top:16px">If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 into a second run. <b style="color:#E9EFEA">The batch stays all-or-nothing; its membership becomes a decision, not an accident.</b> The model supports it. The workflow, and the audit trail that says why five were held back, are not written.</p>
   <ul style="margin-top:22px">
-    <li><b>Access control</b>: an operator signs in before the console reads or writes anything, and the check sits in the proxy that holds the credentials, not in the page. There are no roles yet &mdash; no maker-checker, where one person prepares a run and another releases it. For a payout that is the control an auditor asks about first.</li>
-    <li><b>The set-up surface</b>: the console settles a run; it does not keep the register. Holders, positions and the schedule come from systems a paying agent already runs, and in the demo a script stands in for them. That boundary is deliberate &mdash; it is why Indivisa works against registers that already exist.</li>
+    <li><b>Access control</b>: an operator signs in before the console reads or writes anything, and the check sits in the proxy that holds the credentials, not in the page. There are no roles yet: no maker-checker, where one person prepares a run and another releases it. For a payout that is the control an auditor asks about first.</li>
+    <li><b>The set-up surface</b>: the console settles a run; it does not keep the register. Holders, positions and the schedule come from systems a paying agent already runs, and in the demo a script stands in for them. That boundary is deliberate, and it is why Indivisa works against registers that already exist.</li>
     <li><b>Production onboarding</b>: holders sign through a real client, not a script.</li>
     <li><b>The scheduled agent</b>: today a person presses the button; in production a daemon watches payment dates.</li>
     <li><b>Real cash</b>: a production run settles Canton Coin or a registry's own token. The model never names the asset, so this is a field and one registry adapter, not a rewrite.</li>

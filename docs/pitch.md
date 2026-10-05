@@ -11,16 +11,16 @@ Rebuild the file with:
 
     cd infra/pitch && npm install && npm run build
 
-which writes `docs/Indivisa-pitch.pptx`. Then polish in PowerPoint — the
+which writes `docs/Indivisa-pitch.pptx`. Then polish in PowerPoint: the
 generated deck is a solid first draft, not the final word on spacing.
 
 **Every claim here is checked against `docs/benchmark.md`,
 `docs/devnet-run.md` and `CLAUDE.md`. If you change a number, change it
-there too — or better, don't.**
+there too, or better, don't.**
 
 ---
 
-## 1 — Title
+## 1. Title
 
 > # Indivisa
 > ### Corporate actions, settled in one atomic batch, without exposing the register.
@@ -30,12 +30,12 @@ there too — or better, don't.**
 > Chain-Experts · HackCanton Season 3
 
 **Say:** A bond pays its coupon to hundreds of holders. Today that is
-spreadsheets and batch files. We make it one transaction — and you can run
+spreadsheets and batch files. We make it one transaction, and you can run
 it yourself.
 
 ---
 
-## 2 — The problem, in the judges' own numbers
+## 2. The problem, in the judges' own numbers
 
 > # A distribution is N separate payments.
 > ### There is no moment at which the run is definitively finished.
@@ -51,13 +51,13 @@ it yourself.
 
 **Say:** A distribution is N separate payments, and there is no moment at
 which the run is definitively finished. That is the shape of the problem;
-these are the consequences — Canton Network's own post-trade research, not
+these are the consequences, from Canton Network's own post-trade research, not
 ours. Error rates between three and ten per cent are described there as
 routine.
 
 ---
 
-## 3 — Why it has not simply moved on-chain
+## 3. Why it has not simply moved on-chain
 
 > **Paying a coupon publicly publishes the register.**
 >
@@ -71,13 +71,13 @@ chain. It is not that nobody thought of it.
 
 ---
 
-## 4 — What Indivisa does
+## 4. What Indivisa does
 
 > **One transaction. Every holder paid at the same instant, or nobody.**
 >
 > - The paying agent fires **one** settlement
-> - Every holder is paid **atomically** — no partial settlement to reconcile
-> - **No holder sees another's payment** — the register is never published
+> - Every holder is paid **atomically**, with no partial settlement to reconcile
+> - **No holder sees another's payment**, and the register is never published
 > - **And no single signature moves the money**
 
 **Say:** The paying agent presses one button. Either every holder is paid, or
@@ -86,7 +86,7 @@ about anyone else.
 
 ---
 
-## 5 — Why Canton, precisely
+## 5. Why Canton, precisely
 
 > **The organisers' test:** *"If this product moved to a globally transparent
 > chain tomorrow, what would stop working properly?"*
@@ -100,9 +100,9 @@ answer is "not much". For this one it is everything.
 
 ---
 
-## 6 — What changed in June 2026
+## 6. What changed in June 2026
 
-> **Token Standard V2 — CIP-0112, approved 12 June 2026**
+> **Token Standard V2: CIP-0112, approved 12 June 2026**
 >
 > Multi-leg settlement where the executor sees every leg and each participant
 > sees only its own.
@@ -120,17 +120,17 @@ a better story than claiming we invented it, and it is the true one.
 
 ---
 
-## 7 — How it works
+## 7. How it works
 
 > **Four steps, and only the last one moves money.**
 >
-> 1. **Once, at onboarding** — each holder signs one standing agreement with
+> 1. **Once, at onboarding**: each holder signs one standing agreement with
 >    the paying agent
-> 2. **Record date** — the register is snapshotted, entitlements calculated,
+> 2. **Record date**: the register is snapshotted, entitlements calculated,
 >    rounded by largest remainder so the parts sum to the total exactly
-> 3. **Before payment** — the agent sets aside the cash and prepares one
+> 3. **Before payment**: the agent sets aside the cash and prepares one
 >    allocation per holder
-> 4. **Payment date** — one `SettlementFactory_SettleBatch`
+> 4. **Payment date**: one `SettlementFactory_SettleBatch`
 >
 > Holders authorise **once**, at onboarding. Never per coupon.
 
@@ -140,7 +140,7 @@ standard requires the receiver's authority on every leg; we collect it once.
 
 ---
 
-## 8 — It runs on the real network
+## 8. It runs on the real network
 
 > **Canton DevNet, 24 September 2026**
 >
@@ -157,7 +157,7 @@ halves: the refusal first, then the settlement.
 
 ---
 
-## 9 — Run it yourself
+## 9. Run it yourself
 
 > ```
 > cd judge && docker compose up
@@ -176,7 +176,7 @@ command gives you the whole thing on your own machine.
 
 ---
 
-## 10 — How far it goes
+## 10. How far it goes
 
 > **Measured, not estimated.**
 >
@@ -189,7 +189,7 @@ command gives you the whole thing on your own machine.
 > **A thousand holders: days of reconciliation become 11.1 seconds, and it is
 > final.**
 >
-> A realistic run — one payment per holder — reaches Canton's 10 MB
+> A realistic run, one payment per holder, reaches Canton's 10 MB
 > transaction budget near **6,400 holders**.
 >
 > Method, the second ceiling, and where each figure comes from:
@@ -202,13 +202,13 @@ on the slide; the 13,869-leg gRPC limit lives in the repo.
 distribution takes to reconcile today, so this is a characterisation, not a
 statistic. Keep it qualitative. Every other number in this deck is sourced.
 
-**Say:** Read the holders column — thirteen thousand legs was two hundred and
+**Say:** Read the holders column: thirteen thousand legs was two hundred and
 fifty holders, not thirteen thousand. Nobody had published how many legs fit
 in a CIP-112 batch, so we measured it.
 
 ---
 
-## 11 — And when one signature is not enough
+## 11. And when one signature is not enough
 
 > # In institutional systems, four-eyes authorisation is a requirement, not a feature.
 >
@@ -221,7 +221,7 @@ in a CIP-112 batch, so we measured it.
 >
 > **The threshold is enforced by the ledger, not by our code.** In the demo
 > all three approver nodes are ours, so the threshold is real and the
-> independence is not. On DevNet the second node is BitSafe's — that is the
+> independence is not. On DevNet the second node is BitSafe's, and that is the
 > version that counts.
 
 **Say:** This is a procurement requirement, not a nice-to-have. Below the
@@ -233,7 +233,7 @@ This slide and slide 12 must agree. If you soften one, soften both.
 
 ---
 
-## 12 — Real, simulated, planned
+## 12. Real, simulated, planned
 
 > **Real:** the ledger, the contracts, the settlement, the refusal, the
 > privacy, every number on screen, the DevNet update id, the governance engine.
@@ -249,22 +249,22 @@ This slide and slide 12 must agree. If you soften one, soften both.
 
 ---
 
-## 13 — What we did not build
+## 13. What we did not build
 
 > # What we did not build
 > *known, designed, not yet built*
 >
 > **Scoping a run.** If 5 of 250 holders are not ready, the batch refuses for
 > all 250. A paying agent needs to settle the 245 today and carry the 5 to a
-> second run. The model supports it — the schedule is a list and the run is
-> built from it — but the workflow, and the audit trail that says why five
+> second run. The model supports it (the schedule is a list and the run is
+> built from it), but the workflow, and the audit trail that says why five
 > were held back, are not written.
 >
-> - **Production onboarding** — holders sign the standing agreement through a
+> - **Production onboarding**: holders sign the standing agreement through a
 >   real client, not a script
-> - **The scheduled agent** — today a person presses the button; in production
+> - **The scheduled agent**: today a person presses the button; in production
 >   a daemon watches payment dates
-> - **Real cash** — `TestTokenV2` is the standard's reference asset; a
+> - **Real cash**: `TestTokenV2` is the standard's reference asset; a
 >   production run settles Canton Coin or a registry's own token
 
 **Say:** This is not an apology. These are the things we know are missing, we
@@ -273,28 +273,28 @@ them. The scoping one is the first thing a paying agent would ask for.
 
 ---
 
-## 14 — What this becomes
+## 14. What this becomes
 
 > **The buyer is the independent debt paying agent and the corporate trustee,
 > first.**
 >
-> - **Dividends and redemptions are the same engine** — the same
+> - **Dividends and redemptions are the same engine**: the same
 >   `DistributionRun`, a different event type
 > - **Works against registers that already exist.** The bond is not tokenized;
 >   only the cash is a Token Standard V2 asset
-> - **The benchmark is a contribution in its own right** — the first published
+> - **The benchmark is a contribution in its own right**: the first published
 >   figures for CIP-112 batch settlement, going to the Canton forum
 >   regardless of how this hackathon goes
 
 **Say:** Independent paying agents and trustees first: they carry the
 reconciliation cost themselves, and they do not need a custodian's permission
 to change how they settle. The bond stays where it is, which matters
-commercially — the industry does not have to tokenize every instrument before
+commercially: the industry does not have to tokenize every instrument before
 any of this is useful.
 
 ---
 
-## 15 — Close
+## 15. Close
 
 > # Indivisa
 > ### Corporate actions, settled in one atomic batch, without exposing the register.
@@ -316,7 +316,7 @@ And no holder sees another.
 - **One idea per slide.** The tables are the exception and they earn it.
 - **The logo** is `ui/public/indivisa-logo.png`; it sits on a dark ground.
 - **Slides 8, 9 and 10 are the evidence.** If anything gets cut for time, cut
-  from 5, 6 or 14 — never those three.
+  from 5, 6 or 14, never those three.
 - **The two slides a judge remembers** are the sentence at the top of slide 2
   and the honesty of slide 13. Do not let either get trimmed in a redesign.
 - For the Grand Final's five minutes, slides 1–4 should take ninety seconds.

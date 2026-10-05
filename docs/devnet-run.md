@@ -71,14 +71,14 @@ The full write-up, including what is simulated, is
 | | |
 |---|---|
 | Canton | 3.5.17 (`GET /v2/version`) |
-| Synchronizer | `global-domain::1220be58c29e65de40bf273be1dc2b266d43a9a002ea5b18955aeef7aac881bb471a` — the global DevNet synchronizer, not a private one |
+| Synchronizer | `global-domain::1220be58c29e65de40bf273be1dc2b266d43a9a002ea5b18955aeef7aac881bb471a`, the global DevNet synchronizer, not a private one |
 | Participant | `chain-experts-admin-1::1220d41692257b6921b95b7a4f8e76bb30dd0c6da92718b1758a559f842e8a2ba553` |
 | Packages | all thirteen vetted, `indivisa-0.4.0` included |
 
 ## Both halves were run
 
 **Refused first.** With one holder's receipt allocation withheld, the batch
-was refused and nobody was paid — `missing authorizations`, naming the
+was refused and nobody was paid: `missing authorizations`, naming the
 holder. The refusal is recorded on-ledger as a `SettlementRejected`.
 
 **Then settled.** With every allocation in place, the same button settled all
@@ -90,14 +90,14 @@ That is the same pair the local demo shows, on a network we do not control.
 
 **Proves:** the real network vets our packages and commits a real Token
 Standard V2 `SettlementFactory_SettleBatch`. This is the marker BitSafe's
-Season 2 postmortem calls out — everything else in most submissions is
+Season 2 postmortem calls out. Everything else in most submissions is
 LocalNet.
 
 **Does not prove cross-operator privacy.** Chain-Experts runs one validator
 per network (DevNet, TestNet, MainNet are separate networks, each a
 different version for a different purpose), so all five participant names
 resolve to the same node. On one node the guarantee is that the ledger
-declines to hand one party another party's contracts — real, and enforced by
+declines to hand one party another party's contracts: real, and enforced by
 Canton, but weaker than the data never arriving. The console works this out
 for itself, by comparing each participant's own id rather than the names in
 its config, and says whichever of the two is true.

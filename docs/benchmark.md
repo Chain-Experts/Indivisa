@@ -1,4 +1,4 @@
-# Benchmark — how many legs fit in one CIP-112 batch
+# Benchmark: how many legs fit in one CIP-112 batch
 
 Proof 5. We could find no published figure for how many legs fit in a CIP-112
 batch settlement. Whatever it turns out to be, it goes here and to the Canton
@@ -295,7 +295,7 @@ The model is checked against a measurement it did not come from: for the
 
 So, on this hardware:
 
-1. **A settlement of a real coupon run** — one allocation per holder —
+1. **A settlement of a real coupon run**, one allocation per holder,
    reaches the 10 MB request cap at about **6,400 holders**. Derived, not
    measured: the largest realistic-shape run actually settled is 1,000
    holders at 1.67 MB.

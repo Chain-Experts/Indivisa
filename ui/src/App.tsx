@@ -338,8 +338,8 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
                 {roundedUp + roundedDown > 0 ? (
                   <>
                     {roundedUp + roundedDown} of {entries.length} holders land between cents, so{" "}
-                    <strong>{state.schedule.policy}</strong> rounds {roundedUp} up and {roundedDown} down — marked in the
-                    table — and the parts still sum to the total exactly, with no cent invented or lost.
+                    <strong>{state.schedule.policy}</strong> rounds {roundedUp} up and {roundedDown} down, marked in the
+                    table, and the parts still sum to the total exactly, with no cent invented or lost.
                   </>
                 ) : (
                   <>Every holder lands on a whole cent here, so <strong>{state.schedule.policy}</strong> had nothing to do.</>

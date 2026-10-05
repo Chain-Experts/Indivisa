@@ -117,7 +117,7 @@ export function Holders({
       </div>
 
       <p className="grid-note">
-        Every holder has a card, and each one is read from the participant that hosts that holder — never from the
+        Every holder has a card, and each one is read from the participant that hosts that holder, never from the
         paying agent's node. This console is a demo harness and holds every party's credential, which is exactly why
         the check is worth running: open any card and the node still answers for that holder and nobody else.
       </p>
@@ -207,7 +207,7 @@ function HolderDrawer({ config, run, row, onClose }: { config: Config; run: RunS
         <dt>My position</dt>
         <dd>{row.units.toLocaleString("en-GB")} units</dd>
         <dt>My agreement</dt>
-        <dd>{row.facts?.agreement ? "signed once, at onboarding" : <span className="warn">none — this holder cannot be paid</span>}</dd>
+        <dd>{row.facts?.agreement ? "signed once, at onboarding" : <span className="warn">none, this holder cannot be paid</span>}</dd>
         <dt>My entitlement</dt>
         <dd><Money amount={row.due} currency={run.currency} /></dd>
         <dt>My allocation</dt>

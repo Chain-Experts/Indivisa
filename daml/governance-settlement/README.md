@@ -11,13 +11,13 @@ application-specific: adopt it as it is.
 Any application that moves value to several parties at once and should not
 let one operator release it:
 
-- **Paying agents and corporate trustees** — a coupon, a dividend or a
+- **Paying agents and corporate trustees**: a coupon, a dividend or a
   redemption paid to every holder in one transaction.
-- **Venues and exchanges** — a trade with fee legs, where the venue is the
+- **Venues and exchanges**: a trade with fee legs, where the venue is the
   executor and the counterparties should not depend on it alone.
-- **Treasuries and payroll** — a scheduled run of many payments, released
+- **Treasuries and payroll**: a scheduled run of many payments, released
   on a committee's authority rather than one person's.
-- **Redemption and paying agents for funds** — same shape, different event.
+- **Redemption and paying agents for funds**: same shape, different event.
 
 If your settlement is a V2 batch and your answer to *"who can release
 this?"* is *"more than one party"*, this is the module.
@@ -33,7 +33,7 @@ The part that is easy to get wrong is not the governance. It is the
 **authority arithmetic**, and it bites late:
 
 Token Standard V2 settles a batch only with the authority of every party in
-the settlement's `executors` — `SettlementFactory_SettleBatch` is
+the settlement's `executors`: `SettlementFactory_SettleBatch` is
 controlled by its `actors`, and the standard's default implementation
 requires `actors` to equal the `executors`. So the governance party has to
 be named among the executors **when the allocations are created**, not when
@@ -57,7 +57,7 @@ than of understanding the standard's authorisation model.
 
 - **No application code to strip out.** It depends only on
   `governance-action-v1` and three Splice V2 API packages.
-- **The authority arithmetic is right by construction** — the proposal
+- **The authority arithmetic is right by construction**: the proposal
   carries the executors the settlement needs, and `executeImpl` runs with
   the governance party's authority plus the proposer's, which is exactly
   that set.
@@ -73,7 +73,7 @@ than of understanding the standard's authorisation model.
    settlement's `executors`. This is the step that matters, and it happens
    before any governance does.
 2. **The proposer files a `BatchSettlementProposal`.** The proposer is your
-   application's executor — a paying agent, a venue, a treasury. It must be
+   application's executor: a paying agent, a venue, a treasury. It must be
    a member of the governance rules or an *additional proposer*; an
    application service party usually wants the latter, so that it may
    propose and never confirm.
@@ -86,7 +86,7 @@ Two things that are easy to miss:
 
 - The executing node runs `executeImpl`, so anything it touches that lives
   on another participant must travel with the request as a **disclosed
-  contract** — typically the registry's rules contract and the sender's
+  contract**, typically the registry's rules contract and the sender's
   locked holdings.
 - Every participant hosting a member must have **vetted every package the
   settlement touches**, asset packages included. Package names resolve only
@@ -102,15 +102,15 @@ Two things that are easy to miss:
   application makes when it asks a committee to approve a payout, and it
   should be stated in the application's own terms.
 - **It does not consume anything application-specific.** `executeImpl` is a
-  plain `SettleBatch`. If your application needs its own choice exercised —
-  a run consumed, a receipt written, records updated — write a proposal
+  plain `SettleBatch`. If your application needs its own choice exercised,
+  whether a run consumed, a receipt written or records updated, write a proposal
   whose `executeImpl` calls *that* choice, and use this module as the
   pattern. That is the right way round: this one is the general case, and a
   specific one is a forty-line template.
 
 ## Tests
 
-`BatchSettlementTest.daml` — three scripts, IDE ledger, no network:
+`BatchSettlementTest.daml`: three scripts, IDE ledger, no network:
 
 | Script | Expects |
 | --- | --- |

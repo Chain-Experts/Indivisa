@@ -15,7 +15,7 @@ Indivisa/
 ├── daml/
 │   ├── dars/                      prebuilt Token Standard V2 DARs, Splice 0.8.1
 │   │                              (ten files; listed in NOTICE)
-│   ├── indivisa/                  package `indivisa` — uploaded to participants
+│   ├── indivisa/                  package `indivisa`, uploaded to participants
 │   │   ├── daml.yaml
 │   │   └── Indivisa/
 │   │       ├── Types.daml                 vocabulary, no V2
@@ -27,7 +27,7 @@ Indivisa/
 │   │       │   ├── Event.daml             the corporate action
 │   │       │   └── Entitlement.daml       rate x position, rounding
 │   │
-│   ├── indivisa-test/             package `indivisa-test` — never uploaded (LF 2.2; the model is 2.1)
+│   ├── indivisa-test/             package `indivisa-test`, never uploaded (LF 2.2; the model is 2.1)
 │   │   ├── daml.yaml
 │   │   └── Indivisa/Test/
 │   │       ├── Fixtures.daml              cast, cash, funding, onboarding, waits
@@ -135,7 +135,7 @@ Indivisa/
     └── for-a-teenager.md          the whole idea, BitSafe included, from zero: finance words, blockchain, the flow, the vote
 ```
 
-## `daml/indivisa/` — the model
+## `daml/indivisa/`: the model
 
 | Module | Contains | Touches V2 |
 |---|---|---|
@@ -157,7 +157,7 @@ package, however product-like they are. The allocation-spec builders are the
 example: they are the paying agent's client logic, so they sit in
 `Indivisa.Test.Agent`.
 
-## `daml/indivisa-test/` — scripts
+## `daml/indivisa-test/`: scripts
 
 | Module | Holds |
 |---|---|
@@ -170,7 +170,7 @@ example: they are the paying agent's client logic, so they sit in
 | `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle, `scalePrepare` does the same and emits what the JSON API settle client needs (`PreparedOut`). Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file, settled by `infra/settle.ps1`. Results in `benchmark.md`. |
 | `Demo.daml` | `demo_seat` (parties with realistic names and heavy-tailed positions, cash, instrument, onboarding, announcement, snapshot, on-ledger schedule; emits a `DemoSeat` JSON for the run and the panes) and `demo_attempt` (finds or creates the run, creates only the allocations still missing, settles; `withhold = 1` arms the deliberate failure and writes a `SettlementRejected` record; `withhold = 0` completes). `demo_smoke` runs both under `dpm test`. |
 
-## `daml/governance-*`, `daml/indivisa-governance*` — the BitSafe packages
+## `daml/governance-*`, `daml/indivisa-governance*`: the BitSafe packages
 
 Outside the model package on purpose, so `indivisa` carries no governance
 dependency; LF 2.2 because BitSafe's interface package is.
@@ -181,7 +181,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `indivisa-governance-v0` | `Indivisa.Governance.SettleRunProposal`: the same pattern over `Run_Settle`, so the run is consumed and the receipt written. Forty lines. |
 | `indivisa-governance-test` | `Indivisa.Test.Governance` (three members, threshold two: 1 of 3 refused, agent alone refused, 2 of 3 settles, proposer cancel, no-approver unchanged), `Governance.Settlement.Test.BatchSettlementTest` (the generic module without Indivisa), `Indivisa.Governance.Demo.govern_propose` (the shell-driven proposal). Reuses `indivisa-test`'s cash and agent fixtures. |
 
-## `ui/` — the settlement console
+## `ui/`: the settlement console
 
 | File | Does |
 |---|---|
@@ -191,7 +191,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `auth.ts` | Operator sign-in: OIDC authorization code with PKCE, no client secret. One `keep()` writes the token, so the in-memory copy the request headers use can never go stale; `resumeSession` picks up a session on reload and schedules the refresh from the token own `exp`. |
 | `state/useAgent.ts` | The executor connection and its commands, held at the top of the app because the header and every tab read from them. `onSettle` branches: a run naming an approver files a request instead of attempting a payment. `onWithdraw` archives a request filed by mistake; `onCancelRun` releases the cash a prepared run locked, offered only where the agent is the sole executor. |
 | `state/useVote.ts` | Polls DecMan every three seconds while a request is outstanding. On repeated failure it sets the error **and clears the stale count** - a number nobody can refresh is worse than no number. |
-| `state/useHolders.ts` | The grid's poll — one request set per participant, not per holder — and `useNodeProbe`, the deliberately separate per-party read that proves the claim. |
+| `state/useHolders.ts` | The grid's poll (one request set per participant, not per holder) and `useNodeProbe`, the deliberately separate per-party read that proves the claim. |
 | `App.tsx` | The shell: a three-stage boot (learn whether sign-in is required, complete it, then read the ledger), the sign-in gate, header, working header, outcome strip, four tabs, and the withdraw control. Derives each holder leg state from the allocations actually on the ledger. |
 | `panes/RunBar.tsx` | Instrument, holders, per unit, total due, an allocations meter, the run state, the button, and - on an ungoverned run - the cancel control. On a governed run the ask button is disabled while allocations are incomplete: approvers decide whether a payment goes out, not whether the data is ready. A run with no send allocation but holders authorisations still in place is a cancelled run, and says so. A refused cancellation gets its own line rather than the settlement strip: a cancellation that was declined is not a settlement that was rejected. |
 | `panes/Holders.tsx` | A card per holder with search, filter and sort, and the drawer that asks one node as one party. |
@@ -203,7 +203,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer tokens minted and refreshed server-side (ledger by client credentials, DecMan from a stored refresh token); serves the seat and the party map at `/demo/*`, reduced to what the page may see. Also `operatorGate()`: registered from `configureServer`, which Vite runs **before** its own proxy, so an unauthenticated `/api/` or `/decman/` request is refused on the way in. The operator token is verified against the realm published keys, checked to have been issued to this client, and then deleted from the request rather than forwarded. |
 | `scripts/settle.ts` | The same `settle` call as the button, run from Node against `infra/<network>/ui.json` directly (no proxy; adds the bearer header itself). `infra/settle.ps1` bundles it with esbuild and runs it after a script-side prepare; it is how the benchmark times submit to commit without the Daml Script runner. |
 
-## `judge/` — run it with one command
+## `judge/`: run it with one command
 
 Docker, for anyone who wants to see it work without a toolchain. Build
 context is the repository root, so the images carry the same DARs and the
@@ -212,16 +212,16 @@ same scripts the proofs run.
 | File | Does |
 |---|---|
 | `docker-compose.yml` | Three services: `canton`, a one-shot `seed`, `web`. `prepare` is a fourth, behind the `manual` profile, that reuses the seed image. The seed and the page share a `demo` volume. |
-| `canton.Dockerfile`, `canton.conf`, `bootstrap.canton` | Canton 3.5 on the public image, five participants and a synchronizer in one container, every API bound to `0.0.0.0`. The bootstrap uploads all thirteen DARs — the ten Splice ones, `indivisa`, and the governance layer (BitSafe's two plus our `indivisa-governance-v0` and `governance-settlement-v0`), 57 packages once dependencies are counted — and writes `/indivisa/ready` **last**: the compose healthcheck waits for that file, because the API answers while the uploads are still running. |
+| `canton.Dockerfile`, `canton.conf`, `bootstrap.canton` | Canton 3.5 on the public image, five participants and a synchronizer in one container, every API bound to `0.0.0.0`. The bootstrap uploads all thirteen DARs (the ten Splice ones, `indivisa`, and the governance layer (BitSafe's two plus our `indivisa-governance-v0` and `governance-settlement-v0`), 57 packages once dependencies are counted) and writes `/indivisa/ready` **last**: the compose healthcheck waits for that file, because the API answers while the uploads are still running. |
 | `seed.Dockerfile`, `seed.sh` | The Daml Script runner (fetched at build time from Digital Asset's public registry as an OCI blob, or `--build-arg SCRIPT_SOURCE=local`) running `Indivisa.Test.Demo`. `seat` creates the parties, the bond, the onboarding and the schedule, then the allocations with one holder withheld; `prepare` creates the one that was withheld. The party map is rebuilt from the ledger each time, because the runner only routes parties it allocated itself. |
-| | The seat outlives the ledger — `docker compose down` keeps the volume — so the seed fingerprints the ledger with the agent participant id and re-seats when it does not match. Without that, a second `up` serves a seat whose parties no longer exist. |
+| | The seat outlives the ledger (`docker compose down` keeps the volume) so the seed fingerprints the ledger with the agent participant id and re-seats when it does not match. Without that, a second `up` serves a seat whose parties no longer exist. |
 | `web.Dockerfile`, `nginx.conf` | The built page on nginx, which also proxies `/api/<participant>/` to the five JSON Ledger APIs. No token: this network has no auth. `--build-arg UI_SOURCE=prebuilt` takes `ui/dist` from the host instead of running npm in the container. |
 | `participants.json` | The five JSON API endpoints inside the compose network, before party routing is added. |
 | `govern.sh` | The governed settlement inside the package: `seat` builds the decentralised party (peer mesh, onboarding at threshold 2, member parties, governance rules, admitting the agent as proposer), then `prepare`, `propose`, `confirm N`, `execute N`, `status`. A port of BitSafe's `hackathon/seed.sh` and our `infra/govern.ps1` onto this topology; it skips their DAR-distribution step because `bootstrap.canton` has already vetted everything. |
 | three `decman-*` services | BitSafe's Decentralization Manager `v1.8.0`, unmodified, one per holding participant, all behind the `govern` compose profile so `docker compose up` is unchanged. About 150 MB each. |
 | `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated, and the optional governed run. |
 
-## `contrib/bitsafe/` — what we are giving back
+## `contrib/bitsafe/`: what we are giving back
 
 Two pull requests prepared for
 `github.com/DLC-link/decentralization-manager`, following their
@@ -230,13 +230,13 @@ Two pull requests prepared for
 | File | Does |
 |---|---|
 | `README.md` | What was submitted, when, and the decisions behind each PR |
-| `INTEGRATING.md` | The documentation PR itself — seven things not in their docs, each found the hard way while pointing DecMan at our own Canton |
+| `INTEGRATING.md` | The documentation PR itself: seven things not in their docs, each found the hard way while pointing DecMan at our own Canton |
 
 **There is no copy of the module here.** An earlier draft kept one under
 `contrib/bitsafe/module/` and it drifted: its test still imported Indivisa's
 fixtures after the submitted one had been cut loose from them. The code that
-was contributed is the code that builds — `daml/governance-settlement/` and
-`daml/governance-settlement-test/` — and nothing is kept in step by hand.
+was contributed is the code that builds, `daml/governance-settlement/` and
+`daml/governance-settlement-test/`, and nothing is kept in step by hand.
 
 ## Not built, deliberately
 

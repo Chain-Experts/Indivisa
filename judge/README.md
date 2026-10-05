@@ -13,7 +13,7 @@ docker compose up
 ```
 
 Wait for `Ready. Open http://localhost:8080` in the terminal (see **When is
-it ready?** just below — the first run takes a few minutes, most of it
+it ready?** just below. The first run takes a few minutes, most of it
 seating the holders), then open that page.
 
 You will need Docker with Compose v2, **6 GB of memory** given to it
@@ -34,7 +34,7 @@ indivisa-seed exited with code 0
 ```
 
 That is the moment to switch to the browser. Opening the page earlier is
-harmless — it will say *No seat file* — just reload once those lines appear.
+harmless, and it will say *No seat file*. Just reload once those lines appear.
 
 **If it seems stuck, it probably is not.** Canton prints nothing for minutes
 at a time while it vets packages. `docker compose ps` will show
@@ -55,13 +55,13 @@ What you see before them, so you can tell progress from a stall:
 | `==> Ready…` | go to the browser | |
 
 The terminal stays busy after that: Canton and the web server keep running
-in the foreground, which is normal. Leave the window open — `Ctrl+C` there
+in the foreground, which is normal. Leave the window open: `Ctrl+C` there
 stops the demo.
 
 ## What you are looking at
 
 A bond pays its coupon. The paying agent must pay every holder. Every figure
-on the page is read live from the participant that holds it — there is no
+on the page is read live from the participant that holds it. There is no
 application server in between, and nothing is cached:
 
 - **The header**: the bond, the event, how many holders, the total due, and
@@ -70,15 +70,15 @@ application server in between, and nothing is cached:
   its own receipt, and the paying agent adds one send allocation carrying
   every leg. Token Standard V2 wants both sides of every leg. Below it, the
   one button.
-- **Holders**: a card for every holder — all twenty — each read from the
+- **Holders**: a card for every holder, all twenty, each read from the
   participant that hosts it, showing its units, what it is due and what cash
   it has. Search them, filter by leg state, sort by amount.
 - **Click any card.** The page asks that holder's node, as that holder and
   nobody else, what it will hand over: its own position, agreement,
   allocation and cash, and then six counts of what that node holds about
   *anyone else*. They are zero, and they stay zero through the settlement.
-  Not filtered — never delivered.
-- **Schedule** is the same twenty rows as the executor sees them, sortable —
+  Not filtered. Never delivered.
+- **Schedule** is the same twenty rows as the executor sees them, sortable,
   and it shows its own arithmetic: the coupon rate is finer than a cent, so
   a few holders land between cents and largest-remainder rounding decides
   which way each one goes, marked in the table, with the parts still summing
@@ -100,7 +100,7 @@ The run has been prepared with **one holder deliberately left out**, so:
    Check the other cards: nothing moved, for anyone. That is atomicity,
    demonstrated rather than claimed.
 2. Fix the missing holder. **Leave the browser open and leave the first
-   terminal running** — that one is the network itself. Open a *second*
+   terminal running**: that one is the network itself. Open a *second*
    terminal, go to the same folder, and run:
 
    ```bash
@@ -115,7 +115,7 @@ The run has been prepared with **one holder deliberately left out**, so:
 3. Press the button again.
    Settled. Every holder is paid in the same transaction, the update id of
    that transaction appears on screen, every card turns green and every row
-   in the schedule turns **paid** — while each holder's counts of other
+   in the schedule turns **paid**, while each holder's counts of other
    holders stay at zero. Open a card again and check that for yourself.
 
 To start over: `docker compose down && docker compose up`. The demo is
@@ -130,7 +130,7 @@ worth millions should not. The package can also run the same settlement
 two of its three members agree.
 
 This is BitSafe's Decentralization Manager, unmodified, running as three
-approver nodes beside the ledger. Nothing above changes — the governed path
+approver nodes beside the ledger. Nothing above changes: the governed path
 is opt-in and starts differently:
 
 ```bash
@@ -185,12 +185,12 @@ screen. The transaction is a genuine Token Standard V2
 `SettlementFactory_SettleBatch`.
 
 **Simulated:** the cash is `TestTokenV2`, the standard's own reference
-token, with our registry party — not Canton Coin. We chose it deliberately
+token, with our registry party, not Canton Coin. We chose it deliberately
 rather than for convenience: its `Token` is signed by owner **and** admin,
 so it forces the same receiver-authorisation path as Canton Coin. A
 single-signatory asset would have let us skip the problem this product
 exists to solve. What the asset would take to change is in
-[`../docs/canton-coin.md`](../docs/canton-coin.md) — the model names no
+[`../docs/canton-coin.md`](../docs/canton-coin.md): the model names no
 asset, so it is one field and one registry adapter. The holders, their names
 and their positions are generated. This network is five participants in one
 container on your machine, not five companies.
@@ -201,7 +201,7 @@ This is a local network, so it proves the mechanism, not a deployment. The
 same code runs on Canton's DevNet; the submission carries that run's update
 id as evidence. And the holder base here is small (twenty by default,
 `INDIVISA_HOLDERS` to change it) because creating parties takes a few
-seconds each; the measured limits are in `docs/benchmark.md` — 13,000
+seconds each; the measured limits are in `docs/benchmark.md`: 13,000
 payment legs in one transaction, and where that stops.
 
 ## If something goes wrong

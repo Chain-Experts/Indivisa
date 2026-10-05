@@ -97,7 +97,7 @@ function bullets(s, items, y = 1.7, size = 16) {
   s.addText("Every holder's position size becomes public\nthe moment the coupon pays.", {
     x: M, y: 1.75, w: W - 2 * M, h: 1.05, fontFace: "Segoe UI", fontSize: 23, color: INK, lineSpacingMultiple: 1.25,
   });
-  s.addText("The register is confidential by law and by commercial sensitivity.\nThat is the reason this workflow is still manual — not inertia.", {
+  s.addText("The register is confidential by law and by commercial sensitivity.\nThat is the reason this workflow is still manual, not inertia.", {
     x: M, y: 3.05, w: W - 2 * M, h: 1, fontFace: "Segoe UI", fontSize: 16, color: MUTED, lineSpacingMultiple: 1.3,
   });
   s.addNotes("This is the thing that stops corporate actions moving onto a public chain. It is not that nobody thought of it.");
@@ -108,8 +108,8 @@ function bullets(s, items, y = 1.7, size = 16) {
   const s = slide("One transaction. Every holder paid at the same instant, or nobody.", "what Indivisa does");
   bullets(s, [
     { text: "The paying agent fires one settlement" },
-    { text: "Every holder is paid atomically — no partial settlement to reconcile" },
-    { text: "No holder sees another's payment — the register is never published", bold: true, color: GREEN },
+    { text: "Every holder is paid atomically, with no partial settlement to reconcile" },
+    { text: "No holder sees another's payment, and the register is never published", bold: true, color: GREEN },
     { text: "And no single signature moves the money", bold: true, color: BLUE },
   ], 2.0, 17);
   s.addNotes("One button. Either every holder is paid or nothing moves. Each holder's node receives its own line and nothing about anyone else. And above a threshold, no one person can release it at all.");
@@ -130,7 +130,7 @@ function bullets(s, items, y = 1.7, size = 16) {
 
 // ---- 6. CIP-112 -----------------------------------------------------------
 {
-  const s = slide("Token Standard V2 — CIP-0112, approved 12 June 2026", "what changed");
+  const s = slide("Token Standard V2: CIP-0112, approved 12 June 2026", "what changed");
   s.addText("Multi-leg settlement where the executor sees every leg,\nand each participant sees only its own.", {
     x: M, y: 1.55, w: W - 2 * M, h: 0.8, fontFace: "Segoe UI", fontSize: 17, color: INK, lineSpacingMultiple: 1.25,
   });
@@ -151,10 +151,10 @@ function bullets(s, items, y = 1.7, size = 16) {
 {
   const s = slide("Four steps, and only the last one moves money.", "how it works");
   bullets(s, [
-    { text: "Once, at onboarding — each holder signs one standing agreement with the paying agent" },
-    { text: "Record date — the register is snapshotted and entitlements calculated, rounded so the parts sum to the total exactly" },
-    { text: "Before payment — the agent sets aside the cash and prepares one allocation per holder" },
-    { text: "Payment date — one SettlementFactory_SettleBatch", bold: true, color: GREEN },
+    { text: "Once, at onboarding: each holder signs one standing agreement with the paying agent" },
+    { text: "Record date: the register is snapshotted and entitlements calculated, rounded so the parts sum to the total exactly" },
+    { text: "Before payment: the agent sets aside the cash and prepares one allocation per holder" },
+    { text: "Payment date: one SettlementFactory_SettleBatch", bold: true, color: GREEN },
   ], 1.7, 15);
   s.addText("Holders authorise once, at onboarding. Never per coupon.", {
     x: M, y: 4.5, w: W - 2 * M, h: 0.4, fontFace: "Segoe UI", fontSize: 15, bold: true, color: INK,
@@ -221,7 +221,7 @@ function bullets(s, items, y = 1.7, size = 16) {
   s.addText("A thousand holders: days of reconciliation become 11.1 seconds, and it is final.", {
     x: M + 0.15, y: 3.35, w: W - 2 * M - 0.3, h: 0.62, fontFace: "Segoe UI", fontSize: 16, bold: true, color: GREEN, valign: "middle",
   });
-  s.addText("A realistic run — one payment per holder — reaches Canton's 10 MB transaction budget near 6,400 holders.", {
+  s.addText("A realistic run, one payment per holder, reaches Canton's 10 MB transaction budget near 6,400 holders.", {
     x: M, y: 4.15, w: W - 2 * M, h: 0.4, fontFace: "Segoe UI", fontSize: 14, color: INK,
   });
   s.addText("Method, the second ceiling, and where each figure comes from: docs/benchmark.md", {
@@ -242,7 +242,7 @@ function bullets(s, items, y = 1.7, size = 16) {
   s.addText("Two of three  →  settles", { x: M + 4.55, y: 2.6, w: 3.8, h: 0.6, fontFace: "Segoe UI", fontSize: 15, bold: true, color: GREEN, valign: "middle" });
   s.addText([
     { text: "The threshold is enforced by the ledger, not by our code. ", options: { bold: true, color: INK } },
-    { text: "In the demo all three approver nodes are ours, so the threshold is real and the independence is not. On DevNet the second node is BitSafe's — that is the version that counts, and slide 13 says where it stands.", options: { color: MUTED } },
+    { text: "In the demo all three approver nodes are ours, so the threshold is real and the independence is not. On DevNet the second node is BitSafe's, and that is the version that counts, and slide 13 says where it stands.", options: { color: MUTED } },
   ], { x: M, y: 3.45, w: W - 2 * M, h: 0.95, fontFace: "Segoe UI", fontSize: 13, lineSpacingMultiple: 1.25 });
   s.addNotes("Real paying agents have four-eyes controls; this is a procurement requirement, not a nice-to-have. Below the threshold it is not our code being careful, it is the ledger refusing. And be straight about the independence: three nodes on one machine are three nodes on one machine.");
 }
@@ -267,12 +267,12 @@ function bullets(s, items, y = 1.7, size = 16) {
   s.addShape(p.ShapeType.rect, { x: M, y: 1.5, w: W - 2 * M, h: 1.15, fill: { color: "FFFFFF" }, line: { color: BLUE, pt: 1 } });
   s.addText([
     { text: "Scoping a run.  ", options: { bold: true, color: BLUE } },
-    { text: "If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 to a second run. The model supports it — the schedule is a list and the run is built from it — but the workflow, and the audit trail that says why five were held back, are not written.", options: { color: INK } },
+    { text: "If 5 of 250 holders are not ready, the batch refuses for all 250. A paying agent needs to settle the 245 today and carry the 5 to a second run. The model supports it (the schedule is a list and the run is built from it), but the workflow, and the audit trail that says why five were held back, are not written.", options: { color: INK } },
   ], { x: M + 0.15, y: 1.6, w: W - 2 * M - 0.3, h: 1, fontFace: "Segoe UI", fontSize: 13, lineSpacingMultiple: 1.2 });
   bullets(s, [
-    { text: "Production onboarding — holders sign the standing agreement through a real client, not a script" },
-    { text: "The scheduled agent — today a person presses the button; in production a daemon watches payment dates" },
-    { text: "Real cash — TestTokenV2 is the standard's reference asset; a production run settles Canton Coin or a registry's own token" },
+    { text: "Production onboarding: holders sign the standing agreement through a real client, not a script" },
+    { text: "The scheduled agent: today a person presses the button; in production a daemon watches payment dates" },
+    { text: "Real cash: TestTokenV2 is the standard's reference asset; a production run settles Canton Coin or a registry's own token" },
   ], 2.85, 13);
   s.addNotes("This slide is not an apology. These are the four things we know are missing, we know how each would be built, and we would rather name them than have a judge find them. The scoping one is the first thing a paying agent would ask for.");
 }
@@ -285,9 +285,9 @@ function bullets(s, items, y = 1.7, size = 16) {
     x: M + 0.15, y: 1.5, w: W - 2 * M - 0.3, h: 0.62, fontFace: "Segoe UI", fontSize: 15, bold: true, color: BLUE, valign: "middle",
   });
   bullets(s, [
-    { text: "Dividends and redemptions are the same engine — the same run, a different event type" },
+    { text: "Dividends and redemptions are the same engine: the same run, a different event type" },
     { text: "Works against registers that already exist. The bond is not tokenized; only the cash is a Token Standard V2 asset", bold: true },
-    { text: "The benchmark is a contribution in its own right — the first published figures for CIP-112 batch settlement, going to the Canton forum regardless of how this hackathon goes" },
+    { text: "The benchmark is a contribution in its own right: the first published figures for CIP-112 batch settlement, going to the Canton forum regardless of how this hackathon goes" },
   ], 2.35, 14);
   s.addNotes("Independent paying agents and trustees first: they carry the reconciliation cost themselves and they do not need a custodian's permission to change how they settle. The bond stays where it is, which matters commercially - the industry does not have to tokenize every instrument before any of this is useful.");
 }
@@ -311,4 +311,4 @@ function bullets(s, items, y = 1.7, size = 16) {
 }
 
 await p.writeFile({ fileName: `${REPO}/docs/Indivisa-pitch.pptx` });
-console.log("wrote docs/Indivisa-pitch.pptx — 15 slides");
+console.log("wrote docs/Indivisa-pitch.pptx, 15 slides");

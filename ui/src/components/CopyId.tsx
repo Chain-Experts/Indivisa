@@ -12,7 +12,7 @@ export function CopyId({ value, chars = 12, title }: { value: string; chars?: nu
     <button
       type="button"
       className={`copy-id${done ? " done" : ""}`}
-      title={title ?? `${value} — click to copy`}
+      title={title ?? `${value}, click to copy`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);

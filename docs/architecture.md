@@ -13,8 +13,8 @@ assumes are stated where they apply.
 **Only the cash is a Token Standard V2 asset.**
 
 The bond, the register and the entitlement calculation are ordinary Daml. The
-V2 machinery — Accounts, Holdings, Allocations, `SettlementFactory_SettleBatch`
-— carries the money and nothing else.
+V2 machinery (Accounts, Holdings, Allocations, `SettlementFactory_SettleBatch`
+) carries the money and nothing else.
 
 Three consequences:
 
@@ -30,27 +30,27 @@ Three consequences:
 ## Settlement flow
 
 ```
-  PaymentAgreement per holder            (V2 — signed once by holder and
+  PaymentAgreement per holder            (V2: signed once by holder and
           │                               paying agent, at onboarding)
           ▼
-  CorporateAction                        (Daml — issuer signs, agent observes:
+  CorporateAction                        (Daml: issuer signs, agent observes:
           │                               kind, amount per unit, record and
           │                               payment dates)
           ▼
-  RegisterSnapshot at the record date    (Daml — Instrument_Snapshot verifies
+  RegisterSnapshot at the record date    (Daml: Instrument_Snapshot verifies
           │                               every Position contract, aggregates)
           ▼
-  EntitlementSchedule                    (Daml — CorporateAction_Entitle derives
+  EntitlementSchedule                    (Daml: CorporateAction_Entitle derives
           │                               it on-ledger: quantity x amount per
           │                               unit, rounding policy, total ensured)
           ▼
   DistributionRun                        one PaymentLeg per schedule entry
           │
-          ├─▶ Send allocation(s)          (V2 — paying agent authorises,
+          ├─▶ Send allocation(s)          (V2: paying agent authorises,
           │                               committed = True; one allocation
           │                               may carry every leg)
           │
-          └─▶ Receipt allocation          (V2 — one per holder, created by the
+          └─▶ Receipt allocation          (V2: one per holder, created by the
               per holder                  paying agent under the agreement,
           │                               guarded by ensureIsReceiptAllocation)
           ▼
@@ -110,14 +110,14 @@ removed from the run. The demo's deliberate-failure path can use exactly this.
 | Issuer | signs the `CorporateAction`; funds the paying agent off-batch (the funding leg is not modelled; see `TASKS.md`, open decisions) | the announcement, the instrument, and the entitlement schedule: `Entitle` runs inside the issuer's own contract, so its consequences are in the issuer's view. An issuer knows its register through its registrar anyway; the privacy claim is holder to holder |
 
 The paying agent as executor is the whole design. CIP-112's own worked example
-gives the executor sight of every leg while each participant sees only its own —
+gives the executor sight of every leg while each participant sees only its own,
 which is exactly a paying agent's operational view of a coupon run.
 
 ---
 
 ## Modules
 
-### Daml — the only authoritative layer
+### Daml: the only authoritative layer
 
 | Module | Holds | Status |
 |---|---|---|
@@ -143,7 +143,7 @@ smallest unit and the residual has to go somewhere. Decide the policy once, in
 announced distribution exactly. A settlement that is off by one cent does not
 settle.
 
-### Off-ledger — deliberately thin
+### Off-ledger: deliberately thin
 
 **No Java is required, and none was built.** The JSON Ledger API v2 lets the
 console read the ledger directly, which removes the REST tier entirely.
@@ -160,12 +160,12 @@ run without a human. It is the honest production component and it is invisible
 in a sixty-second video. Say on the slide: *in production this is a scheduled
 agent; for the demo it is a button.*
 
-### UI — the settlement console (built)
+### UI: the settlement console (built)
 
 | Part | Shows |
 |---|---|
 | **Working header** | instrument, event, holder count, per unit, total due, how many allocations are on the ledger out of how many the batch needs, the run's state, one button; then SETTLED with the update id and the submit-to-commit time, or SETTLEMENT REJECTED with the ledger's reason and the on-ledger record |
-| **Holders** | a card per holder — position, entitlement, cash, leg state — filled by one request set per participant, not per holder. Search, filter, sort |
+| **Holders** | a card per holder (position, entitlement, cash, leg state) filled by one request set per participant, not per holder. Search, filter, sort |
 | **Any card, opened** | that holder's own view, read **as that holder alone**: its contracts, then six counts of what its node holds about anyone else, all zero |
 | **Schedule** | the entitlement schedule as the executor sees it, sortable |
 | **Privacy** | the same per-party check run once per participant, continuously |
@@ -194,7 +194,7 @@ the judges Docker stack - carry no sign-in configuration and the gate is not
 registered at all.
 
 **The impressive part is not the styling.** It is that a card opened on one
-node is conspicuously empty where the executor's schedule has everything —
+node is conspicuously empty where the executor's schedule has everything,
 and that the console holds every party's credential and still cannot make
 one node answer for another.
 
@@ -210,17 +210,17 @@ holds one. In production nginx does the same.
 
 Sixty to ninety seconds, pre-recorded. Season 2's second and third place were
 won with slides and a one-minute screen capture, so the bar is a recording, not
-a live run — which also removes stage risk.
+a live run, which also removes stage risk.
 
 **Onboarding, shown once.** N agreements land on the ledger. Caption it: *each
 holder signs once; never again.* Five seconds, but it is the answer to the
 first question any judge who has read the CIP will ask.
 
-**Run one — success.** Fire the distribution. One transaction. Then open a
+**Run one, success.** Fire the distribution. One transaction. Then open a
 holder's card, and another on a different node: each sees only its own
 payment.
 
-**Run two — deliberate failure.** Label the screen unambiguously as an atomicity
+**Run two, deliberate failure.** Label the screen unambiguously as an atomicity
 demonstration before clicking, so nobody thinks the system broke. One leg is
 unavailable: one holder's receipt allocation is withheld (`demo.ps1 prepare
 -Withhold 1`). Result, as the page renders it:
@@ -237,7 +237,7 @@ list is `demo-script.md`.
 
 ---
 
-## Boundaries — what must never cross
+## Boundaries: what must never cross
 
 | Never crosses | Into |
 |---|---|
@@ -259,15 +259,15 @@ as released in Splice 0.8.1. Proof 3 confirms it and records the error shape.
 **Which V2 cash instrument for the proofs?** `TestTokenV2`, prebuilt in Splice
 0.8.1 at `daml/dars/splice-test-token-v2-1.0.1.dar`. It has no Splice runtime
 dependency and no contract keys, so it runs in Daml Script and on a plain
-Canton participant. Its Holding is signed by owner and admin — the same hard
-case as Canton Coin — so nothing proven against it is easier than the real
+Canton participant. Its Holding is signed by owner and admin, the same hard
+case as Canton Coin, so nothing proven against it is easier than the real
 thing.
 
 **How many legs fit in one transaction?** Measured to refusal, 17–22
 September, on LocalNet (`benchmark.md`). A realistic run, one allocation per
 holder: 1,000 legs in one transaction, 1.67 MB, 11.1 s submit to commit
 (500 in 4.0 s, 250 in 1.6 s). Pushed further, with legs sharing allocations:
-**13,000 legs settled in 10.4 s**, and 14,000 were refused — by the Ledger
+**13,000 legs settled in 10.4 s**, and 14,000 were refused, by the Ledger
 API's 10 MB gRPC limit on the command that authorises them, not by the
 settlement. That command costs 756 bytes per leg, so one send allocation
 holds 13,869 legs; past that the standard's own answer is several send

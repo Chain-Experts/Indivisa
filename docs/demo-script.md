@@ -164,7 +164,7 @@ It shows `➜  Local:   http://localhost:5174/`. Window 3 serves demo two.
 
 - A dark bar across the top: the **Indivisa** mark and wordmark, the line
   *Corporate actions, settled in one atomic batch, without exposing the
-  register.*, a green **live** pill, and two labels — "real · ledger reads
+  register.*, a green **live** pill, and two labels: "real · ledger reads
   and the settle are live over the JSON Ledger API" and "simulated · the
   cash is TestTokenV2, the holders are synthetic".
 - Under it a row of figures: INSTRUMENT *Northwind Rail 4.375% 2031
@@ -173,7 +173,7 @@ It shows `➜  Local:   http://localhost:5174/`. Window 3 serves demo two.
   ALLOCATIONS **251 / 251** with a full bar · RUN **PREPARED**.
 - A big green button **Settle 250 legs in one transaction** and the note
   "All or nothing. If any leg cannot settle, nothing moves."
-- Four tabs — **Holders 250**, Schedule, Privacy, Activity — with Holders
+- Four tabs (**Holders 250**, Schedule, Privacy, Activity) with Holders
   open: a search box, the chips **All 250 · Waiting 0 · Ready 250 · Paid
   0**, and a card for every holder, each showing its participant, units,
   amount due and cash, with a **READY** pill.
@@ -208,7 +208,7 @@ art, no animations.
 | 5 | **A coupon this size should not move on one signature.** / The run can name an approver: a party no single company controls. / *(small, 20 pt)* Governed through BitSafe's Decentralization Manager. Three approver nodes, threshold two. |
 | 6 | **Below the threshold, the ledger refuses.** / One approval is not enough. Nothing moves. |
 | 8 | **The holder is made ready.** / Same run. Same button. Nothing else changes. *(used between the refusal and the fix, not at the end - add it as the LAST slide so the earlier numbers do not move)* |
-| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026** — update id `1220652e…f466b` / **Run it yourself:** `cd judge && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
+| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026**, update id `1220652e…f466b` / **Run it yourself:** `cd judge && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
 (create the folder in the dialog if it does not exist).
@@ -258,13 +258,13 @@ Chrome is full screen on the **5173** tab (demo one). OBS is behind it.
 1. In OBS click **Start Recording**. Alt+Tab to Chrome. Let the page sit
    still for **five full seconds** with the mouse parked at the bottom
    right, off any text. (This still frame is shots 1 and 2 of the edit.)
-2. Move the mouse slowly down the card grid — **every one of the 250
-   holders has a card**, each marked **READY** — then back up to the
+2. Move the mouse slowly down the card grid: **every one of the 250
+   holders has a card**, each marked **READY**, then back up to the
    button. Take about eight seconds. Do not click anything.
 3. Click **Omar Berg**'s card. The panel on the right opens: his position,
    his agreement, his allocation, his cash, and under WHAT THIS NODE HOLDS
    ABOUT OTHER HOLDERS six lines all reading **0**, ending in "Nothing. Not
-   hidden — never received by this participant." Rest there three seconds,
+   hidden. Never received by this participant." Rest there three seconds,
    close it, and open **Ingrid Andersen**'s for three more. Two different
    nodes, the same answer.
 4. Move to the green button **Settle 250 legs in one transaction** and
@@ -275,8 +275,8 @@ Chrome is full screen on the **5173** tab (demo one). OBS is behind it.
    **SETTLED · 250 of 250 legs · 1,197,240.63 USD**, then *update id
    1220…* (a long code), then *effective 2026-… · submitted to committed in
    1,6xx ms*. ALLOCATIONS now reads *251 consumed by the settlement*. Within
-   two more seconds **every card in the grid turns green at once** — green
-   border, green tint, pill **PAID** — the CASH figure on each fills in, and
+   two more seconds **every card in the grid turns green at once**: green
+   border, green tint, pill **PAID**, and the CASH figure on each fills in, and
    the chips read **Paid 250**. Open any card again: the six zeros are
    unchanged.
 6. Let it sit for **ten seconds**, so the green box can be read. Then scroll
@@ -313,7 +313,7 @@ ALLOCATIONS reads **250 of 251 · waiting for <name>**.
    *Hanna-Ivanova-take2-…*), then *recorded on-ledger at 2026-…*.
 3. Look at the grid: unchanged. Every card still **READY**, no green, every
    CASH still **0.00**. Rest the mouse there for three seconds. Nothing
-   moved for the 249 who were ready either — that is the point.
+   moved for the 249 who were ready either. That is the point.
 4. Ten seconds still, then **Stop Recording**. Rename to
    `take2-rejected.mp4`.
 
@@ -451,10 +451,10 @@ other three into it; point at them instead.
 
 | | Where |
 |---|---|
-| **The DevNet run** | `docs/devnet-run.md` — update id `1220652e…f466b`, 24 Sep 2026 |
-| **Run it yourself** | `judge/` — `docker compose up`, no account, no toolchain. The same package also runs the governed settlement, so a judge can hold the vote themselves |
-| **The measured ceiling** | `docs/benchmark.md` — 13,000 legs in one transaction, and where it stops |
-| **The governed settlement** | `docs/decentralization.md` — the BitSafe integration, written up |
+| **The DevNet run** | `docs/devnet-run.md`: update id `1220652e…f466b`, 24 Sep 2026 |
+| **Run it yourself** | `judge/`: `docker compose up`, no account, no toolchain. The same package also runs the governed settlement, so a judge can hold the vote themselves |
+| **The measured ceiling** | `docs/benchmark.md`: 13,000 legs in one transaction, and where it stops |
+| **The governed settlement** | `docs/decentralization.md`: the BitSafe integration, written up |
 
 Card 7 carries the first two. The README carries all four, and it is the
 first thing a judge opens after the video.
@@ -467,8 +467,8 @@ One sentence per shot, spoken slowly; silence is fine between them.
   holders. This is the paying agent's view: every holder, every amount."
 - Over the card grid: "Every holder, read from its own node." Over the
   opened card: "This is one holder's view, answered by its own
-  participant. Its own line, and nothing about anyone else. Not filtered —
-  never delivered."
+  participant. Its own line, and nothing about anyone else. Not filtered.
+  Never delivered."
 - Over the click: "One transaction."
 - Over the green box: "Settled. Every holder paid at the same instant.
   The update id is on screen."

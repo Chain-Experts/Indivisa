@@ -42,9 +42,9 @@ export function NodeAnswer({ probe, sharing }: { probe: Probe | null; sharing: N
         {total !== 0
           ? `${total} contracts about others reached this node`
           : sharing === "separate"
-            ? "Nothing. Not hidden — never received by this participant."
+            ? "Nothing. Not hidden. Never received by this participant."
             : sharing === "shared"
-              ? "Nothing for this party. This node also hosts the paying agent, so the data is on the node and the ledger filters it by party — a weaker guarantee than never receiving it, and the one this network can offer."
+              ? "Nothing for this party. This node also hosts the paying agent, so the data is on the node and the ledger filters it by party: a weaker guarantee than never receiving it, and the one this network can offer."
               : "Nothing for this party. This deployment would not say which node answered, so we do not claim the data never arrived."}
       </div>
     </div>

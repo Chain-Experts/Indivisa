@@ -1,7 +1,7 @@
-# Member-governed cancellation of a stranded proposal — Design
+# Member-governed cancellation of a stranded proposal: design
 
 **Date:** 2026-10-05
-**Status:** Design — questions open, implementation offered
+**Status:** Design, questions open, implementation offered
 **Author:** Chain-Experts
 **Raised as:** an issue on `DLC-link/decentralization-manager` · **Implementation target:** `governance-core` or a small package beside it
 
@@ -9,8 +9,8 @@
 
 A `GovernableAction` whose proposer the live `GovernanceRules` no longer
 authorises can never reach threshold, and cannot be removed by anyone except
-that proposer. If the proposer is a party nobody controls any more — a member
-who has left, a decommissioned validator, a counterparty who has moved on —
+that proposer. If the proposer is a party nobody controls any more, a member
+who has left, a decommissioned validator, a counterparty who has moved on, then
 the card sits on every member's Approvals tab permanently.
 
 `Governance.Action` already anticipates the fix: `GovernableAction_Cancel` is
@@ -32,7 +32,7 @@ wrong on both counts.** The ACS commitments between the two participants
 matched for the week and the contract was live on both sides. The cause was
 authorisation: the proposal's proposer was a paying agent from an earlier
 seat, and the live `GovernanceRules` authorises a different one, so
-`GovernanceRules_ConfirmAction` refused every confirmation — correctly, and
+`GovernanceRules_ConfirmAction` refused every confirmation, correctly, and
 for a reason that had nothing to do with staleness.
 
 An error about *who is asking* reads, from the Approvals tab, exactly like an
@@ -54,7 +54,7 @@ ours: the party was hosted on our participant and our ledger user still held
 
 The second is the right primitive. The gap is that the only things holding
 the governance party's authority are `GovernableAction_Execute`
-implementations, and none of them cancels another action — so in practice the
+implementations, and none of them cancels another action, so in practice the
 second row is unreachable.
 
 ## The shape we would propose
@@ -85,19 +85,19 @@ as any other action. Nothing new for a member to learn or to trust.
 ## Five questions, which are yours rather than ours
 
 **1. Who may propose a cancellation?** The natural answer is the same set as
-any other action — members and additional proposers. But a proposal is often
+any other action: members and additional proposers. But a proposal is often
 stranded *because* proposer authorisation has drifted, which argues for
 members only. We lean to members only: it is the narrower claim, and it
 cannot itself become stranded for the same reason.
 
 **2. What happens to confirmations already cast on the target?** Nothing
-mechanically — the note on `ProposerCancel` already observes that outstanding
+mechanically. The note on `ProposerCancel` already observes that outstanding
 confirmations against an archived proposal are harmless, because
 `ExecuteConfirmedAction` fetches the proposal and fails. Worth stating for
 `Cancel` too, so the silence is not read as an oversight.
 
 **3. Can a cancellation itself become stranded?** Yes, if proposed by a party
-that later loses authorisation — the same trap one level up. Restricting
+that later loses authorisation, the same trap one level up. Restricting
 proposal to members makes it unlikely, not impossible. We would document that
 rather than engineer around it.
 
@@ -124,7 +124,7 @@ that one.**
 
 ## What we are offering
 
-We will write the package and its tests to the shape above — in the same
+We will write the package and its tests to the shape above, in the same
 style as the batch-settlement module in #517: built and tested inside this
 repository, at your SDK, with any dependency cost stated up front.
 

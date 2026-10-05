@@ -6,7 +6,7 @@ import type { RunSummary } from "./RunBar";
 /**
  * What the ledger actually did, newest first: the settlement with its update
  * id, and every refusal with the reason the ledger gave. Both are contracts,
- * not log lines — the refusal is recorded on-ledger by the agent, which is
+ * not log lines. The refusal is recorded on-ledger by the agent, which is
  * what makes "it was refused" auditable rather than a screenshot.
  */
 export function Activity({ agent, run }: { agent: AgentHandle; run: RunSummary }) {
@@ -17,7 +17,7 @@ export function Activity({ agent, run }: { agent: AgentHandle; run: RunSummary }
   if (!receipt && rejections.length === 0) {
     return (
       <p className="muted pad">
-        Nothing has been attempted yet. Press the button and this fills in — with the settlement, or with the ledger's
+        Nothing has been attempted yet. Press the button and this fills in, with the settlement or with the ledger's
         reason for refusing it.
       </p>
     );
@@ -42,7 +42,7 @@ export function Activity({ agent, run }: { agent: AgentHandle; run: RunSummary }
               update id {receipt.updateId ? <CopyId value={receipt.updateId} chars={24} /> : <code>…</code>}
             </div>
             <div className="event-line muted">
-              One transaction. Every leg in it, or none of them — there is no partial settlement to reconcile.
+              One transaction. Every leg in it, or none of them. There is no partial settlement to reconcile.
             </div>
           </div>
         </li>

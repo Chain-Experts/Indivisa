@@ -13,14 +13,14 @@ export function Privacy({ config, currency, byNode }: { config: Config; currency
   return (
     <div className="privacy">
       <p className="grid-note">
-        One reading per participant, refreshed every two seconds. The paying agent is the executor and sees every leg —
+        One reading per participant, refreshed every two seconds. The paying agent is the executor and sees every leg,
         that is the standard's design, not a leak. What must not happen is a holder's node learning another holder's
         position, and these are the counts that would show it.
       </p>
       {config.distinctNodes === 1 ? (
         <p className="grid-note warn-note">
           On this network every participant name resolves to the <strong>same node</strong>, so what follows is the
-          ledger declining to hand one party another party's contracts — real, and enforced by Canton, but weaker than
+          ledger declining to hand one party another party's contracts: real, and enforced by Canton, but weaker than
           the data never arriving. For that stronger claim the holders must sit on nodes somebody else operates; the
           local run does exactly that, with five participants.
         </p>

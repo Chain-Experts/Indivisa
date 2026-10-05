@@ -606,7 +606,7 @@ legs works. The recorded rejection for a missing receipt is below under proof 4.
 
 ---
 
-## Phase 0 — Wiring (day 1)
+## Phase 0: Wiring (day 1)
 
 No LocalNet needed for this phase. Everything here is a download and a build.
 
@@ -629,7 +629,7 @@ No LocalNet needed for this phase. Everything here is a download and a build.
       create a `Token`, as Splice's own test env does. `TokenRules_OfferMint`
       not exercised; nothing proven depends on it.
 - [ ] Read `OpenZeppelin/canton-specs` → `experiments/cip112-settlement` and
-      `docs/reference-architectures/dex.md`. **Reference only** — DAR import is
+      `docs/reference-architectures/dex.md`. **Reference only**: DAR import is
       gated and nothing there is dependable.
 - [ ] Ask NODERS (mostly overtaken - the challenge structure was answered on
       30 Sep, and the DevNet questions by simply running on it):
@@ -643,7 +643,7 @@ No LocalNet needed for this phase. Everything here is a download and a build.
          holder can log into the wallet and watch `TestTokenV2` cash land
          (display only; no wallet-side transfers needed).
 
-### Phase 0b — LocalNet, five participants · **DONE 17 Sep, no Docker**
+### Phase 0b: LocalNet, five participants · **DONE 17 Sep, no Docker**
 
 `TestTokenV2` has no Splice runtime dependency and no contract keys, so
 LocalNet is a plain Canton synchronizer plus participants. It turned out not
@@ -683,9 +683,9 @@ survives restarts; `localnet.conf` is the only file that changes.
 
 ---
 
-## Phase 1 — The five proofs (days 2–8)
+## Phase 1: The five proofs (days 2–8)
 
-Written in `Indivisa.Model.*`, `Indivisa.Utils` and `Indivisa.Test.*` — the real
+Written in `Indivisa.Model.*`, `Indivisa.Utils` and `Indivisa.Test.*`, which are the real
 packages. Nothing here is throwaway.
 
 Proofs 1, 3 and 4 are Daml Script against `TestTokenV2`, run with `dpm test`.
@@ -693,7 +693,7 @@ No network. Proofs 2 and 5 wait for Phase 0b.
 
 No bond. No register. No entitlement engine. No UI. No 500 holders.
 
-### Proof 1 — does the batch settle at all? **PASSES** (`proof1_batchSettles`)
+### Proof 1: does the batch settle at all? **PASSES** (`proof1_batchSettles`)
 - [x] One payer, `TestTokenV2` cash, three recipients, in Daml Script.
 - [x] **One** committed send allocation carrying all three `transferLegSides`.
       The token accepted it; no fallback to one-per-leg needed.
@@ -705,7 +705,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
       asserted over the V2 `Holding` interface. The run is consumed and a
       `DistributionReceipt` remains.
 
-### Proof 3 — do holders authorise once, at onboarding, and never again? **PASSES**
+### Proof 3: do holders authorise once, at onboarding, and never again? **PASSES**
 
 - [x] `PaymentProposal` (agent proposes) and `PaymentAgreement`
       (holder accepts, once) in `Indivisa.Model.Payment`.
@@ -722,7 +722,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
       leg`). Alice's balance untouched.
 - [x] Second coupon with no new holder action: in `proof3_holdersAuthoriseOnce`.
 
-### Proof 2 — does each recipient see only its own leg?
+### Proof 2: does each recipient see only its own leg?
 - [x] Single-participant form (`proof2_visibility_singleParticipant`): before
       settlement each holder sees exactly one `V2.Allocation`, its own, with
       only its own amount; the agent sees four. After settlement each holder's
@@ -740,7 +740,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 > party-scoped queries, **not** projection. The five-participant run is what
 > proves the privacy claim, and it now does.
 
-### Proof 4 — is it really all or none? **PASSES**
+### Proof 4: is it really all or none? **PASSES**
 - [x] `proof4_allOrNone`: Charlie not onboarded, so his receipt allocation is
       missing. Settle refused. Alice, Bob, Charlie all still at 0; agent still
       7,000 unlocked and 3,000 locked; the run still active; no receipt.
@@ -765,7 +765,7 @@ No bond. No register. No entitlement engine. No UI. No 500 holders.
 - [ ] Still to add: an expired or insufficient **send** allocation as the bad
       leg, once settlement deadlines are in play.
 
-### Proof 5 — where is the ceiling? **FOUND, 22 Sep**: 13,000 legs settle; the command that authorises them refuses at 13,869
+### Proof 5: where is the ceiling? **FOUND, 22 Sep**: 13,000 legs settle; the command that authorises them refuses at 13,869
 
 Script form (`Indivisa.Test.Scale`, 17 Sep), results in `docs/benchmark.md`:
 - [x] N = 3, 10, 50 under `dpm test -p scale`; 250, 500, 1000, 2000 through
@@ -829,27 +829,27 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 2 — The model (days 8–13)
+## Phase 2: The model (days 8–13)
 
-- [x] `Indivisa.Types` — `PaymentLeg`, `Isin`, `EventKind` (Coupon / Dividend /
+- [x] `Indivisa.Types`: `PaymentLeg`, `Isin`, `EventKind` (Coupon / Dividend /
       Redemption), `RoundingPolicy` (LargestRemainder, RoundHalfUpResidualToIssuer). (18 Sep)
-- [x] `Indivisa.Model.Register` — `Instrument`, `Position` (registrar signs,
+- [x] `Indivisa.Model.Register`: `Instrument`, `Position` (registrar signs,
       holder observes: each holder sees only its own), `RegisterSnapshot`.
       `Instrument_Snapshot` verifies every position contract on-ledger
       (right isin, right registrar), aggregates per holder, sorts. The
       registrar can omit a position; it cannot invent one.
-- [x] `Indivisa.Model.Event` — `CorporateAction` (issuer signs, agent
+- [x] `Indivisa.Model.Event`: `CorporateAction` (issuer signs, agent
       observes; `amountPerUnit`, record and payment dates).
       `CorporateAction_Entitle` attaches the snapshot and derives the
       schedule **on-ledger**, so the schedule is verifiably announcement x
       snapshot. `CorporateAction_Cancel` for the issuer.
-- [x] `Indivisa.Model.Entitlement` — `entitlements`: quantity x amountPerUnit,
+- [x] `Indivisa.Model.Entitlement`: `entitlements`: quantity x amountPerUnit,
       **largest-remainder** rounding by default (floor to the cent, hand the
       residual cents to the largest discarded fractions), sums to the
       announced total exactly; half-up-with-issuer-residual as the
       alternative; zero entitlements dropped. `EntitlementSchedule` records
       policy, exact and paid amounts per holder, and ensures the total.
-- [x] `Indivisa.Model.Distribution` — `runFromSchedule`: one leg per entry,
+- [x] `Indivisa.Model.Distribution`: `runFromSchedule`: one leg per entry,
       currency from the schedule, `schedule` link on the run and the receipt.
       Proofs still create runs by hand (`schedule = None`).
 - [x] Scripts: `Test.Register` (3), `Test.Entitlement` (5), `Test.Coupon`
@@ -866,9 +866,9 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 3 — Driver and data (days 13–15) · **built 18 Sep**
+## Phase 3: Driver and data (days 13–15) · **built 18 Sep**
 
-- [x] `Test.Demo.demo_seat` — parties, cash, the instrument ("Northwind Rail
+- [x] `Test.Demo.demo_seat`: parties, cash, the instrument ("Northwind Rail
       4.375% 2031"), positions, **N payment agreements** (the onboarding step,
       shown once), the announcement (21.875 per unit so the rounding is
       visible), the record-date snapshot and the on-ledger schedule. Emits a
@@ -901,7 +901,7 @@ Participant form, LocalNet, 17–18 Sep (`docs/benchmark.md` section 2):
 
 ---
 
-## Phase 4 — UI (days 15–17) · **built 18 Sep, rebuilt as a console 23 Sep**
+## Phase 4: UI (days 15–17) · **built 18 Sep, rebuilt as a console 23 Sep**
 
 Lists and numbers, and the interrogation of them. No forms, no auth flows,
 no application backend.
@@ -912,7 +912,7 @@ no application backend.
       reload) and submit-to-commit time. On refusal: "SETTLEMENT REJECTED ·
       N requested · 0 executed · NO PARTIAL SETTLEMENT", the reason, and a
       `SettlementRejected` record written on-ledger.
-- [x] ~~`Holder.tsx` — one component rendered three times~~ — replaced
+- [x] ~~`Holder.tsx`, one component rendered three times~~, replaced
       23 Sep (below). The per-holder view survives as the drawer.
 - [x] JSON Ledger API v2 only, through the dev server's proxy (no CORS on
       the API; nginx in production). No Java tier.
@@ -929,7 +929,7 @@ no application backend.
       and a page with one button does not look like something anyone
       operates. Now: a dark header carrying the mark; a row of figures
       (instrument, holders, per unit, total due, an allocations meter, the
-      run's state); the button; and four tabs — **Holders** (a card for
+      run's state); the button; and four tabs: **Holders** (a card for
       every holder, searchable, filterable by leg state, sortable),
       **Schedule** (sortable, each leg waiting / ready / paid),
       **Privacy** (the per-party check once per participant), **Activity**
@@ -955,7 +955,7 @@ no application backend.
       card green, every per-party count still zero.
 
 > Budgeted at one to two days because it is AI-assisted and the surface is
-> small. If Phase 1 or 2 slips, this phase absorbs it — but do not cut it to
+> small. If Phase 1 or 2 slips, this phase absorbs it, but do not cut it to
 > nothing. Season 2's finalists all showed a polished one-minute recording, and
 > the contrast between the executor's schedule and a single holder's node is
 > the most persuasive thing we can put on screen.
@@ -966,7 +966,7 @@ no application backend.
 
 - **One project, one track**, and the same project enters sponsor challenges
   on top. The track is picked at submission. We do not split the idea or
-  submit twice — which is what the single video and single repo already
+  submit twice, which is what the single video and single repo already
   assume.
 - **Judging is asynchronous.** No live slot, no call. Judges review three
   things on the platform: the **repo**, a **working demo** (live, or a
@@ -994,7 +994,7 @@ no application backend.
 
 ---
 
-## Phase 5 — DevNet, recording and pitch (days 17–20)
+## Phase 5: DevNet, recording and pitch (days 17–20)
 
 Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 
@@ -1012,18 +1012,18 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 - [x] Handover checklist in `infra/README.md`: eight steps, what to send
       back (seat file, both attempt files, the update id).
 - [x] `docs/demo-script.md`: shot list, captions, what each caption may claim.
-- [x] **One DevNet run — done 24 Sep.** Five holders paid in one transaction
+- [x] **One DevNet run, done 24 Sep.** Five holders paid in one transaction
       on Chain-Experts' DevNet validator, update id
       `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`,
       8,421.88 USD, and the deliberate failure refused first. Full record in
       `docs/devnet-run.md`. **One validator, confirmed 23 Sep**:
       all five participant names resolve to the same node, so this run is
       evidence that the real network vets our packages and commits a real
-      `SettlementFactory_SettleBatch` — not evidence of cross-operator
+      `SettlementFactory_SettleBatch`, not evidence of cross-operator
       privacy, which stays with the five-participant local run. The console
       now reads each node's own id and says which of the two claims applies.
       A real update id on a real network is still the evidence BitSafe's
-      Season 2 postmortem names as a marker of the credible builds —
+      Season 2 postmortem names as a marker of the credible builds,
       everything else was LocalNet.
       **18 Sep: Splice 0.8.1 installed on the DevNet validator** (DevOps
       confirmed), the release the DARs were built against. Next from the
@@ -1081,7 +1081,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       after two clips of exactly that. It now opens "That was one
       signature", which makes the section read as *default, then option*
       rather than as a contradiction. The operator caught that, not me.
-- [x] **A one-command local deployment for the judges** — `judge/`, built
+- [x] **A one-command local deployment for the judges**: `judge/`, built
       and verified 23 Sep, ahead of the DevNet run rather than after it
       (there was room, and it costs the recording nothing). `cd judge &&
       docker compose up` gives one Canton container with the five-participant
@@ -1104,7 +1104,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       from `benchmark.md` and `devnet-run.md` rather than being retyped.
       **Still to do:** open it, check the spacing, rehearse against the
       five-minute Grand Final format.
-- [x] Label every component **real / simulated / planned** — done in three
+- [x] Label every component **real / simulated / planned**, done in three
       places that a judge actually reads: the deck (slide 12, and slide 13
       for what is not built), `judge/README.md`, and `docs/demo-script.md`
       Part H, which says what a caption may and may not claim.
@@ -1112,7 +1112,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
 
 ---
 
-## BitSafe challenge — governed settlement · **sandbox end to end 22 Sep, DevNet path agreed 23 Sep**
+## BitSafe challenge: governed settlement · **sandbox end to end 22 Sep, DevNet path agreed 23 Sep**
 
 Separate, capped workstream (the brief and the first-task report are in
 `private/`, outside the repo; `docs/decentralization.md` is the public
@@ -1148,21 +1148,21 @@ Next, by owner:
 
 - [x] **Us**: Slack addresses sent and the shared channel is live - we ran the
       whole governed settlement through it on 29 Sep with BitSafe.
-- [x] **Us (DevOps)**: DecMan beside the DevNet validator — **done 25 Sep**
+- [x] **Us (DevOps)**: DecMan beside the DevNet validator, **done 25 Sep**
       at the DevNet Decentralization Manager host (`decman.url` in the
       git-ignored `infra/devnet/ui.json`), Noise listener on 9000.
       Verified from outside without credentials: 9000 open (93 ms), 8080
       filtered, and the admin API refuses every path without a token *and*
       rejects a forged one, so it is not running in the accept-anything
       insecure mode. The login page itself is public, which is correct.
-- [x] **Us**: node data sent to BitSafe — **25 Sep**. DecMan's own "share my
+- [x] **Us**: node data sent to BitSafe, **25 Sep**. DecMan's own "share my
       data" button emits the row; our participant id in it matches the value
       read independently from the ledger on 23 Sep, and the address and port
       match what was tested from outside. Kept in
       `private/bitsafe-devnet-peer.md`.
       Note: the truncated second field (`…::1220...a553`) is what the button
       emits on **both** sides, not an error in theirs.
-- [x] **BitSafe**: post their DevNet node data — **received 23 Sep**
+- [x] **BitSafe**: post their DevNet node data, **received 23 Sep**
       (BitSafe). Validated and kept in `private/bitsafe-devnet-peer.md`:
       participant id and public key are well formed, and all three of their
       A records accept TCP on 9000. One field to confirm with them, the
@@ -1170,8 +1170,8 @@ Next, by owner:
 - [x] **BitSafe**: shared Slack channel created by BitSafe and in daily use.
 - [x] **Protocol version: answered by the deployment itself** (25 Sep). The
       worry was that DecMan pins protocol version 35. It is now running
-      against our DevNet participant and reading its identity from it — the
-      share-my-data button returned our real participant id — so whatever
+      against our DevNet participant and reading its identity from it, and the
+      share-my-data button returned our real participant id, so whatever
       the synchronizer runs, DecMan works against it. Asking BitSafe to
       confirm the synchronizer id is still worth doing, because parties
       cannot span two synchronizers.
@@ -1239,8 +1239,8 @@ Done:
       with `-Force`), and one showed the previous run's update id because
       the evidence command took the first receipt rather than the newest.
 - [x] **Judge package carries the whole product** (24 Sep, stage 1 of 2). The
-      judge Canton image now vets all thirteen DARs, governance included —
-      57 packages with dependencies — so an inspecting judge finds everything
+      judge Canton image now vets all thirteen DARs, governance included,
+      57 packages with dependencies, so an inspecting judge finds everything
       we built in the running system. Verified: the five governance-relevant
       packages all report vetted.
 - [x] **Judge package, stage 2: the vote inside Docker** (24 Sep, working end
@@ -1262,8 +1262,8 @@ Done:
       keep it behind a compose profile so `docker compose up` stays exactly
       as it is today.
 - [x] **Both BitSafe contributions prepared** (25 Sep) in `contrib/bitsafe/`:
-      the reusable module as one PR, and `INTEGRATING.md` — six undocumented
-      things that each cost hours — as another. Branch names, commit types and
+      the reusable module as one PR, and `INTEGRATING.md`, six undocumented
+      things that each cost hours, as another. Branch names, commit types and
       draft descriptions follow their `docs/CONTRIBUTING.md`. Send the docs
       one first. **Still to do: open the two PRs.**
 - [x] **Two pull requests to BitSafe - both open, #516 and #517 (4-5 Oct).**
@@ -1278,22 +1278,22 @@ Done:
 > for the contribution pool"*, and the organiser said the same. But BitSafe
 > have said on Telegram that **the page is wrong and they will correct it**,
 > and that a team may enter both. That is the rule author disowning their own
-> published text, not an unwritten claim contradicting it — so it very likely
+> published text, not an unwritten claim contradicting it, so it very likely
 > stands. Being confirmed with them directly (26 Sep).
 >
 > Two more things in their wording. The contribution pool is *"for teams
-> without a node"* — we have had one since 24 September — and it is *"split
+> without a node"*, and we have had one since 24 September, and it is *"split
 > by two teams"*, so it is smaller per team than it reads.
 >
 > **The decision turns on that answer.** If both are open, apply for Gold
-> regardless — it costs nothing and the contribution work stands on its own.
+> regardless, since it costs nothing and the contribution work stands on its own.
 > If they are exclusive after all, apply for Gold only once the governed
 > settlement has actually run on DevNet, because applying on expectation and
 > not finishing would forfeit the pool and win nothing.
 >
 > Either way the fallback is strong and already built: the contribution pool asks for a reproducible LocalNet demo
 > of an integration, a custom module, or an open-source contribution, and we
-> have all four — `judge/` runs the governed flow in one command,
+> have all four: `judge/` runs the governed flow in one command,
 > `governance-settlement-v0` is the module, and `contrib/bitsafe/` holds two
 > ready PRs.
 
@@ -1319,7 +1319,7 @@ Done:
       a member with no node of its own still counts towards the threshold,
       so the party could not reach its own threshold, and only
       `PUT /party-config` could unpick it (`infra/bitsafe/confirm-as-member.ps1`).
-- [ ] Java paying-agent daemon — watches payment dates, fires the run without a
+- [ ] Java paying-agent daemon: watches payment dates, fires the run without a
       human. The honest production component, invisible in the video. First to be
       cut.
 - [ ] Dividend and redemption as second and third event types, to show the
