@@ -1,8 +1,12 @@
 # Three contributions to BitSafe's Decentralization Manager
 
-Both submitted on 4 October 2026 to `github.com/DLC-link/decentralization-manager`.
-Both are finished work, used and tested here first; nothing was written for
-the occasion.
+Two pull requests on 4 October 2026 and one issue on 5 October, to
+`github.com/DLC-link/decentralization-manager`. All three are finished work,
+used and tested here first; nothing was written for the occasion.
+
+**Both pull requests were reviewed on 5 October and revised the same day.**
+Changes were requested on each and all of them are in. See "What the review
+changed" under each PR.
 
 Their conventions, from `docs/CONTRIBUTING.md`:
 
@@ -11,7 +15,7 @@ Their conventions, from `docs/CONTRIBUTING.md`:
 | Commit | `<type>(<scope>): <subject>`, past tense |
 | Branch | `<type>/<scope>/<subject>` |
 | Types | `feat`, `fix`, `docs`, `style`, `refact`, `perf`, `test`, `chore` |
-| Staging | `git add <file>`, deliberately — not `git add .` |
+| Staging | `git add <file>`, deliberately, not `git add .` |
 
 **How to submit, from BitSafe, 30 September:** open
 focused pull requests **against `main`**, one for the documentation and one
@@ -34,7 +38,7 @@ module.
 
 ## Where the code lives now
 
-Both contributions were submitted on 4 October 2026. The module and its tests
+All three were submitted on 4 and 5 October 2026. The module and its tests
 are **packages in this repository**, not copies kept in this folder:
 
 | In this repo | Submitted as |
@@ -43,6 +47,11 @@ are **packages in this repository**, not copies kept in this folder:
 | `daml/governance-settlement-test/` | PR #517, `daml/governance-settlement-test/` |
 | `contrib/bitsafe/INTEGRATING.md` | PR [#516](https://github.com/DLC-link/decentralization-manager/pull/516), `docs/INTEGRATING.md` |
 | `contrib/bitsafe/member-governed-cancel-design.md` | Issue [#518](https://github.com/DLC-link/decentralization-manager/issues/518) |
+
+**The two copies of the module are no longer identical**, and that is
+deliberate. Theirs is `governance-settlement-v1` with tests in their own
+harness; ours stays `governance-settlement-v0`. See "Why the version in this
+repository is not the version in theirs" below.
 
 An earlier draft kept a second copy of the module under `contrib/bitsafe/module/`.
 It was removed once the packages existed, because a duplicate that drifts is
@@ -74,7 +83,8 @@ registry, minting, balances, the two allocation shapes - were ported into
 of their own `governance-token-custody-test`.
 
 Three scripts, IDE ledger, no network: below threshold nothing executes, the
-proposer alone is refused, at threshold the batch settles.
+proposer alone is refused, at threshold the batch settles. **The review
+replaced them with eight** - see "What the review changed" below.
 
 ### What it costs them, stated in the PR rather than discovered
 
@@ -100,7 +110,66 @@ module, then the tests - all at their **SDK 3.4.11**, LF **2.2**, with
 - **The package name.** Ours is `governance-settlement-v0`; their convention
   is `governance-<area>-v1`. The name is the Smart Contract Upgrade identity
   rather than a label, so the PR offers the rename instead of making it.
+  **Answered: they asked for `-v1`**, which is why leaving it to them was the
+  right call.
 - **Where `TestUtils.daml` belongs**, if they would rather it were shared.
+  Still open; they accepted it beside the tests without comment.
+
+### What the review changed, 5 October
+
+`schronck` requested changes and gave six items plus six inline comments. All
+six are in the revised branch. Three of the findings were worth more than
+their fixes.
+
+- **Our negative test passed on anything.** It called
+  `SettlementFactory_SettleBatch` directly, so the proposal was never
+  involved, and it only `debug`'d the error instead of asserting it. A missing
+  disclosure would have passed it too. It was testing TestTokenV2, not this
+  module. Its replacement exercises `GovernableAction_Execute` on the proposal
+  as the proposer and expects the refusal, which is the one property the module
+  adds. **A negative test that does not assert the reason is not a test.**
+- **`ensure` checked only one direction.** It required the governance party and
+  the proposer to be among the settlement's executors and said nothing about
+  any others. `executeImpl` carries exactly those two authorities, so a
+  settlement naming a third executor passed creation, passed the vote, and
+  failed at execution. Their clause rejects it at creation. They reproduced it
+  before reporting it.
+- **Their one optional suggestion rested on a wrong fact, and we said so.**
+  They proposed binding `factoryCid` to the admin "the legs carry". In V2 as
+  released, `TransferLeg.instrumentId` is a `Text`; the admin sits on the
+  allocation, not the leg. And the standard's own
+  `fetchAndValidateAllocations` already checks every allocation's admin against
+  the factory's. We built it, found both facts, reverted it, and put the
+  residual gap in the module's README: the refusal lands at execution rather
+  than at filing.
+
+Also done: the CI step, SPDX headers, and the comments, `daml.yaml` notes and
+README cut to the reasons the code cannot show. Eight tests, rewritten in
+their `testlib` given/when/then harness, all passing at their SDK 3.4.11 with
+no warnings.
+
+### Why the version in this repository is not the version in theirs
+
+`daml/governance-settlement/` here stays `governance-settlement-v0` with its
+original tests, and that is deliberate.
+
+- **The name is load-bearing here.** `governance-settlement-v0` is the package
+  vetted on DevNet, the DAR `judge/canton.Dockerfile` copies and
+  `judge/bootstrap.canton` uploads, and the name in
+  `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. Renaming it would
+  break the judges' one-command package in order to tidy a label.
+- **The rewritten tests cannot build here.** They are written against
+  `testlib-0.1.0.dar`, which exists only in BitSafe's repository.
+- **The `ensure` fix is real but idle here.** A changed `ensure` is a new
+  package lineage rather than a version bump, and the configuration it rejects
+  is one Indivisa cannot create: `runExecutors run = payingAgent :: approver`
+  is exactly two parties, and the product settles through
+  `indivisa-governance-v0`'s `SettleRunProposal`, not through this module. It
+  is worth adopting as a properly renamed `governance-settlement-v1` after the
+  Grand Final, not before.
+
+A contribution adopting the host repository's conventions is the contribution
+working as intended. The divergence is the evidence of that, not drift.
 
 ---
 
@@ -147,7 +216,27 @@ The seven that stand:
    says the UI has no way to supply them, and the click fails with
    `CONTRACT_NOT_FOUND` naming a contract rather than a missing parameter
 
----
+### What the review changed, 5 October
+
+Six items, all addressed. The reviewer's objection was the same one four times
+over and it was fair: **items 1 to 4 are only true of a Canton running in
+`DECPM_INSECURE` mode**, and the page did not say so. They now sit under one
+blockquote that scopes them.
+
+The other three:
+
+- **Item 2 asserted a failure we had not captured.** We reproduced it and the
+  page now carries the actual `GENERIC_CONFIG_ERROR` rather than a description
+  of it.
+- **Item 3 was headed by the symptom**, not the setting. It is now headed
+  `max-token-lifetime = Inf`.
+- **Item 6's workaround was presented as a procedure.** It writes credentials
+  through `PUT /party-config` and is marked as last-resort recovery.
+- **Item 7 was too broad.** It is narrowed to custom proposals, which is where
+  the Execute button sends no disclosed contracts.
+
+Also: "Two worked examples" removed, and the voice made neutral throughout. A
+page about someone else's product should read as notes, not as a verdict.
 
 ---
 
