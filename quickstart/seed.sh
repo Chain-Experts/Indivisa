@@ -15,7 +15,7 @@ set -euo pipefail
 AUTH=(-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08")
 
 HOLDERS="${INDIVISA_HOLDERS:-20}"
-TAG="${INDIVISA_TAG:-judge}"
+TAG="${INDIVISA_TAG:-demo}"
 DAR=/indivisa/indivisa-test-0.1.0.dar
 OUT=/demo
 RUNNER=(java -jar /opt/daml-script.jar)
@@ -87,7 +87,7 @@ case "${1:-seat}" in
     # governed path is wanted, the seat stops here and `govern prepare`
     # creates the run instead.
     if [ -n "${INDIVISA_GOVERNED:-}" ]; then
-      jq "{network: \"judge\", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}"         /tmp/participants.json > "$OUT/participants.json"
+      jq "{network: \"demo\", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}"         /tmp/participants.json > "$OUT/participants.json"
       printf %s "$instance" > "$OUT/instance"
       say "Seated. The run itself is created by the governed path."
       printf "    Next:  docker compose run --rm govern-seed
@@ -106,7 +106,7 @@ case "${1:-seat}" in
     # submit as. Canton is authenticated here and takes the user from the
     # token subject, refusing a command that names a different one - with an
     # error that deliberately says nothing. Never let the page guess it.
-    jq '{network: "judge", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}' \
+    jq '{network: "demo", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}' \
       /tmp/participants.json > "$OUT/participants.json"
     printf %s "$instance" > "$OUT/instance"
     say "Ready. Open http://localhost:${INDIVISA_PORT:-8080} and press the button."

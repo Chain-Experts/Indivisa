@@ -53,9 +53,9 @@ infra/*/public/
 ui/dist/
 quickstart/.cache/
 # Scratch from driving the quickstart stack from a shell (party maps, a
-# bundled settle, an endpoint list): generated, never committed. The seat tag
-# and network are still called "judge", so the directory is named for that.
-infra/judge/
+# bundled settle, an endpoint list): generated, never committed. Named for the
+# seat tag, which defaults to "demo".
+infra/demo/
 
 # The pitch deck and its speaker notes. Kept on disk, deliberately out of the
 # repository: the PDF is what goes to the submission platform, the pptx is

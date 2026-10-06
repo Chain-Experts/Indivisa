@@ -171,6 +171,77 @@ kept in the document rather than quietly replaced.
 
 ---
 
+## Adoption
+
+### What would it take to settle real cash, or a different asset?
+
+**Nothing in the model.** `DistributionRun` carries an `instrument` field and
+no asset type, so a different asset is different data in that field, not
+different code.
+
+One thing is asset-specific, and it is off-ledger. Exercising a Token Standard
+factory needs the registry's **choice context**, and where that comes from
+differs per asset:
+
+| | `TestTokenV2`, built | Canton Coin, planned |
+|---|---|---|
+| Where the context lives | a `TokenRules` contract on the ledger | the registry's off-ledger API |
+| How the client gets it | `queryDisclosure`, then `disclose` on submit | an HTTP call to the Amulet registry (Scan) |
+| Funding the payer | create a holding in a script | a funded validator wallet |
+
+**The restructuring is the work, not the field.** Our seat, prepare and settle
+flow runs inside Daml Script, and Daml Script cannot make HTTP calls, so the
+context has to be fetched by a client and passed in, or the flow has to move
+onto the JSON Ledger API entirely.
+
+It also costs the quickstart its best property. `TestTokenV2` needs no super
+validator, no Amulet, no Scan and no identity provider, which is why the whole
+thing runs offline with no account anywhere. A Canton Coin run needs a
+validator on a live network. Full detail in [`canton-coin.md`](canton-coin.md).
+
+### What about real wallets, rather than a console holding every credential?
+
+The console is a demo harness and says so on the page: it holds every party's
+credential, and then shows the nodes still refusing to answer for one another.
+That is a stronger claim than hiding it.
+
+In a deployment, three things change. Each party sits on its own node with its
+own credential, which the model already supports and the harness does not.
+Holders sign the standing agreement once through their own wallet or client
+rather than a script. And the paying agent's cash comes from a funded wallet
+with its signing key in an HSM rather than a configuration file.
+
+None of that is research. It is the "one credential per party" and "key
+management" rows in [`production-readiness.md`](production-readiness.md).
+
+### What would we have to do to adopt this?
+
+The honest division, for a pilot running one real coupon alongside your
+existing process:
+
+| You bring | We bring |
+|---|---|
+| A register: holders, positions, the instrument. However you hold it today | The import and reconciliation against the ledger |
+| The event terms: rate, denomination, record and payment dates, rounding policy | The entitlement engine, including rounding that sums to the total exactly |
+| The cash, and a funded wallet to pay from | The settlement: one atomic batch, privately |
+| Your holders, for a one-time onboarding programme | The standing-agreement flow they sign once |
+| A Canton participant, or somewhere to run one | The model, the console and the deployment |
+| A decision on who may release a payout | Operator sign-in today; maker-checker is a build |
+
+**The onboarding programme is the part people underestimate.** Collecting a
+standing agreement from hundreds of holders is operational work, mostly not
+software, and it is front-loaded. It is also what makes every coupon after it
+zero-touch.
+
+Our estimate for that pilot is **one quarter of focused engineering**,
+assuming a counterparty who wants it. Replacing an existing process at scale
+is a different distance, and there the regulatory and operational path
+dominates rather than the engineering. Both are set out, with sizes we wrote
+to be argued with, in
+[`production-readiness.md`](production-readiness.md).
+
+---
+
 ## Shared control
 
 ### Can one company release a payment on its own?

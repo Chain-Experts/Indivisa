@@ -30,7 +30,7 @@ AUTH=(-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ
 OUT=/demo
 STATE=$OUT/govern.json
 DAR=/indivisa/indivisa-governance-test-0.1.0.dar
-TAG="${INDIVISA_TAG:-judge}"
+TAG="${INDIVISA_TAG:-demo}"
 PARTY_PREFIX="${INDIVISA_PARTY_PREFIX:-indivisa-approvers}"
 RUNNER=(java -jar /opt/daml-script.jar)
 

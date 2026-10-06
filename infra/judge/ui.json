@@ -1,0 +1,19 @@
+{
+  "participants": {
+    "registry": {
+      "jsonApi": "http://localhost:8080/api/registry"
+    },
+    "agent": {
+      "jsonApi": "http://localhost:8080/api/agent"
+    },
+    "alice": {
+      "jsonApi": "http://localhost:8080/api/alice"
+    },
+    "bob": {
+      "jsonApi": "http://localhost:8080/api/bob"
+    },
+    "charlie": {
+      "jsonApi": "http://localhost:8080/api/charlie"
+    }
+  }
+}
