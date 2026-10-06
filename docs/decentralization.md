@@ -291,10 +291,11 @@ allocate, as the sandbox's own seed script does.
   operator independence, as section 4 says.
 - **Runnable by anyone, since 24 Sep:** the governed settlement is in the
   judge package. `INDIVISA_GOVERNED=1 docker compose --profile govern up -d`
-  brings up three Decentralization Manager nodes beside the ledger, and
-  `govern confirm` / `govern execute` hold the vote. One confirmation is
-  refused by the ledger; two settle. No account, no toolchain, no sandbox
-  of ours to trust: see `judge/README.md`.
+  brings up three Decentralization Manager nodes beside the ledger. The page
+  files the request, `govern confirm` holds the vote, and the page executes
+  it once the threshold is met. One confirmation is refused by the ledger;
+  two settle. No account, no toolchain, no sandbox of ours to trust: see
+  `judge/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).**
   A coupon settled through the decentralised party at 2 of 2: our
   confirmation and theirs, on their own node.

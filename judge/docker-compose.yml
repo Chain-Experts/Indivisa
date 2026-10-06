@@ -149,7 +149,7 @@ services:
       - demo:/demo
     entrypoint: ["/indivisa/govern.sh"]
     command: ["seat"]
-    profiles: ["govern"]
+    profiles: ["manual"]
     restart: "no"
 
   # prepare / propose / confirm N / execute N / status
@@ -161,7 +161,7 @@ services:
     volumes:
       - demo:/demo
     entrypoint: ["/indivisa/govern.sh"]
-    profiles: ["govern"]
+    profiles: ["manual"]
     restart: "no"
 
   web:

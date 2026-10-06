@@ -146,9 +146,22 @@ create_party() {
   if [ -n "$existing" ]; then info "the party already exists: $existing"; return 0; fi
 
   say "Creating the decentralised party, threshold 2 of 3"
-  dm_post 1 /onboarding "$(jq -n --arg prefix "$PARTY_PREFIX" \
+  # The peer mesh is written a moment earlier and the nodes connect to each
+  # other lazily, so onboarding answers 400 until they have. Retry, and report
+  # the body: curl's own exit code says nothing a reader can act on.
+  local onboard tries=0 code out
+  onboard=$(jq -n --arg prefix "$PARTY_PREFIX" \
     --arg p2 "$(state_get PID_2)" --arg p3 "$(state_get PID_3)" \
-    '{party_id_prefix: $prefix, peer_ids: [$p2, $p3], threshold: 2}')" >/dev/null
+    '{party_id_prefix: $prefix, peer_ids: [$p2, $p3], threshold: 2}')
+  while :; do
+    out=$(curl -sS -w '\n%{http_code}' -X POST -H 'Content-Type: application/json' \
+          -d "$onboard" "http://$(node_http 1)/onboarding" 2>&1) || true
+    code=$(printf '%s' "$out" | tail -1)
+    case "$code" in 200|201|202) break ;; esac
+    tries=$((tries + 1))
+    [ "$tries" -lt 30 ] || die "the approver nodes would not start onboarding (HTTP $code): $(printf '%s' "$out" | head -n -1 | head -c 300)"
+    sleep 2
+  done
   accept_invitation 2 Onboarding
   accept_invitation 3 Onboarding
   poll_workflow /onboarding/status "the onboarding"
@@ -254,6 +267,41 @@ admit_agent() {
   info "admitted"
 }
 
+
+# The page reads the vote from DecMan, and it needs the decentralised party's
+# id to ask about. seed.sh wrote the map before this party existed, so add it
+# here, once the party is real. nginx proxies /decman/ to decman-1.
+publish_party() {
+  local party
+  party=$(state_get DEC_PARTY_ID)
+  [ -n "$party" ] || die "no decentralised party to publish"
+  jq --arg p "$party" '.decman = {party: $p}' "$OUT/participants.json" \
+    > "$OUT/participants.json.tmp" && mv "$OUT/participants.json.tmp" "$OUT/participants.json"
+  info "the page can now follow the vote"
+}
+
+
+# The page can file the proposal too: on a governed run its button reads
+# "Ask the approvers to settle N legs". When a judge presses it there is no
+# proposal.json, so find the proposal on the ledger instead - the newest
+# SettleRunProposal the paying agent can see. The script and the page then
+# act on the same contract whichever of them filed it.
+ledger_proposal_cid() {
+  local agent end
+  agent=$(state_get AGENT_ADMITTED)
+  [ -n "$agent" ] || return 1
+  end=$(curl -fsS "${AUTH[@]}" "http://canton:5023/v2/state/ledger-end" | jq -r '.offset') || return 1
+  curl -fsS "${AUTH[@]}" -X POST -H 'Content-Type: application/json' \
+    -d "$(jq -n --arg p "$agent" --argjson o "$end" \
+          '{filter: {filtersByParty: {($p): {cumulative: [{identifierFilter:
+             {WildcardFilter: {value: {includeCreatedEventBlob: false}}}}]}}},
+            verbose: false, activeAtOffset: $o}')" \
+    "http://canton:5023/v2/state/active-contracts" \
+    | jq -r '[.[].contractEntry.JsActiveContract.createdEvent
+              | select(.templateId | endswith(":Indivisa.Governance.SettleRunProposal:SettleRunProposal"))]
+             | sort_by(.offset) | last | .contractId // empty'
+}
+
 # --- the run ----------------------------------------------------------------
 
 party_map() {
@@ -269,6 +317,16 @@ party_map() {
   jq --slurpfile pp "$tmp" '.party_participants = $pp[0]' /indivisa/participants.json > /tmp/participants.json
 }
 
+# A zero-length or corrupt state file used to be silent: jq fails on it,
+# state_get ends in `|| true` and returns empty, and the script carries on
+# with blank ids to fail somewhere unrelated with an error about something
+# else. Check it once, here. Zero length is recoverable; anything else is
+# not, and says so.
+if [ -f "$STATE" ] && [ ! -s "$STATE" ]; then rm -f "$STATE"; fi
+if [ -f "$STATE" ] && ! jq -e . "$STATE" >/dev/null 2>&1; then
+  die "$STATE is not readable JSON. Delete it and re-run: docker compose run --rm govern-seed"
+fi
+
 case "${1:-seat}" in
   seat)
     wait_for_nodes
@@ -278,6 +336,7 @@ case "${1:-seat}" in
     member_parties
     governance_core
     admit_agent
+    publish_party
     say "Ready. The approvers exist and the paying agent may propose."
     printf '    party  %s\n    rules  %s\n\n    Next:  docker compose run --rm govern prepare\n\n' \
       "$(state_get DEC_PARTY_ID)" "$(state_get RULES_CID)"
@@ -294,7 +353,11 @@ case "${1:-seat}" in
       --input-file /tmp/prepare-args.json --output-file "$OUT/prepared.json" \
       --participant-config /tmp/participants.json
     say "Done. The run now needs the approvers, not just the paying agent."
-    printf '    Try the page now: the settle button is refused, because the agent cannot act alone.\n    Then: docker compose run --rm govern propose\n\n'
+    printf '    Open http://localhost:8080. The button no longer settles: it reads
+    "Ask the approvers to settle 20 legs", because the agent cannot act alone.
+    Press it, then: docker compose run --rm govern confirm 1
+
+'
     ;;
 
   propose)
@@ -313,10 +376,13 @@ case "${1:-seat}" in
 
   confirm|execute)
     cmd=$1; node="${2:-1}"
-    [ -f "$OUT/proposal.json" ] || die "run: docker compose run --rm govern propose"
     dec=$(state_get DEC_PARTY_ID); rules=$(rules_cid)
-    cid=$(jq -r '.actionCid // empty' "$OUT/proposal.json")
-    [ -n "$cid" ] || die "no action contract id in $OUT/proposal.json"
+    if [ -f "$OUT/proposal.json" ]; then
+      cid=$(jq -r '.actionCid // empty' "$OUT/proposal.json")
+    else
+      cid=$(ledger_proposal_cid || true)
+    fi
+    [ -n "$cid" ] || die "nothing has been proposed yet. Press \"Ask the approvers\" on the page, or run: docker compose run --rm govern propose"
 
     # The engine identifies a domain action by proposal_cid. The action field
     # is required by the request schema and ignored in this mode, so it

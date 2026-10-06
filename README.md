@@ -182,8 +182,8 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   governed run those are the agent *and* the approver. The commitment is
   symmetric, which is what makes an approval worth anything.
 - **A one-command package for anyone who wants to run it** (`judge/`, 23 Sep):
-  `docker compose up` gives the whole thing (five participants, the nine
-  packages, twenty seated holders with one allocation deliberately withheld,
+  `docker compose up` gives the whole thing (five participants, the thirteen
+  DARs, twenty seated holders with one allocation deliberately withheld,
   and the console) on a machine with nothing installed but Docker. Verified
   end to end: refused, then `docker compose run --rm prepare`, then settled
   in under a second.

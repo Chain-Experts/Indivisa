@@ -13,7 +13,7 @@ docker compose up
 ```
 
 Wait for `Ready. Open http://localhost:8080` in the terminal (see **When is
-it ready?** just below. The first run takes a few minutes, most of it
+it ready?** just below; the first run takes a few minutes, most of it
 seating the holders), then open that page.
 
 You will need Docker with Compose v2, **6 GB of memory** given to it
@@ -134,26 +134,35 @@ approver nodes beside the ledger. Nothing above changes: the governed path
 is opt-in and starts differently:
 
 ```bash
-docker compose down -v                                   # start clean
+docker compose --profile govern down -v                  # start clean
 INDIVISA_GOVERNED=1 docker compose --profile govern up -d
 docker compose run --rm govern-seed                      # ~2 min, once
 docker compose run --rm govern prepare
 ```
 
-Open http://localhost:8080. The button is there, and it is refused: the run
-names an approver, so the paying agent alone no longer has the authority.
+Open http://localhost:8080. **The button has changed.** It no longer settles.
+It reads *Ask the approvers to settle 20 legs*, because the run now names an
+approver and the paying agent alone no longer has the authority to pay. Press
+it: that files the request, and nothing moves.
 
-Then the vote:
+Now two of the three approvers must agree. Each has their own node:
 
 ```bash
-docker compose run --rm govern propose      # the agent asks
 docker compose run --rm govern confirm 1    # one approver agrees
-docker compose run --rm govern execute 2    # REFUSED - one is not enough
 docker compose run --rm govern confirm 2    # a second agrees
-docker compose run --rm govern execute 3    # settles
 ```
 
-The refusal is worth reading. It is not our code declining; it is the ledger:
+Watch the strip on the page as you do: it goes from one of two to two of two,
+read live from the approvers' own software. At two, a second button appears.
+Press it, and the coupon settles.
+
+The refusal below threshold is worth seeing. Between the two confirms, try:
+
+```bash
+docker compose run --rm govern execute 2    # REFUSED, one is not enough
+```
+
+It is not our code declining; it is the ledger:
 
 ```
 The requirement 'Enough confirmations to execute action' was not met.
@@ -162,21 +171,11 @@ The requirement 'Enough confirmations to execute action' was not met.
 `docker compose run --rm govern status` shows where a vote stands at any
 point. The three approver nodes have their own web interfaces on
 http://localhost:8081, 8082 and 8083 if you want to see the invitations and
-confirmations from their side.
+the confirmations from their side.
 
-**What is real here:** the governance engine is BitSafe's, unchanged; the
-threshold, the refusal and the settlement are the ledger's. **What is not:**
-three approver nodes on one machine are not three independent operators. The
-threshold is real; the independence is simulated.
-
-**The independent version has run.** On 29 September a coupon settled on
-Canton DevNet through a decentralised party at **2 of 2**: our confirmation
-and BitSafe's, on BitSafe's own node. 5 legs, 8,421.88 USD, update id
-`1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`.
-Chain-Experts could not have produced that transaction alone. What you run
-here proves the mechanism offline and on your own machine; that run proves
-the independence. Both are in [`../docs/decentralization.md`](../docs/decentralization.md).
-
+If you would rather not use the page at all, the whole thing also runs from
+the terminal: `govern propose` files the same request, and `govern execute 3`
+settles it once two approvers have confirmed.
 ## What is real and what is not
 
 **Real:** the ledger (Canton 3.5, five participants, one synchronizer), the
@@ -212,3 +211,4 @@ payment legs in one transaction, and where that stops.
 | The page says "No seat file" | The seed has not finished. Wait for `Ready. Open http://localhost:8080` in the terminal, then reload. To watch just that container: `docker compose logs -f seed`. |
 | Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
 | The button says "Prepare the run first" | The seed did not finish; see above. |
+| The governed seat fails with a 409, or DecMan says onboarding is already complete | The approver nodes keep their own volumes, and a plain `docker compose down -v` does not clear them, so they carry a party the new ledger has never heard of. Use `docker compose --profile govern down -v`. |
