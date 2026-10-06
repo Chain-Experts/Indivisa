@@ -17,6 +17,33 @@ Everything here is `TestTokenV2` as the cash instrument, one committed send
 allocation carrying all N legs, N receipt allocations created by the paying
 agent under the holders' agreements, one `SettlementFactory_SettleBatch`.
 
+
+## A leg and an allocation, because the difference drives every number here
+
+**A leg is a line of the instruction.** Pay this holder this amount of this
+instrument. In the settle request it is an id, two account references, an
+amount and an instrument name. **About 85 bytes.**
+
+**An allocation is a party's authorisation**, and it is a contract on the
+ledger with the cash set aside behind it. Each one carries a complete copy of
+the settlement it belongs to, including the executor list, plus the account
+authorising, the leg sides it covers, the holdings backing it, and timestamps
+and expiry. **About 1,554 bytes**, roughly eighteen times a leg. The ledger
+also fetches each one, validates it against the settlement and exercises a
+choice on it, so an allocation is work as well as bytes.
+
+The Token Standard requires both sides to have authorised. The paying agent
+can sign once for every leg, but each receiving holder needs its own
+authorisation, and each of those is its own contract. **A thousand holders is
+one agent allocation plus a thousand receipt allocations: 1,001 allocations
+for 1,000 legs.**
+
+That is why the two experiments below are not comparable as a single series.
+Section 2 is the real shape, one allocation per holder. Section 3 lets 250
+holders share, so 13,000 legs ride on 251 allocations: thirteen times the
+lines, a quarter of the signatures, a slightly smaller transaction. Signatures
+are the expensive thing.
+
 ---
 
 ## 1. Interpreter, 17 September 2026
@@ -320,6 +347,28 @@ the largest actually run.
 
 Do not say the limit is Canton's transaction size. On this evidence Canton
 was never the constraint; the client's command was.
+
+**Do not line the two series up as one progression.** "250 legs in 1.6 s,
+1,000 in 11.1 s, 13,000 in 10.4 s" reads as work getting faster as it grows,
+and invites the reader to conclude the numbers are wrong or massaged. They
+come from two experiments with different shapes. Section 2 is one allocation
+per holder; section 3 pins allocations at 251 and grows only the legs. The
+same thousand legs took **11.1 s with 1,001 allocations and 2.0 s with 251**,
+because an allocation costs about 1,554 bytes and a leg about 85.
+
+If both are quoted together, quote the allocation count with them, or say
+which experiment each came from. The deck does this correctly by showing only
+the realistic shape on the slide and giving the derived 6,400-holder figure
+for the ceiling.
+
+**The answer if a judge asks why 13,000 beat 1,000.** Allocations are the
+cost, not legs. The thousand-holder run carried a thousand allocations; the
+thirteen-thousand-leg run carried 251, so it was the smaller transaction:
+1.52 MB against 1.67 MB. Holding allocations fixed was deliberate, because it
+separates the two costs, and that separation is what makes the 6,400-holder
+figure a calculation rather than a guess. Within the fixed-allocation sweep
+the times rise monotonically from 2.0 s to 10.4 s, and the 13,000 row was
+measured last, after the warmest rows had already run.
 
 ### What this still cannot say
 

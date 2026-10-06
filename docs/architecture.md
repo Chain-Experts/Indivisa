@@ -73,6 +73,96 @@ settlement is atomic.** That distinction matters: a demo that shows allocations
 building and then one settlement landing is showing the truth. A demo that
 implies five hundred simultaneous allocations is not.
 
+### A leg and an allocation
+
+These two words carry every number in `docs/benchmark.md`, and confusing them
+is the fastest way to misread the project.
+
+**A leg is one payment to one person.** That is the whole of it:
+
+```daml
+data PaymentLeg = PaymentLeg
+  with
+    legId     : Text
+    recipient : Party
+    amount    : Decimal
+```
+
+A leg is not a bond, and it is not a unit of a bond. The bond is not on the
+ledger as a token at all: it is an `Instrument` and a `Position` per holder,
+ordinary Daml. Only the cash is a Token Standard asset.
+
+Alice holds **30 units** of a bond paying **21.875 per unit**. The register
+says 30, the entitlement calculation makes that 30 x 21.875 = **656.25**, and
+that becomes **one leg**. Thirty units do not make thirty legs.
+`runFromSchedule` builds one `PaymentLeg` per schedule entry, and the schedule
+has one entry per holder. So for a coupon:
+
+> one holder = one entitlement = one leg = one payment
+
+**An allocation is a party's authorisation**, and unlike a leg it is a real
+contract on the ledger with cash locked behind it. The standard requires both
+sides of every leg to be authorised, and an allocation has exactly **one**
+authorizer. It can never span two holders.
+
+Five holders therefore produce five legs and six allocations:
+
+| Allocation | Authorizer | Covers | Committed |
+|---|---|---|---|
+| 1 | **the paying agent** | the sender side of all five legs | yes, cash locked |
+| 2 | Alice | the receiver side of her own leg | no |
+| 3 | Bob | the receiver side of his own leg | no |
+| 4 | Charlie | the receiver side of his own leg | no |
+| 5 | David | the receiver side of his own leg | no |
+| 6 | Emily | the receiver side of her own leg | no |
+
+One signature from the agent covers every sender side, because the agent is
+the sender on all of them. The holders cannot share, because each authorises
+only its own receipt. **N legs, N+1 allocations**, which is where the
+benchmark's 1,001 allocations for 1,000 legs comes from.
+
+The agent's allocation is `committed` and the receipts are not. That is what
+stops the agent quietly withdrawing the cash after the holders have
+authorised, and it is why cancelling a prepared run needs the executors rather
+than the agent alone.
+
+#### Who sees an allocation
+
+The reference token answers this directly:
+
+```daml
+signatory accountParties allocation.admin allocation.authorizer, allocation.admin
+observer settlement.executors
+```
+
+Three kinds of party, and no others: the one authorising it, the registry
+administering the asset, and the executors. The standard says the same about
+the settlement itself, restricting visibility of each credit or debit to
+*"executors, admin, and affected account parties only"*.
+
+So the agent's single allocation, the one that enumerates every holder's
+payment, is visible to the agent, the cash registry and the approver. **No
+holder is on that list.** Alice sees only the allocation she authorised. The
+reference implementation is deliberate about it, adding no extra observers
+*"to avoid leaking the settlement of different allocations to the other
+authorizers"*.
+
+#### When legs greatly outnumber allocations
+
+Three cases, and only the first is ours.
+
+1. **The sender's side, always.** One agent allocation carries all N sender
+   sides. That is the N+1 rather than 2N.
+2. **The benchmark, deliberately.** Section 3 gives 250 holders 13,000 legs,
+   about 52 each, so the allocation count can be held still while the leg
+   count grows. No coupon looks like that; it is a test bench.
+3. **Other applications of the same standard.** CIP-112 was designed for
+   trading and netting, where one settlement carries many legs among few
+   parties. There the executor sees every leg, which is the executor's job.
+   Note also that one `SettleBatch` covers **one instrument admin**, so a
+   cash-against-securities trade is two factory calls in one transaction and
+   neither registry sees the other's legs.
+
 ### Authorisation
 
 Token Standard V2's default settlement logic requires, for every transfer leg,
