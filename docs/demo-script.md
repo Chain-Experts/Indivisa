@@ -26,13 +26,13 @@ made at the first save.
 
 | File | What it is |
 |---|---|
-| `D:\Dev\ChainExperts\Indivisa-recording\raw\take1.mp4` | the success run, one clip |
-| `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-rejected.mp4` | the deliberate failure |
-| `D:\Dev\ChainExperts\Indivisa-recording\raw\take2-settled.mp4` | the fix and the retry |
-| `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-refused.mp4` | one approval is not enough (Part I) |
-| `D:\Dev\ChainExperts\Indivisa-recording\raw\take3-governed-settled.mp4` | two approvals, and it settles (Part I) |
-| `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx` and `cards\Slide1.PNG` … `Slide8.PNG` | eight title cards |
-| `D:\Dev\ChainExperts\Indivisa-recording\Indivisa-HackCanton-S3.mp4` | **the finished video, one file, under 2 minutes** |
+| `../Indivisa-recording/raw/take1.mp4` | the success run, one clip |
+| `../Indivisa-recording/raw/take2-rejected.mp4` | the deliberate failure |
+| `../Indivisa-recording/raw/take2-settled.mp4` | the fix and the retry |
+| `../Indivisa-recording/raw/take3-governed-refused.mp4` | one approval is not enough (Part I) |
+| `../Indivisa-recording/raw/take3-governed-settled.mp4` | two approvals, and it settles (Part I) |
+| `../Indivisa-recording/cards.pptx` and `cards/Slide1.PNG` … `Slide8.PNG` | eight title cards |
+| `../Indivisa-recording/Indivisa-HackCanton-S3.mp4` | **the finished video, one file, under 2 minutes** |
 
 **One submission, one video.** HackCanton allows a single entry to entre
 several challenges, so the governed settlement is not a separate film: it is
@@ -45,7 +45,7 @@ video files never end up in git.
 
 ## 1. What you need
 
-- This workstation (Windows 11), the repo at `D:\Dev\ChainExperts\Indivisa`,
+- This workstation (Windows 11), with the repository
   already set up (dpm, Node, PowerShell 7, Chrome). If `dpm build --all`
   has ever worked here, everything is in place.
 - **OBS Studio** (free, obsproject.com) to record the screen. Install with
@@ -71,7 +71,7 @@ whole session; call it **window 1**.
 **A1. Go to the repo.**
 
 ```
-cd D:\Dev\ChainExperts\Indivisa
+cd <the repository>
 ```
 
 **A2. Build the Daml packages** (2 minutes; it must happen before the
@@ -109,7 +109,7 @@ one-time agreements, the coupon announcement and the payment schedule.
 Nothing prints for a long time; that is normal. It ends with one line:
 
 ```
-seat 'take1' on localnet: 250 holders in 2,0xxs -> D:\Dev\ChainExperts\Indivisa\infra\localnet\demo\seat-take1.json
+seat 'take1' on localnet: 250 holders in 2,0xxs -> infra/localnet/demo/seat-take1.json
 ```
 
 **A5. Seat demo two** (the failure run; another 30 to 35 minutes).
@@ -139,7 +139,7 @@ who will block the batch.
 (window 2) and run:
 
 ```
-cd D:\Dev\ChainExperts\Indivisa\ui
+cd ui
 npm install
 $env:INDIVISA_TAG = "take1"
 npm run dev
@@ -152,7 +152,7 @@ serving demo one.
 Open a **third** PowerShell window (window 3):
 
 ```
-cd D:\Dev\ChainExperts\Indivisa\ui
+cd ui
 $env:INDIVISA_TAG = "take2"
 npm run dev -- --port 5174
 ```
@@ -210,11 +210,11 @@ art, no animations.
 | 8 | **The holder is made ready.** / Same run. Same button. Nothing else changes. *(used between the refusal and the fix, not at the end - add it as the LAST slide so the earlier numbers do not move)* |
 | 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026**, update id `1220652e…f466b` / **Run it yourself:** `cd quickstart && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
 
-Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
+Save: File → Save As → `../Indivisa-recording/cards.pptx`
 (create the folder in the dialog if it does not exist).
 
 Export as images: File → Export → Change File Type → PNG Portable Network
-Graphics → Save As → choose the folder `D:\Dev\ChainExperts\Indivisa-recording`,
+Graphics → Save As → choose the folder `../Indivisa-recording`,
 file name `cards` → Save → when asked "Which slides do you want to
 export?" click **All Slides**. PowerPoint creates a folder `cards` with
 `Slide1.PNG` … `Slide8.PNG`.
@@ -234,7 +234,7 @@ broken up, press Ctrl and − once. Scroll to the top of the page (Home key).
 - Settings (bottom right) → **Video**: Base (Canvas) Resolution 1920x1080,
   Output (Scaled) Resolution 1920x1080, Common FPS Values 30. OK.
 - Settings → **Output**: Output Mode *Simple*; Recording Path → Browse →
-  `D:\Dev\ChainExperts\Indivisa-recording\raw` (create it); Recording
+  `../Indivisa-recording/raw` (create it); Recording
   Quality *High Quality, Medium File Size*; Recording Format *MP4* (or
   *Hybrid MP4* on newer OBS). OK.
 - Settings → **Audio**: if you will speak, leave Mic/Auxiliary on your
@@ -244,7 +244,7 @@ broken up, press Ctrl and − once. Scroll to the top of the page (Home key).
   desktop.
 - Do a ten-second test: **Start Recording**, Alt+Tab to Chrome, wait,
   Alt+Tab back, **Stop Recording**. Open the file in
-  `Indivisa-recording\raw` and check it plays and the panes are sharp.
+  `../Indivisa-recording/raw` and check it plays and the panes are sharp.
   Delete the test file.
 
 **C3. Rename as you go.** OBS names files by date and time. After each
@@ -367,8 +367,8 @@ saves changing each one by hand.
 Bottom of the window there is a row of pages: Media, Cut, Edit, Fusion,
 Color, Fairlight, Deliver. Click **Media**.
 
-Drag in every `.mp4` from `Indivisa-recording\raw` and every `Slide*.PNG`
-from `Indivisa-recording\cards`. They land in the **Media Pool**.
+Drag in every `.mp4` from `../Indivisa-recording/raw` and every `Slide*.PNG`
+from `../Indivisa-recording/cards`. They land in the **Media Pool**.
 
 Click **Edit**.
 
@@ -439,7 +439,7 @@ after you have watched the cut once.
 **Deliver** page → preset **H.264 Master** → Format MP4, Codec H.264,
 Resolution 1920x1080, Frame rate 30 → set the filename to
 `Indivisa-HackCanton-S3` and the location to
-`D:\Dev\ChainExperts\Indivisa-recording\` → **Add to Render Queue** →
+`../Indivisa-recording/` → **Add to Render Queue** →
 **Render All**.
 
 Play it once, end to end, before you call it done.
@@ -614,7 +614,7 @@ on another day.
 In **window 1** (PowerShell 7):
 
 ```
-cd D:\Dev\ChainExperts\decentralization-manager
+cd ../decentralization-manager
 bash hackathon/up.sh
 bash hackathon/seed.sh
 ```
@@ -627,7 +627,7 @@ lines: the usual cause is Docker with less than 12 GB.
 Then, in the Indivisa repo:
 
 ```
-cd D:\Dev\ChainExperts\Indivisa
+cd <the repository>
 dpm build --all
 pwsh infra\bitsafe\distribute.ps1
 ```
@@ -635,7 +635,7 @@ pwsh infra\bitsafe\distribute.ps1
 `distribute.ps1` ends with three lines `node 808x: governance-settlement-v0,
 indivisa, indivisa-governance-v0, splice-test-token-v2`. Copy the demo party
 id from seed.sh's output (or from
-`..\decentralization-manager\hackathon\.state`, line `DEC_PARTY_ID=`); you
+`../decentralization-manager/hackathon/.state`, line `DEC_PARTY_ID=`); you
 need it twice below. Call it `<DP>`.
 
 ### I2. Seat, admit, prepare, propose (≈ 3 minutes)
@@ -654,7 +654,7 @@ is done on camera.
 **Window 2**: the console, pointed at the sandbox.
 
 ```
-cd D:\Dev\ChainExperts\Indivisa\ui
+cd ui
 $env:INDIVISA_NETWORK = "bitsafe"
 $env:INDIVISA_TAG = "clip"
 npm run dev

@@ -41,7 +41,7 @@ preparation rather than settlement, and card 7 says so out loud.
 
 ## What you need
 
-- The repo at `D:\Dev\ChainExperts\Indivisa`, built (`dpm build --all`).
+- The repository, built (`dpm build --all`).
 - `ui\.env.local` filled in (copy `ui\.env.example`). It carries the network,
   the tag and the client secret, so starting the console is `npm run dev` and
   nothing else.
@@ -50,7 +50,7 @@ preparation rather than settlement, and card 7 says so out loud.
   film exists to show.
 - OBS and DaVinci Resolve.
 - The seven cards, already exported to
-  `D:\Dev\ChainExperts\Indivisa-recording\governed-cards\Slide1.PNG` to
+  `../Indivisa-recording/governed-cards/Slide1.PNG` to
   `Slide7.PNG`.
 
 No LocalNet. No Docker. Everything here runs against the real DevNet.
@@ -69,7 +69,7 @@ This is the only terminal work, and it happens before the camera starts.
 ### A1. Open PowerShell
 
 ```powershell
-cd D:\Dev\ChainExperts\Indivisa
+cd <the repository>
 ```
 
 The client secret comes from `infra\devnet\ui.json`, so there is nothing to
@@ -145,9 +145,11 @@ Seven, already built and verified. In order:
 | 6 | Both agreed. One transaction. Five holders paid. | Settled on Canton DevNet. |
 | 7 | This console settles. It does not keep the register. | Holders, positions and the schedule come from systems a paying agent already runs. Here a script stands in for them. |
 
-If you ever rebuild them, the prompt is `docs/prompts/governed-cards.md`,
-which was brought in line with these seven on 1 October. It carries the exact
-text above, so a rebuild reproduces them rather than the old six.
+These seven cards are the governed set, superseded on 5 October when the two
+films became one. The film that shipped carries fourteen cards, built in
+`../Indivisa-recording/final-cards.pptx`. The prompt that generated this set
+was deleted with `docs/prompts/`: it described a six-card, ninety-second cut
+that no longer exists.
 
 ---
 
@@ -168,7 +170,7 @@ sessionStorage.getItem("dec_party_manager_refresh_token")
 Copy the value **without the quotes** into:
 
 ```
-D:\Dev\ChainExperts\Indivisa\infra\devnet\decman-refresh.txt
+infra/devnet/decman-refresh.txt
 ```
 
 That file is git-ignored. The dev server trades it for access tokens and
@@ -181,7 +183,7 @@ Close the browser console.
 ### C2. The console
 
 ```powershell
-cd D:\Dev\ChainExperts\Indivisa\ui
+cd ui
 npm run dev
 ```
 
@@ -229,7 +231,7 @@ client id and secret.
 
 - Settings → **Video**: 1920x1080 for both resolutions, 30 fps.
 - Settings → **Output**: Simple; Recording Path
-  `D:\Dev\ChainExperts\Indivisa-recording\raw`; High Quality, Medium File
+  `../Indivisa-recording/raw`; High Quality, Medium File
   Size; **MP4**.
 - Settings → **Audio**: every device **Disabled**. You are not speaking.
 - Sources → **+** → **Display Capture** → the monitor Chrome is on.
@@ -382,7 +384,7 @@ if it runs long: the cards are the only words in the film.
 - Cross dissolve, 12 frames, between every clip.
 - No music. The main film has none either.
 - Export: **MP4, H.264, 1920x1080, 30 fps**, to
-  `D:\Dev\ChainExperts\Indivisa-recording\ready\Indivisa-Governed-DevNet.mp4`.
+  `../Indivisa-recording/ready/Indivisa-Governed-DevNet.mp4`.
 
 **Card 7 goes last, after the proof.** Ending on what the demo does *not* do
 is deliberate: a judge who has just watched a settlement is exactly the
