@@ -13,19 +13,16 @@ build/
 
 # LocalNet runtime output
 infra/localnet/log/
-infra/localnet/participants-with-parties.json
 infra/localnet/demo/
 ui/node_modules/
 ui/dist/
 infra/devnet/participants.json
 infra/devnet/ui.json
-infra/devnet/participants-with-parties.json
 infra/devnet/demo/
 # BitSafe's sandbox config, which carries its bundled tokens. Committed as
 # *.example.json with the tokens replaced, the same way infra/devnet/ does it.
 infra/bitsafe/participants.json
 infra/bitsafe/ui.json
-infra/bitsafe/participants-with-parties.json
 infra/bitsafe/demo/
 infra/bitsafe/log/
 
@@ -55,7 +52,15 @@ quickstart/.cache/
 # Scratch from driving the quickstart stack from a shell (party maps, a
 # bundled settle, an endpoint list): generated, never committed. Named for the
 # seat tag, which defaults to "demo".
+# Generated per seat, in a directory named for the seat tag. Ignored by name
+# rather than by directory, so renaming the tag cannot quietly expose them
+# again - which is exactly what happened when "judge" became "demo".
+infra/*/participants-with-parties.json
+infra/*/prepared.json
+infra/*/settle.mjs
+infra/*/seat.json
 infra/demo/
+infra/judge/
 
 # The pitch deck and its speaker notes. Kept on disk, deliberately out of the
 # repository: the PDF is what goes to the submission platform, the pptx is
