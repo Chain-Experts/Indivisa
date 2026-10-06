@@ -102,7 +102,6 @@ Indivisa/
 │   │                              minting the token twice: once to walk the map, once before writing it
 │   ├── settle.ps1                 prepare N legs by script, settle over the JSON API from Node, time it
 │   ├── publish-ui.ps1             build the console and gather the read-only deployment into one folder
-│   ├── pitch/build-pitch.mjs      regenerates docs/Indivisa-pitch.pptx from the content in docs/pitch.md
 │   ├── govern.ps1                 the governed settlement against BitSafe's DecMan: admit, propose, confirm, execute, audit
 │   ├── localnet/
 │   │   ├── localnet.conf          1 synchronizer, 5 participants, in memory
@@ -122,13 +121,9 @@ Indivisa/
     ├── modules.md                 this file
     ├── architecture.md
     ├── explainer.html             the story for a beginner, standalone page
-    ├── Indivisia Logo.png         the logo
+    ├── logo.png                   the mark, used by the console and the deck
     ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
     ├── devnet-run.md              the DevNet evidence: update id, network, what it proves
-    ├── pitch.md                   fourteen slides: what is on each, and what to say over it
-    ├── Indivisa-pitch.pptx        the deck, built by infra/pitch/build-pitch.mjs
-    ├── pitch.md                   fourteen slides: what is on each, and what to say over it
-    ├── Indivisa-pitch.pptx        the deck, built by infra/pitch/build-pitch.mjs
     ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
     ├── demo-script.md             the recording, step by step, for someone who has never seen the project
     ├── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce

@@ -44,7 +44,6 @@ CLAUDE.local.md
 CLAUDE-backup.md
 # A local TLS-interception root (Norton on this machine), exported so the
 # Java gRPC client will trust the proxied certificate. Machine-specific.
-infra/pitch/node_modules/
 infra/*/ca.pem
 infra/*/public/
 ui/dist/
@@ -53,3 +52,13 @@ quickstart/.cache/
 # bundled settle, an endpoint list): generated, never committed. The seat tag
 # and network are still called "judge", so the directory is named for that.
 infra/judge/
+
+# The pitch deck and its speaker notes. Kept on disk, deliberately out of the
+# repository: the PDF is what goes to the submission platform, the pptx is
+# where it is edited, deck.html is the browser version, and pitch.md is what
+# to say over each slide. Four copies of one deck drifted for a week while
+# they were tracked, and none of them is code.
+docs/deck.html
+docs/pitch.md
+docs/Indivisa-pitch.pptx
+docs/Indivisa-pitch.pdf

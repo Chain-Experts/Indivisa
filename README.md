@@ -302,9 +302,6 @@ today.
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |
 | `docs/devnet-run.md` | The DevNet evidence: update id, what it proves and what it does not |
 | `docs/production-readiness.md` | **The road after the hackathon**: production hardening, known limits, and the difference between a pilot and real money |
-| `docs/deck.html` | **The pitch deck, 15 slides** - the source of truth for the deck |
-| `docs/Indivisa-pitch.pdf`, `.pptx` | The same deck exported; regenerate both whenever `deck.html` changes |
-| `docs/pitch.md` | The pitch slide by slide, with what to say over each one |
 | `docs/canton-coin.md` | Why the demo settles the standard's reference asset, and exactly what settling Canton Coin instead would take |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
