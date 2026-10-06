@@ -21,6 +21,10 @@ infra/devnet/participants.json
 infra/devnet/ui.json
 infra/devnet/participants-with-parties.json
 infra/devnet/demo/
+# BitSafe's sandbox config, which carries its bundled tokens. Committed as
+# *.example.json with the tokens replaced, the same way infra/devnet/ does it.
+infra/bitsafe/participants.json
+infra/bitsafe/ui.json
 infra/bitsafe/participants-with-parties.json
 infra/bitsafe/demo/
 infra/bitsafe/log/
@@ -62,3 +66,6 @@ docs/deck.html
 docs/pitch.md
 docs/Indivisa-pitch.pptx
 docs/Indivisa-pitch.pdf
+
+# One editor preference (unpacked DARs read-only). Not project material.
+.vscode/

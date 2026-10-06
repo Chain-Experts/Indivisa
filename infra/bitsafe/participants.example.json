@@ -1,0 +1,41 @@
+{
+  "default_participant": {
+    "host": "localhost",
+    "port": 3901,
+    "access_token": "<a token from the sandbox bundle>",
+    "user_id": "ledger-api-user"
+  },
+  "participants": {
+    "registry": {
+      "host": "localhost",
+      "port": 3901,
+      "access_token": "<a token from the sandbox bundle>",
+      "user_id": "ledger-api-user"
+    },
+    "agent": {
+      "host": "localhost",
+      "port": 3901,
+      "access_token": "<a token from the sandbox bundle>",
+      "user_id": "ledger-api-user"
+    },
+    "alice": {
+      "host": "localhost",
+      "port": 3901,
+      "access_token": "<a token from the sandbox bundle>",
+      "user_id": "ledger-api-user"
+    },
+    "bob": {
+      "host": "localhost",
+      "port": 2901,
+      "access_token": "<a token from the sandbox bundle>",
+      "user_id": "ledger-api-user"
+    },
+    "charlie": {
+      "host": "localhost",
+      "port": 4901,
+      "access_token": "<a token from the sandbox bundle>",
+      "user_id": "ledger-api-user"
+    }
+  },
+  "party_participants": {}
+}

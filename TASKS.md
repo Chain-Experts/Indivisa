@@ -391,8 +391,8 @@ approved like the settlement. The ledger supports it; the console does not.
 
 ### The stuck action, and two things we had wrong about it (5 October)
 
-Reported to BitSafe. Richard traced it, and **both halves of our diagnosis
-were wrong**:
+Reported to BitSafe, who traced it, and **both halves of our diagnosis were
+wrong**:
 
 | We said | Actually |
 | --- | --- |
@@ -410,9 +410,9 @@ party, which our ledger user still holds `CanActAs` on - update id
 
 ### What this means for our withdraw control
 
-**It does not do what BitSafe think it does.** Richard wrote "your withdraw
-control runs the same choice"; it does not. Ours exercises `Archive` on our
-own `SettleRunProposal` template. Same outcome - the contract is consumed -
+**It is not the choice BitSafe assume it is.** They read our withdraw control
+as exercising their interface choice; it does not. Ours exercises `Archive` on
+our own `SettleRunProposal` template. Same outcome, the contract is consumed,
 but a different route.
 
 `GovernableAction_ProposerCancel` is the better one: it is their published
@@ -1298,8 +1298,8 @@ Done:
 > **Whether the two tiers are exclusive is unresolved, and it decides the
 > plan.** BitSafe own challenge page says *"Gold applicants are not eligible
 > for the contribution pool"*, and the organiser said the same. But BitSafe
-> have said on Telegram that **the page is wrong and they will correct it**,
-> and that a team may enter both. That is the rule author disowning their own
+> have since said the page is wrong and that they will correct it, and that a
+> team may enter both. That is the rule author disowning their own
 > published text, not an unwritten claim contradicting it, so it very likely
 > stands. Being confirmed with them directly (26 Sep).
 >

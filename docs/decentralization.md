@@ -276,10 +276,11 @@ pwsh infra/govern.ps1 audit   -Network bitsafe -Tag bs1
 
 The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
 
-`infra/bitsafe/participants.json` and `ui.json` carry the sandbox's public
-LocalNet dev token (it is in BitSafe's repo and authorises nothing
-elsewhere); the scripts grant that user act-as rights on every party they
-allocate, as the sandbox's own seed script does.
+`infra/bitsafe/participants.example.json` and `ui.example.json` show the
+shape. Copy them without the `.example` and paste the sandbox's own LocalNet
+dev token, which is in BitSafe's repository and authorises nothing elsewhere.
+The scripts grant that user act-as rights on every party they allocate, as
+the sandbox's own seed script does.
 
 ## 7. Real, simulated, unfinished
 

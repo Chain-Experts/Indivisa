@@ -1,0 +1,24 @@
+{
+  "participants": {
+    "registry": {
+      "jsonApi": "http://localhost:3975",
+      "token": "<a token from the sandbox bundle>"
+    },
+    "agent": {
+      "jsonApi": "http://localhost:3975",
+      "token": "<a token from the sandbox bundle>"
+    },
+    "alice": {
+      "jsonApi": "http://localhost:3975",
+      "token": "<a token from the sandbox bundle>"
+    },
+    "bob": {
+      "jsonApi": "http://localhost:2975",
+      "token": "<a token from the sandbox bundle>"
+    },
+    "charlie": {
+      "jsonApi": "http://localhost:4975",
+      "token": "<a token from the sandbox bundle>"
+    }
+  }
+}
