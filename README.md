@@ -18,7 +18,7 @@ Built by Chain-Experts for HackCanton Season 3.
   24 September 2026, five holders in one transaction, update id
   `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
   ([`docs/devnet-run.md`](docs/devnet-run.md) has the whole record).
-- **The recording**: 2 minutes 45 seconds, on Canton DevNet throughout. An operator signs in; a coupon is refused because one holder is not ready; each holder is shown seeing only its own line; the holder is made ready; the coupon settles; then a second coupon that no single company could release, needing two to agree. Thirteen cards, no narration. Every figure on screen is read live from the ledger, and each was checked against the ledger afterwards.
+- **The recording**: 3 minutes, on Canton DevNet throughout, with narration. An operator signs in; a coupon is refused because one holder is not ready; each holder is shown seeing only its own line; the holder is made ready; the coupon settles; then a second coupon that no single company could release, needing two to agree. Fourteen cards. Every figure on screen is read live from the ledger, and each was checked against the ledger afterwards.
 - **The story, for anyone**: [chain-experts.com/indivisa](https://chain-experts.com/indivisa/), the explainer page (also in this repo as `docs/explainer.html`).
 - **The numbers**: [`docs/benchmark.md`](docs/benchmark.md) measures how many legs fit in one CIP-112 batch settlement, on real participants, with the method and the caveats.
 

@@ -21,7 +21,7 @@ minutes of questions.
 | Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
 | Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
 | **Governed, independently** | **DevNet, twice: 29 and 30 Sep, 2 of 2 - ours and BitSafe's, on their node.** The second is the one filmed, update id `1220eb43...c6ac`. Chain-Experts could not have produced either transaction alone |
-| The video | **`Indivisa-S3.mp4`, 2 m 45 s**, 1920x1080, cut 5 October. One film on DevNet throughout: sign-in, a coupon refused because one holder was not ready, each holder seeing only its own line, the fix, the settlement, then a second coupon that needed two companies to agree. Thirteen cards, no narration, no music. Every figure checked against the ledger. **Supersedes `Indivisa-HackCanton-S3.mp4`** (2 m 27 s, 30 Sep), kept only as history |
+| The video | **`Indivisa-S3.mp4`, 3 m 00 s**, 1920x1080, cut 5 October and re-cut with narration on 6 October. One film on DevNet throughout: sign-in, a coupon refused because one holder was not ready, each holder seeing only its own line, the fix, the settlement, then a second coupon that needed two companies to agree. Fourteen cards and a voice-over, no music. Every figure checked against the ledger. **Supersedes `Indivisa-HackCanton-S3.mp4`** (2 m 27 s, 30 Sep), kept only as history |
 | The deck | 15 slides; `deck.html`, `.pdf` and `.pptx` in sync; three unsourced claims removed 29 Sep |
 | The cash-asset question | Asked in the channel and answered: no required asset, and our reason endorsed |
 
@@ -142,7 +142,8 @@ minutes of questions.
 5. ~~Re-shoot the governed video~~ - **done 5 October, and it became one
    film rather than two.**
 
-   `Indivisa-S3.mp4`, **2 m 45 s**, replaces the 30 September cut entirely.
+   `Indivisa-S3.mp4`, **3 m 00 s** after the 6 October re-cut, replaces the
+   30 September cut entirely.
    Everything in it is DevNet, one coupon size throughout, current UI.
 
    | Shows | Verified |
