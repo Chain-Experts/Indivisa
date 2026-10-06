@@ -34,7 +34,8 @@ indivisa-seed exited with code 0
 ```
 
 That is the moment to switch to the browser. Opening the page earlier is
-harmless, and it will say *No seat file*. Just reload once those lines appear.
+harmless: it says it is waiting for the demo to finish seating, and picks the
+demo up by itself when the seed is done. No reload needed.
 
 **If it seems stuck, it probably is not.** Canton prints nothing for minutes
 at a time while it vets packages. `docker compose ps` will show
@@ -208,7 +209,7 @@ payment legs in one transaction, and where that stops.
 | What you see | What to do |
 |---|---|
 | `canton` keeps restarting, or the page never loads | Docker has too little memory. Give it 6 GB and `docker compose down && docker compose up`. |
-| The page says "No seat file" | The seed has not finished. Wait for `Ready. Open http://localhost:8080` in the terminal, then reload. To watch just that container: `docker compose logs -f seed`. |
+| The page says it is waiting for the demo to finish seating | That is the normal first few minutes. It picks the demo up by itself. To watch the seed: `docker compose logs -f seed`. |
 | Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
 | The button says "Prepare the run first" | The seed did not finish; see above. |
 | The governed seat fails with a 409, or DecMan says onboarding is already complete | The approver nodes keep their own volumes, and a plain `docker compose down -v` does not clear them, so they carry a party the new ledger has never heard of. Use `docker compose --profile govern down -v`. |

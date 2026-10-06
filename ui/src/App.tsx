@@ -27,11 +27,36 @@ export function App() {
   // Whether this deployment requires an operator, and where they sign in.
   // Served from /demo, which is the one thing the proxy leaves open - the
   // page cannot sign in without first being told where to.
+  //
+  // The seed writes this file last, so it is also the "is the demo ready"
+  // signal, and waiting for it is the normal first minutes of a fresh stack.
+  // Do not parse the body before checking the status: a judge who opens the
+  // page while it is still seating gets the web server's own HTML 404, and
+  // reading that as JSON failed with `Unexpected token '<'`, which reads as a
+  // broken application rather than as "not ready yet".
   useEffect(() => {
-    fetch("/demo/participants.json")
-      .then((r) => r.json())
-      .then((m: { operator?: OperatorAuth | null }) => setAuth(m.operator ?? null))
-      .catch((e) => setError(String(e)));
+    let live = true;
+    let timer: number | undefined;
+    const read = async (): Promise<boolean> => {
+      try {
+        const r = await fetch("/demo/participants.json");
+        if (!r.ok) return false;
+        const m = (await r.json()) as { operator?: OperatorAuth | null };
+        if (live) setAuth(m.operator ?? null);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const tick = async () => {
+      if (!live || (await read())) return;
+      timer = window.setTimeout(tick, 2000);
+    };
+    void tick();
+    return () => {
+      live = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, []);
 
   // Finish a redirect back from the identity provider, or pick up a session
@@ -60,7 +85,14 @@ export function App() {
   }, [ready, auth, operator]);
 
   if (error) return <div className="boot error">{error}</div>;
-  if (!ready || auth === undefined) return <div className="boot">Starting…</div>;
+  if (auth === undefined)
+    return (
+      <div className="boot">
+        Waiting for the demo to finish seating. On a fresh stack this takes a few minutes; the page
+        picks it up by itself.
+      </div>
+    );
+  if (!ready) return <div className="boot">Starting…</div>;
   if (auth && !operator) return <SignIn auth={auth} />;
   if (!config) return <div className="boot">Loading the seat…</div>;
   return <Console config={config} operator={operator} auth={auth} />;
