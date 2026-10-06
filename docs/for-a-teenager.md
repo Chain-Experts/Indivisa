@@ -127,7 +127,7 @@ A company called BitSafe makes open-source tools for Canton and set a side chall
 
 Remember that a party is a name with a secret key. A decentralised party is a name whose key is *split between several computers run by several organisations*, with a rule like "two of the three must agree". No single one of them can act as that party alone. It is a committee with a shared signature.
 
-What we did with it: a coupon run can now name an **approver**, and the approver is a decentralised party. The money rules on Canton say a settlement needs the authority of everyone named as an executor, so once the approver is named, the paying agent's own button is refused by the ledger. The only way to settle is a vote:
+What we did with it: a coupon run can now name an **approver**, and the approver is a decentralised party. The money rules on Canton say a settlement needs the authority of everyone named as an executor, so once the approver is named the paying agent cannot settle the run at all: its button stops paying and starts asking. The only way to settle is a vote:
 
 ```mermaid
 sequenceDiagram

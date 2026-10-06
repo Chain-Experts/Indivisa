@@ -664,9 +664,9 @@ Chrome, tab A: `http://localhost:5173`. RUN reads **PREPARED**,
 ALLOCATIONS **11 / 11**, and under the button a second line: **Approver**
 *demo party · a decentralised party; its members must confirm before the
 settle can execute*, above the note *All or nothing, and not alone: this
-run names an approver, so the agent's own button is refused until the
-approvers have confirmed and executed.* Open a card on the node that also
-hosts the paying agent and it says *This node also hosts the paying agent,
+run names an approver, so the agent cannot settle it. The button signs a
+request instead.* Open a card on the node that also hosts the paying agent
+and it says *This node also hosts the paying agent,
 so the data is on the node; the ledger filters it by party* instead of
 *never received*: in the sandbox one of the three nodes hosts both, and the
 page says so rather than claiming more than it should.
