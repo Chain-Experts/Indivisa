@@ -154,8 +154,8 @@ no warnings.
 original tests, and that is deliberate.
 
 - **The name is load-bearing here.** `governance-settlement-v0` is the package
-  vetted on DevNet, the DAR `judge/canton.Dockerfile` copies and
-  `judge/bootstrap.canton` uploads, and the name in
+  vetted on DevNet, the DAR `quickstart/canton.Dockerfile` copies and
+  `quickstart/bootstrap.canton` uploads, and the name in
   `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. Renaming it would
   break the judges' one-command package in order to tidy a label.
 - **The rewritten tests cannot build here.** They are written against

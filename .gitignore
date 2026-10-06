@@ -48,7 +48,8 @@ infra/pitch/node_modules/
 infra/*/ca.pem
 infra/*/public/
 ui/dist/
-judge/.cache/
-# Scratch from driving the judge stack from a shell (party maps, a bundled
-# settle, an endpoint list): generated, never committed.
+quickstart/.cache/
+# Scratch from driving the quickstart stack from a shell (party maps, a
+# bundled settle, an endpoint list): generated, never committed. The seat tag
+# and network are still called "judge", so the directory is named for that.
 infra/judge/

@@ -10,10 +10,10 @@ Built by Chain-Experts for HackCanton Season 3.
 
 ## Demo
 
-- **Run it yourself**: `cd judge && docker compose up`, then
+- **Run it yourself**: `cd quickstart && docker compose up`, then
   http://localhost:8080. A real five-participant Canton network, the real
   contracts, a coupon that is refused until every holder is ready. Nothing to
-  install but Docker, about five minutes: [`judge/README.md`](judge/README.md).
+  install but Docker, about five minutes: [`quickstart/README.md`](quickstart/README.md).
 - **It runs on the real network.** A coupon settled on Canton DevNet on
   24 September 2026, five holders in one transaction, update id
   `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`
@@ -181,7 +181,7 @@ On top of the proofs, built and running on LocalNet (18 Sep):
   **committed**, so only the settlement executors may cancel it, and on a
   governed run those are the agent *and* the approver. The commitment is
   symmetric, which is what makes an approval worth anything.
-- **A one-command package for anyone who wants to run it** (`judge/`, 23 Sep):
+- **A one-command package for anyone who wants to run it** (`quickstart/`, 23 Sep):
   `docker compose up` gives the whole thing (five participants, the thirteen
   DARs, twenty seated holders with one allocation deliberately withheld,
   and the console) on a machine with nothing installed but Docker. Verified
@@ -214,7 +214,7 @@ approver**; see [`docs/decentralization.md`](docs/decentralization.md).
   anybody.
 
 Still to come: one clean `docker compose up` on a machine other than the one it
-was built on. This one intercepts TLS, so `judge/`'s two download paths could
+was built on. This one intercepts TLS, so `quickstart/`'s two download paths could
 not be exercised here.
 
 ---
@@ -247,7 +247,7 @@ Or with Docker, needing none of the above: the same topology, the same
 contracts, seated and served:
 
 ```bash
-cd judge && docker compose up                      # http://localhost:8080
+cd quickstart && docker compose up                 # http://localhost:8080
 docker compose run --rm prepare                    # after the first refusal
 ```
 
@@ -313,7 +313,7 @@ today.
 | `docs/for-a-teenager.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
-| `judge/README.md` | Run the whole thing with one Docker command, and what to look for |
+| `quickstart/README.md` | Run the whole thing with one Docker command, and what to look for |
 | `ui/README.md` | The settlement console: four tabs, and what each one reads |
 
 ---

@@ -101,7 +101,7 @@ make HTTP calls.** So the context has to be fetched by a client and passed into
 the flow as input, or the flow has to move onto the JSON Ledger API entirely.
 That restructuring, not the field, is the work.
 
-It also costs the judges' package its best property: `judge/` runs offline with
+It also costs the judges' package its best property: `quickstart/` runs offline with
 no account anywhere, because `TestTokenV2` needs no SV, no Amulet, no Scan and
 no Keycloak. A Canton Coin run needs a validator on a live network.
 
@@ -116,7 +116,7 @@ daml/indivisa-test/Indivisa/Test/{Demo,Distribution,Fixtures,Scale}.daml
 daml/indivisa-governance-test/...
 contrib/bitsafe/module/test/BatchSettlementTest.daml
 infra/bitsafe/distribute.ps1, infra/govern.ps1
-infra/localnet/bootstrap.canton, judge/bootstrap.canton, judge/govern.sh
+infra/localnet/bootstrap.canton, quickstart/bootstrap.canton, quickstart/govern.sh
 ui/src/App.tsx, ui/src/ledger/client.ts, ui/src/ledger/queries.ts
 ```
 

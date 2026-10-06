@@ -4,7 +4,7 @@ Two networks, one layout. LocalNet is what the proofs and benchmarks run on
 today. DevNet is the evidence run for the submission and is handed to DevOps;
 this page is written so that handover needs no Daml knowledge.
 
-A third way to run the whole thing needs none of this: `judge/` packages the
+A third way to run the whole thing needs none of this: `quickstart/` packages the
 network, the seat and the console into `docker compose up`. It is for
 someone who wants to see it work, not for development or for evidence,
 LocalNet is faster to iterate on and DevNet is what a judge will believe.
@@ -203,7 +203,7 @@ The V2 interface packages must be vetted on the validator, which step 2 does.
    arrived". The console reads each participant's own id from
    `/v2/parties/participant-id` and says whichever of the two is true, so
    nothing has to be remembered at demo time. The strong claim stays where
-   it is honest: the local run and `judge/`, both with five participants.
+   it is honest: the local run and `quickstart/`, both with five participants.
 2. **Upload the DARs**: the ten in `daml/dars/` **and ours**,
    `daml/indivisa/indivisa-0.4.0.dar` (committed; identical to
    `daml/indivisa/.daml/dist/`, which `dpm build --all` produces. The

@@ -160,7 +160,7 @@ halves: the refusal first, then the settlement.
 ## 9. Run it yourself
 
 > ```
-> cd judge && docker compose up
+> cd quickstart && docker compose up
 > ```
 >
 > A five-participant Canton network, the real contracts, twenty holders, and
@@ -300,7 +300,7 @@ any of this is useful.
 > ### Corporate actions, settled in one atomic batch, without exposing the register.
 >
 > Settled on Canton DevNet · `1220652e…f466b`
-> Run it yourself: `cd judge && docker compose up`
+> Run it yourself: `cd quickstart && docker compose up`
 >
 > github.com/Chain-Experts/Indivisa · Apache-2.0
 

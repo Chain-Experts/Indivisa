@@ -9,7 +9,7 @@
 #
 #   --build-arg SCRIPT_SOURCE=local
 #
-# takes it from judge/.cache/daml-script.jar instead, for building on a
+# takes it from quickstart/.cache/daml-script.jar instead, for building on a
 # machine whose network intercepts TLS (a container there cannot verify
 # the registry's certificate; the host can).
 
@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-cert
 RUN set -eu;     idx="$(curl -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json' "$REGISTRY/manifests/$DAML_SCRIPT_VERSION")";     man_digest="$(printf '%s' "$idx" | jq -r '.manifests[0].digest')";     man="$(curl -fsSL -H 'Accept: application/vnd.oci.image.manifest.v1+json' "$REGISTRY/manifests/$man_digest")";     jar_digest="$(printf '%s' "$man" | jq -r '.layers[] | select(.annotations["org.opencontainers.image.title"] == "daml-script-binary_distribute.jar") | .digest')";     test -n "$jar_digest";     curl -fsSL -o /opt/daml-script.jar "$REGISTRY/blobs/$jar_digest";     test -s /opt/daml-script.jar
 
 FROM eclipse-temurin:21-jre AS script-local
-COPY judge/.cache/daml-script.jar /opt/daml-script.jar
+COPY quickstart/.cache/daml-script.jar /opt/daml-script.jar
 
 FROM script-${SCRIPT_SOURCE} AS final
 RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-certificates  && rm -rf /var/lib/apt/lists/*
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-cert
 WORKDIR /indivisa
 COPY daml/indivisa-test/.daml/dist/indivisa-test-0.1.0.dar ./
 COPY daml/indivisa-governance-test/.daml/dist/indivisa-governance-test-0.1.0.dar ./
-COPY judge/participants.json judge/seed.sh judge/govern.sh ./
+COPY quickstart/participants.json quickstart/seed.sh quickstart/govern.sh ./
 RUN chmod +x seed.sh govern.sh
 
 # A stack for the script runner's own recursion, a small heap: this is a

@@ -29,7 +29,7 @@ COPY daml/indivisa/indivisa-0.4.0.dar dars/
 COPY daml/indivisa-governance/indivisa-governance-v0-0.1.0.dar dars/
 COPY daml/governance-settlement/governance-settlement-v0-0.1.0.dar dars/
 
-COPY judge/canton.conf judge/bootstrap.canton ./
+COPY quickstart/canton.conf quickstart/bootstrap.canton ./
 
 # 5011..5051 ledger API, 5013..5053 JSON ledger API, 5001 sequencer.
 EXPOSE 5011 5013 5021 5023 5031 5033 5041 5043 5051 5053

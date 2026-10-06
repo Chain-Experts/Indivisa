@@ -5,7 +5,7 @@ CLAUDE.md
 CLAUDE-backup.md
 node_modules
 ui/node_modules
-# ui/dist is needed by judge/web.Dockerfile when UI_SOURCE=prebuilt
+# ui/dist is needed by quickstart/web.Dockerfile when UI_SOURCE=prebuilt
 infra/*/demo/
 infra/*/log/
 infra/*/public/
@@ -14,4 +14,4 @@ infra/*/participants.json
 infra/*/ui.json
 infra/localnet/log/
 daml/*/.daml/dependencies
-!judge/.cache/daml-script.jar
+!quickstart/.cache/daml-script.jar

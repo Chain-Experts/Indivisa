@@ -83,7 +83,7 @@ Indivisa/
 │           ├── CopyId.tsx         an update id or party id, shortened, copied in full on click
 │           └── StatusPill.tsx
 │
-├── judge/                         one command, for anyone who wants to run it
+├── quickstart/                     one command, for anyone who wants to run it
 │   ├── README.md                  when it is ready, what to press, what is real
 │   ├── docker-compose.yml         canton + a one-shot seed + web; prepare behind a profile
 │   ├── canton.Dockerfile          the public Canton image, our topology, all thirteen DARs
@@ -203,7 +203,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 | `vite.config.ts` | Dev proxy per participant from `infra/<network>/ui.json`, bearer tokens minted and refreshed server-side (ledger by client credentials, DecMan from a stored refresh token); serves the seat and the party map at `/demo/*`, reduced to what the page may see. Also `operatorGate()`: registered from `configureServer`, which Vite runs **before** its own proxy, so an unauthenticated `/api/` or `/decman/` request is refused on the way in. The operator token is verified against the realm published keys, checked to have been issued to this client, and then deleted from the request rather than forwarded. |
 | `scripts/settle.ts` | The same `settle` call as the button, run from Node against `infra/<network>/ui.json` directly (no proxy; adds the bearer header itself). `infra/settle.ps1` bundles it with esbuild and runs it after a script-side prepare; it is how the benchmark times submit to commit without the Daml Script runner. |
 
-## `judge/`: run it with one command
+## `quickstart/`: run it with one command
 
 Docker, for anyone who wants to see it work without a toolchain. Build
 context is the repository root, so the images carry the same DARs and the

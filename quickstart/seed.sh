@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # This network authenticates with one unsafe, non-expiring demo token (see
-# judge/canton.conf). Public on purpose: the network is local and holds
+# quickstart/canton.conf). Public on purpose: the network is local and holds
 # nothing of value. Only Canton wants it - the approver nodes mint their own.
 AUTH=(-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYXJ0aWNpcGFudF9hZG1pbiIsImF1ZCI6Imh0dHBzOi8vY2FudG9uLm5ldHdvcmsuZ2xvYmFsIiwiZXhwIjo0MDcwOTA4ODAwfQ.WOS0ZzNrmPtZZaPJXHF8VpF6HKs2r26F_JTG1CUGg08")
 

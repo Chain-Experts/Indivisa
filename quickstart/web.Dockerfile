@@ -27,4 +27,4 @@ FROM ui-${UI_SOURCE} AS ui
 
 FROM nginx:1.27-alpine
 COPY --from=ui /out /usr/share/nginx/html
-COPY judge/nginx.conf /etc/nginx/conf.d/default.conf
+COPY quickstart/nginx.conf /etc/nginx/conf.d/default.conf

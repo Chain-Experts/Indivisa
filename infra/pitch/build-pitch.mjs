@@ -183,7 +183,7 @@ function bullets(s, items, y = 1.7, size = 16) {
 {
   const s = slide("Run it yourself", "the working demo");
   s.addShape(p.ShapeType.rect, { x: M, y: 1.55, w: W - 2 * M, h: 0.68, fill: { color: INK } });
-  s.addText("cd judge && docker compose up", {
+  s.addText("cd quickstart && docker compose up", {
     x: M + 0.2, y: 1.55, w: W - 2 * M - 0.4, h: 0.68, fontFace: "Consolas", fontSize: 20, color: "63D3A4", valign: "middle",
   });
   bullets(s, [
@@ -301,7 +301,7 @@ function bullets(s, items, y = 1.7, size = 16) {
   s.addText("Corporate actions, settled in one atomic batch, without exposing the register.", {
     x: M, y: 3.0, w: W - 2 * M, h: 0.5, fontFace: "Segoe UI", fontSize: 17, color: "9FB8CB",
   });
-  s.addText("Settled on Canton DevNet  ·  1220652e…f466b\nRun it yourself:  cd judge && docker compose up", {
+  s.addText("Settled on Canton DevNet  ·  1220652e…f466b\nRun it yourself:  cd quickstart && docker compose up", {
     x: M, y: 3.7, w: W - 2 * M, h: 0.7, fontFace: "Consolas", fontSize: 12, color: "63D3A4", lineSpacingMultiple: 1.3,
   });
   s.addText("github.com/Chain-Experts/Indivisa  ·  Apache-2.0", {

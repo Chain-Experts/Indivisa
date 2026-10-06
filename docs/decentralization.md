@@ -295,7 +295,7 @@ allocate, as the sandbox's own seed script does.
   files the request, `govern confirm` holds the vote, and the page executes
   it once the threshold is met. One confirmation is refused by the ledger;
   two settle. No account, no toolchain, no sandbox of ours to trust: see
-  `judge/README.md`.
+  `quickstart/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).**
   A coupon settled through the decentralised party at 2 of 2: our
   confirmation and theirs, on their own node.

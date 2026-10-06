@@ -103,7 +103,7 @@ for itself, by comparing each participant's own id rather than the names in
 its config, and says whichever of the two is true.
 
 The stronger claim is demonstrated where it is honest: the local run and
-`judge/`, both with five separate participants.
+`quickstart/`, both with five separate participants.
 
 ## Reproducing it
 

@@ -28,7 +28,7 @@ Token Standard V2 is specified in CIP-0112 by the Canton Foundation. Canton
 and Daml are trademarks of Digital Asset. Indivisa is not affiliated with or
 endorsed by Digital Asset, the Canton Foundation or the Splice project.
 
-The Docker package in judge/ redistributes no binaries. It builds on top of
+The Docker package in quickstart/ redistributes no binaries. It builds on top of
 Digital Asset's public Canton image
 (ghcr.io/digital-asset/decentralized-canton-sync/docker/canton) and fetches
 the Daml Script runner from Digital Asset's public artefact registry at

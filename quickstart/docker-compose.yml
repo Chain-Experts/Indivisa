@@ -14,7 +14,7 @@ services:
   canton:
     build:
       context: ..
-      dockerfile: judge/canton.Dockerfile
+      dockerfile: quickstart/canton.Dockerfile
     container_name: indivisa-canton
     healthcheck:
       # The bootstrap writes /indivisa/ready last, after every package is
@@ -34,7 +34,7 @@ services:
   seed:
     build:
       context: ..
-      dockerfile: judge/seed.Dockerfile
+      dockerfile: quickstart/seed.Dockerfile
     image: indivisa-seed
     container_name: indivisa-seed
     depends_on:
@@ -102,7 +102,7 @@ services:
       DECPM_INSECURE: "true"
       # Canton takes the user id from the token's sub, and participant_admin
       # is the one user it creates for itself. Secret and audience are
-      # DecMan's own defaults; they match judge/canton.conf.
+      # DecMan's own defaults; they match quickstart/canton.conf.
       DECPM_CANTON_HMAC_SUBJECT: participant_admin
       RUST_LOG: dec_party_manager=info,tokio_noise=error,hyper_noise=error
       DECPM_PORT: "8081"
@@ -167,7 +167,7 @@ services:
   web:
     build:
       context: ..
-      dockerfile: judge/web.Dockerfile
+      dockerfile: quickstart/web.Dockerfile
     container_name: indivisa-web
     depends_on:
       canton:

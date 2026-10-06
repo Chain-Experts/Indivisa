@@ -18,7 +18,7 @@ minutes of questions.
 | --- | --- |
 | The experiment | Five proofs, 17-22 Sep. Proof 5 measured to **13,000 legs in one transaction** (10.4 s, 1.52 MB), ceiling derived at 13,869 |
 | The product | Model, demo driver, settlement console; `indivisa` 0.4.0 |
-| Judges can run it | `cd judge && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
+| Judges can run it | `cd quickstart && docker compose up` - five participants, 13 DARs, offline, no account anywhere. `--profile govern` adds the full vote: refused at one approval, settled at two |
 | Real network | DevNet, 24 Sep. 5 holders, 8,421.88 USD, update id `1220652e...f466b` |
 | **Governed, independently** | **DevNet, twice: 29 and 30 Sep, 2 of 2 - ours and BitSafe's, on their node.** The second is the one filmed, update id `1220eb43...c6ac`. Chain-Experts could not have produced either transaction alone |
 | The video | **`Indivisa-S3.mp4`, 3 m 00 s**, 1920x1080, cut 5 October and re-cut with narration on 6 October. One film on DevNet throughout: sign-in, a coupon refused because one holder was not ready, each holder seeing only its own line, the fix, the settlement, then a second coupon that needed two companies to agree. Fourteen cards and a voice-over, no music. Every figure checked against the ledger. **Supersedes `Indivisa-HackCanton-S3.mp4`** (2 m 27 s, 30 Sep), kept only as history |
@@ -119,7 +119,7 @@ minutes of questions.
    **The rename stops at their repository.** The contributed package is
    `governance-settlement-v1`; ours stays `governance-settlement-v0`, because
    that is the name vetted on DevNet, the DAR the judges' image uploads
-   (`judge/canton.Dockerfile`, `bootstrap.canton`) and the name in
+   (`quickstart/canton.Dockerfile`, `bootstrap.canton`) and the name in
    `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. The tests diverge
    too: theirs are written in `testlib`'s given/when/then harness, which exists
    only in their repository. Adopting either change here would have broken the
@@ -272,7 +272,7 @@ run since then went through scripts, so nothing exercised the page.
 | The page was not told the ledger user, and guessed `indivisa-ui`, which does not exist on that ledger | First press: *a security-sensitive error has been received* - which reads as a broken product, not as the atomicity demonstration |
 | One `curl` in `seed.sh`s prepare branch was missing the auth header | `docker compose run --rm prepare` died with `curl: (22) ... 401` |
 
-Both fixed in `judge/seed.sh`. Also `judge/nginx.conf` now serves
+Both fixed in `quickstart/seed.sh`. Also `quickstart/nginx.conf` now serves
 `index.html` with `Cache-Control: no-store`, so rebuilding the image actually
 changes what a returning browser loads.
 
@@ -589,7 +589,7 @@ to 1,000 legs on LocalNet on 17–18 September (one transaction, seconds).
 Phases 2 to 4 were built on 18 September. Phase 5 is what is left of the main
 submission; the BitSafe challenge (its own section below) reached its sandbox
 milestones on 22 September. On 23 September the judges' one-command Docker
-package was built and verified (`judge/`, brought forward from Phase 5
+package was built and verified (`quickstart/`, brought forward from Phase 5
 because there was room), and the UI was rebuilt as a settlement console.
 **What now remains is the DevNet run, the recording and the deck.**
 
@@ -973,7 +973,7 @@ no application backend.
   things on the platform: the **repo**, a **working demo** (live, or a
   recorded video of at most **five minutes**), and **pitch materials**
   (slides *or* a document).
-  - Our working demo is unusually strong here: `judge/` is a live demo a
+  - Our working demo is unusually strong here: `quickstart/` is a live demo a
     judge can run themselves, and `docs/devnet-run.md` is a real update id
     on DevNet. Both beat a video for credibility; the video is the way in.
   - Pitch materials may be a **document**, not necessarily slides. Worth
@@ -1082,9 +1082,9 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       after two clips of exactly that. It now opens "That was one
       signature", which makes the section read as *default, then option*
       rather than as a contradiction. The operator caught that, not me.
-- [x] **A one-command local deployment for the judges**: `judge/`, built
+- [x] **A one-command local deployment for the judges**: `quickstart/`, built
       and verified 23 Sep, ahead of the DevNet run rather than after it
-      (there was room, and it costs the recording nothing). `cd judge &&
+      (there was room, and it costs the recording nothing). `cd quickstart &&
       docker compose up` gives one Canton container with the five-participant
       topology and nine vetted packages, a one-shot seed container (the Daml
       Script runner and `Indivisa.Test.Demo`) that seats 20 holders with one
@@ -1092,7 +1092,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       proxying the participants. Verified end to end on this machine: refused
       (`20 payments requested · 0 executed`), `docker compose run --rm
       prepare`, settled in 589 ms with the update id on screen.
-      `judge/README.md` tells the judge when it is ready, what to press and
+      `quickstart/README.md` tells the judge when it is ready, what to press and
       what is real; the run is linked from the top of the main README.
       **Still to test elsewhere:** the two shipped build paths
       (`SCRIPT_SOURCE=download` for the script runner, `UI_SOURCE=build` for
@@ -1123,7 +1123,7 @@ Prepared on LocalNet, 18 Sep, so the DevNet step is configuration only:
       five-minute Grand Final format.
 - [x] Label every component **real / simulated / planned**, done in three
       places that a judge actually reads: the deck (slide 12, and slide 13
-      for what is not built), `judge/README.md`, and `docs/demo-script.md`
+      for what is not built), `quickstart/README.md`, and `docs/demo-script.md`
       Part H, which says what a caption may and may not claim.
 - [ ] Rehearse the answer to *"would anyone really use this?"*
 
@@ -1266,7 +1266,7 @@ Done:
       the ledger's own *'Enough confirmations to execute action' was not
       met*). Three DecMan v1.8.0 containers behind the `govern` compose
       profile, ~150 MB each, so a plain `docker compose up` is untouched and
-      6 GB still covers both paths. `judge/govern.sh` ports BitSafe's
+      6 GB still covers both paths. `quickstart/govern.sh` ports BitSafe's
       `hackathon/seed.sh` and our `infra/govern.ps1` onto this topology.
       ~~Original plan:~~ Three DecMan
       containers against three of our five participants, plus a seeding step
@@ -1310,7 +1310,7 @@ Done:
 >
 > Either way the fallback is strong and already built: the contribution pool asks for a reproducible LocalNet demo
 > of an integration, a custom module, or an open-source contribution, and we
-> have all four: `judge/` runs the governed flow in one command,
+> have all four: `quickstart/` runs the governed flow in one command,
 > `governance-settlement-v0` is the module, and `contrib/bitsafe/` holds two
 > ready PRs.
 
@@ -1357,7 +1357,7 @@ Done:
       `governance-settlement-v1`.** Their clause rejects a settlement naming a
       third executor at creation instead of after the vote. A changed `ensure`
       is a new package lineage rather than a version bump, so the rename has to
-      ripple through `judge/canton.Dockerfile`, `judge/bootstrap.canton`,
+      ripple through `quickstart/canton.Dockerfile`, `quickstart/bootstrap.canton`,
       `infra/bitsafe/distribute.ps1`, `verify-packages.ps1`, three `daml.yaml`
       files and four documents, then a fresh DevNet upload and a re-verified
       judge package. **Not before the Grand Final:** the configuration it
@@ -1377,7 +1377,7 @@ Done:
       is signed by owner and admin, so it keeps the receiver-authorisation
       case instead of skipping it. The disclosure, and the "configuration
       change, not a redesign" framing, are now in `README.md`,
-      `judge/README.md`, deck slides 12 and 13, and video card 2;
+      `quickstart/README.md`, deck slides 12 and 13, and video card 2;
       `docs/canton-coin.md` sets out what a switch would take (nothing in
       the model - one field and one registry adapter).
       Their caveat: **sponsor challenges set their own conditions**. The

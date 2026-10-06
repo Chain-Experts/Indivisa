@@ -208,7 +208,7 @@ art, no animations.
 | 5 | **A coupon this size should not move on one signature.** / The run can name an approver: a party no single company controls. / *(small, 20 pt)* Governed through BitSafe's Decentralization Manager. Three approver nodes, threshold two. |
 | 6 | **Below the threshold, the ledger refuses.** / One approval is not enough. Nothing moves. |
 | 8 | **The holder is made ready.** / Same run. Same button. Nothing else changes. *(used between the refusal and the fix, not at the end - add it as the LAST slide so the earlier numbers do not move)* |
-| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026**, update id `1220652e…f466b` / **Run it yourself:** `cd judge && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
+| 7 | **One transaction. 250 holders paid at the same instant, or nobody.** / Measured on LocalNet: 250 legs in 1.6 s · 1,000 in 11.1 s · pushed to 13,000 legs in 10.4 s / **Settled on Canton DevNet, 24 Sep 2026**, update id `1220652e…f466b` / **Run it yourself:** `cd quickstart && docker compose up` / Built on Token Standard V2 (CIP-0112, approved June 2026) · github.com/Chain-Experts/Indivisa |
 
 Save: File → Save As → `D:\Dev\ChainExperts\Indivisa-recording\cards.pptx`
 (create the folder in the dialog if it does not exist).
@@ -452,7 +452,7 @@ other three into it; point at them instead.
 | | Where |
 |---|---|
 | **The DevNet run** | `docs/devnet-run.md`: update id `1220652e…f466b`, 24 Sep 2026 |
-| **Run it yourself** | `judge/`: `docker compose up`, no account, no toolchain. The same package also runs the governed settlement, so a judge can hold the vote themselves |
+| **Run it yourself** | `quickstart/`: `docker compose up`, no account, no toolchain. The same package also runs the governed settlement, so a judge can hold the vote themselves |
 | **The measured ceiling** | `docs/benchmark.md`: 13,000 legs in one transaction, and where it stops |
 | **The governed settlement** | `docs/decentralization.md`: the BitSafe integration, written up |
 
