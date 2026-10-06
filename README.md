@@ -297,6 +297,7 @@ today.
 | | |
 |---|---|
 | `TASKS.md` | The plan to 9 October, proofs first, with results as they came in |
+| [`docs/questions.md`](docs/questions.md) | **The questions people ask**, answered directly: privacy when the agent sees every leg, why 13,000 legs beat 1,000, what is simulated, and whether anyone would use it |
 | `docs/architecture.md` | Components, settlement flow, boundaries, settled and open questions |
 | `docs/modules.md` | Every file, and what is in it |
 | `docs/benchmark.md` | Proof 5: method, numbers, what they mean |

@@ -119,6 +119,7 @@ Indivisa/
 │
 └── docs/
     ├── modules.md                 this file
+    ├── questions.md               the questions people ask, answered with pointers to the evidence
     ├── architecture.md
     ├── explainer.html             the story for a beginner, standalone page
     ├── logo.png                   the mark, used by the console and the deck
