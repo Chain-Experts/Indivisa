@@ -29,7 +29,7 @@ Corporate-action processing is still substantially manual. From Canton Network's
 | **71% / <40%** | straight-through processing for mandatory and income events / for voluntary events |
 | **+23%** | annual growth in investors' asset-servicing costs |
 
-Bond coupons are our chosen example. Dividends and redemptions are the same engine.
+Bond coupons are our chosen example. A dividend is the same engine with a different rate. A redemption pays the same way and also retires the position, which is register work the demo does not do.
 
 ---
 
