@@ -121,7 +121,7 @@ export function useAgent(config: Config): AgentHandle {
       const r = await settle(agent, state.run.cid, state.allocations.map((a) => a.cid), seat.rulesCid, factory);
       setPressed({ kind: "settled", updateId: r.updateId, ms: r.ms });
     } catch (e) {
-      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      const reason = reasonOf(e);
       setPressed({ kind: "rejected", reason });
       try {
         await recordRejection(agent, runId, state.run.legs, reason);
@@ -142,7 +142,7 @@ export function useAgent(config: Config): AgentHandle {
       // nothing is outstanding, and the agent may ask again when it is ready.
       setPressed({ kind: "idle" });
     } catch (e) {
-      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      const reason = reasonOf(e);
       setPressed({ kind: "rejected", reason });
     } finally {
       refresh();
@@ -163,7 +163,7 @@ export function useAgent(config: Config): AgentHandle {
       await cancelRun(agent, send.cid, executors, seat.rulesCid, factory);
       setPressed({ kind: "idle" });
     } catch (e) {
-      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      const reason = reasonOf(e);
       // Deliberately NOT "rejected": that strip says SETTLEMENT REJECTED, and
       // a refused cancellation is not a refused settlement. Saying so cost
       // real confusion on 2 October.
@@ -192,7 +192,7 @@ export function useAgent(config: Config): AgentHandle {
       await allocateMissing(agent, state.run.cid, state.allocations, seat.rulesCid, factory);
       setPressed({ kind: "idle" });
     } catch (e) {
-      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      const reason = reasonOf(e);
       // Not "rejected": that strip says SETTLEMENT REJECTED, and a failed
       // preparation is not a refused settlement. The same distinction the
       // cancel path had to learn on 2 October.
@@ -241,7 +241,7 @@ export function useAgent(config: Config): AgentHandle {
       setRunId(id);
       setPressed({ kind: "idle" });
     } catch (e) {
-      const reason = e instanceof LedgerError ? extractReason(e.body) : String(e);
+      const reason = reasonOf(e);
       setPressed({ kind: "failed", what: "coupon", reason: `could not ${step}: ${reason}` });
     } finally {
       refresh();
@@ -249,6 +249,14 @@ export function useAgent(config: Config): AgentHandle {
   }, [agent, issuer, refresh, seat.isin, seat.registry, state]);
 
   return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, onCancelRun, onPrepare, onSetUpCoupon, runId, ledgers: { agent, registry } };
+}
+
+/** What to show an operator. A ledger refusal carries its cause in the body;
+ *  anything else is one of our own errors, and `String(err)` would prefix it
+ *  with "Error: ", which reads as a crash rather than as an explanation. */
+function reasonOf(e: unknown): string {
+  if (e instanceof LedgerError) return extractReason(e.body);
+  return e instanceof Error ? e.message : String(e);
 }
 
 function extractReason(body: string): string {

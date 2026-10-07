@@ -455,7 +455,22 @@ export async function createRun(
 ): Promise<string> {
   const runId = runIdFor(schedule.isin, schedule.kind, schedule.paymentDate);
   const already = (await agent.templates(T.run)).find((c) => c.createdEvent.createArgument.runId === runId);
-  if (already) return runId;
+  if (already) {
+    // Reusing a run is the point of being idempotent, but NOT when the
+    // approver differs: the model cannot add one to a run that exists, so
+    // quietly handing back an ungoverned run to an operator who asked for a
+    // governed one would leave them believing a payout needs two companies
+    // when it needs one. That is the worst thing this page could get wrong.
+    const have: Party | null = already.createdEvent.createArgument.approver ?? null;
+    if (have !== approver) {
+      throw new Error(
+        approver
+          ? `a run already exists for ${runId} and it names no approver, so it would settle on the agent alone. An approver cannot be added to a run that exists: settle or cancel that run first, or use a different payment date.`
+          : `a run already exists for ${runId} and it names an approver, so it cannot settle on the agent alone. Settle or cancel that run first, or use a different payment date.`,
+      );
+    }
+    return runId;
+  }
   await agent.submitAndWait([
     {
       CreateCommand: {

@@ -61,7 +61,7 @@ The run has been prepared with **one holder deliberately left out**, so:
    If you would rather watch it happen in a terminal, the same work is `docker compose run --rm prepare` from a second terminal in the same folder. Leave the browser open and leave the first terminal running: that one is the network itself.
 3. Press the button again. Settled. Every holder is paid in the same transaction, the update id of that transaction appears on screen, every card turns green and every row in the schedule turns **paid**, while each holder's counts of other holders stay at zero. Open a card again and check that for yourself.
 
-To start over: `docker compose down && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. (`down` leaves a small volume behind; `docker compose down -v` removes that too.)
+To start over: `docker compose down -v && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. If the next thing you want is the governed run below, use `docker compose --profile govern down -v` instead: it clears the approver nodes too.
 
 ## Optional: make it need more than one signature
 
@@ -74,6 +74,8 @@ docker compose --profile govern down -v                  # start clean
 INDIVISA_GOVERNED=1 docker compose --profile govern up -d
 docker compose run --rm govern-seed                      # ~2 min, once
 ```
+
+**That first line matters even if you have already stopped the stack.** Two things survive a plain `docker compose down -v`: the approver nodes' own volumes, which then carry a party the new ledger has never heard of, and the run the ungoverned demo seated, which names no approver. An approver cannot be added to a run that already exists, so starting the governed path on top of the first one gives a run the agent could settle alone. The page refuses and says so rather than letting that pass, but the fix is to start clean.
 
 That is the whole terminal. `govern-seed` builds the decentralised party itself: three nodes, a peer mesh, and rules at a threshold of two. The coupon is then set up on the page.
 
@@ -88,7 +90,7 @@ docker compose run --rm govern confirm 1    # one approver agrees
 docker compose run --rm govern confirm 2    # a second agrees
 ```
 
-Watch the strip on the page as you do: it goes from one of two to two of two, read live from the approvers' own software. At two, a second button appears. Press it, and the coupon settles.
+Watch the strip on the page as you do: it goes from one of two to two of two, read live from the approvers' own software. At two, the greyed-out *Waiting for the approvers* button disappears and a green **Settle N legs, now approved** takes its place, so there is only ever one thing to press. Press it, and the coupon settles.
 
 The refusal below threshold is worth seeing. Between the two confirms, try:
 
@@ -122,5 +124,6 @@ This is a local network, so it proves the mechanism, not a deployment. The same 
 | `canton` keeps restarting, or the page never loads | Docker has too little memory. Give it 6 GB and `docker compose down && docker compose up`. |
 | The page says it is waiting for the demo to finish seating | That is the normal first few minutes. It picks the demo up by itself. To watch the seed: `docker compose logs -f seed`. |
 | Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
-| The button says "Prepare the run first" | The seed did not finish; see above. |
+| The page says there is no run yet and opens a set-up panel | On the ungoverned path the seed did not finish; see above. On the governed path that is correct: the run is yours to create, from that panel. |
+| Setting a coupon up says a run already exists and names no approver | You are on the governed path over the ungoverned one's leftovers. `docker compose --profile govern down -v`, then start the governed path again. |
 | The governed seat fails with a 409, or DecMan says onboarding is already complete | The approver nodes keep their own volumes, and a plain `docker compose down -v` does not clear them, so they carry a party the new ledger has never heard of. Use `docker compose --profile govern down -v`. |

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Money } from "../components/Money";
 import { StatusPill } from "../components/StatusPill";
 import { displayName, type Config } from "../config";
@@ -89,7 +89,11 @@ function CouponSetup({
   approver: Party | null;
   onSetUp: (terms: CouponTerms, approver: Party | null) => Promise<void>;
 }) {
-  const [showing, setShowing] = useState(open);
+  // Null until the operator touches it, so until then the panel follows the
+  // page: open while there is no run, because that is the state they are stuck
+  // in, and a link once there is one. After a click their choice sticks.
+  const [showing, setShowing] = useState<boolean | null>(null);
+  const expanded = showing ?? open;
   // Prefilled from the coupon on screen, so the common case is "the same terms,
   // now make the run" and the operator changes only what differs.
   const [rate, setRate] = useState(schedule ? String(schedule.amountPerUnit) : "");
@@ -97,8 +101,24 @@ function CouponSetup({
   const [paymentDate, setPaymentDate] = useState(schedule?.paymentDate ?? "");
   const [policy, setPolicy] = useState(schedule?.policy ?? "LargestRemainder");
   const [governed, setGoverned] = useState(!!approver);
+  // Seed the fields the first time a schedule arrives, and only then.
+  //
+  // The page polls every two seconds, so the schedule is not there on the
+  // first render. Keying the whole component on it fixed the empty form and
+  // broke something worse: every poll remounted it, so the panel an operator
+  // had just opened closed again within two seconds, taking anything they had
+  // typed with it. Seed once, never remount, and the operator keeps both.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || !schedule) return;
+    seeded.current = true;
+    setRate(String(schedule.amountPerUnit));
+    setRecordDate(schedule.recordDate);
+    setPaymentDate(schedule.paymentDate);
+    setPolicy(schedule.policy);
+  }, [schedule]);
 
-  if (!showing) {
+  if (!expanded) {
     return (
       <button className="linklike" disabled={busy} onClick={() => setShowing(true)}>
         Set up another coupon
@@ -352,7 +372,6 @@ export function RunBar({
         ) : null}
         {!settled && !config.readOnly ? (
           <CouponSetup
-            key={state?.schedule?.cid ?? "no-schedule"}
             busy={pressed.kind === "busy"}
             open={!state?.run}
             schedule={state?.schedule ?? null}
