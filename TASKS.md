@@ -550,7 +550,7 @@ Done:
 - [ ] Java paying-agent daemon: watches payment dates, fires the run without a human. The honest production component, invisible in the video. First to be cut.
 - [ ] Dividend and redemption as second and third event types, to show the engine generalises.
 
-- [ ] **The prepare screen: move the agent's own setup off the terminal and onto the page** (scoped 7 October). The governed run has been page-driven since 1 October; everything before it is still `demo.ps1 seat` and `prepare`. This closes that, agent-side only.
+- [x] **The prepare screen: the agent's own setup is off the terminal and on the page** (scoped and built 7 October). The governed run has been page-driven since 1 October; everything before it is still `demo.ps1 seat` and `prepare`. This closes that, agent-side only.
 
   **Six new functions in `ui/src/ledger/queries.ts`, siblings of `settle`:** `announce` (create `CorporateAction`), `snapshot` (`Instrument_Snapshot`), `entitle` (`CorporateAction_Entitle`, which derives the schedule on-ledger), `createRun` (a `DistributionRun` in the shape `runFromSchedule` builds), `allocateSend` (`AllocationFactory_Allocate` on the disclosed rules contract, with the agent's unlocked holdings), and `allocateReceipts` (`CreateReceiptAllocation` on each `PaymentAgreement`).
 
