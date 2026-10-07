@@ -307,7 +307,14 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
           <div className="outcome-line">
             {state.proposal.description}
             {state.run?.approver ? (
-              <span className="muted"> · {displayName(state.run.approver, config.seat.tag)} must confirm to its threshold</span>
+              <span className="muted">
+                {" · "}
+                {displayName(state.run.approver, config.seat.tag)}
+                {/* Past tense once the threshold is met: the line directly below
+                    already says it is, and the two together read as a
+                    contradiction that makes an operator distrust the page. */}
+                {voting.vote?.canExecute ? " confirmed to its threshold" : " must confirm to its threshold"}
+              </span>
             ) : null}
           </div>
           {voting.vote ? (

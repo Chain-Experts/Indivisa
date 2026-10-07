@@ -354,7 +354,7 @@ case "${1:-seat}" in
       --participant-config /tmp/participants.json
     say "Done. The run now needs the approvers, not just the paying agent."
     printf '    Open http://localhost:8080. The button no longer settles: it reads
-    "Ask the approvers to settle 20 legs", because the agent cannot act alone.
+    "Ask the approvers to settle N legs", because the agent cannot act alone.
     Press it, then: docker compose run --rm govern confirm 1
 
 '
