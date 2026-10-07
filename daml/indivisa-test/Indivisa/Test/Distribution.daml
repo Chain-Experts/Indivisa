@@ -273,3 +273,70 @@ proof2With topology = do
       let owners = sort [ v.account | (_, Some v) <- everything ]
       owners === [basicAccount holder]
       awaitBalance cash holder expected
+
+-- ---------------------------------------------------------------------------
+-- The run itself: what the ledger refuses to record
+-- ---------------------------------------------------------------------------
+
+-- | `DistributionRun`'s ensure clause, one condition at a time.
+--
+-- Each submission below is the run that `createRun` creates successfully in
+-- every other test in this module, with exactly one field changed. A run that
+-- fails any of these would reach `Run_Settle` and either pay nothing, pay a
+-- leg of zero that the standard refuses anyway, settle one leg twice under one
+-- id, or draw on an account the agent does not own.
+run_refusesAMalformedRun : Script ()
+run_refusesAMalformedRun = do
+  (cast, cash) <- setup
+  let run = DistributionRun with
+        payingAgent = cast.payingAgent
+        runId = "ACME-2031-COUPON-01"
+        instrument = cash.instrument
+        agentAccount = basicAccount cast.payingAgent
+        schedule = None
+        approver = None
+        legs = threeLegs cast
+  -- The control. Everything below differs from it in one field.
+  _ <- submit cast.payingAgent $ createCmd run
+
+  submitMustFail cast.payingAgent $ createCmd run with legs = []
+  submitMustFail cast.payingAgent $ createCmd run with
+    legs = [ PaymentLeg with legId = "leg-1"; recipient = cast.alice; amount = 0.0 ]
+  submitMustFail cast.payingAgent $ createCmd run with
+    legs = [ PaymentLeg with legId = "leg-1"; recipient = cast.alice; amount = -500.0 ]
+  submitMustFail cast.payingAgent $ createCmd run with
+    legs =
+      [ PaymentLeg with legId = "same"; recipient = cast.alice; amount = 500.0
+      , PaymentLeg with legId = "same"; recipient = cast.bob;   amount = 500.0
+      ]
+  submitMustFail cast.payingAgent $ createCmd run with
+    agentAccount = basicAccount cast.alice
+
+-- | Only the executors may settle, and on an ungoverned run that is the
+-- paying agent alone. A holder who is owed money by the run still cannot
+-- release it, and neither can the cash registry that administers the asset.
+--
+-- `governance_agentAloneRefused` is the other half of this: with an approver
+-- named, the agent alone is no longer enough either.
+run_settleIsForTheExecutorsOnly : Script ()
+run_settleIsForTheExecutorsOnly = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreements <- onboardAll cast.payingAgent cash [cast.alice, cast.bob, cast.charlie]
+  (runCid, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- forA agreements (allocateReceipt cast.payingAgent cash run)
+  let allocationCids = sendCid :: receiptCids
+
+  forA_ [cast.alice, cast.registry] $ \other ->
+    submitMustFail (actAs other <> disclose cash.rules) $
+      exerciseCmd runCid Run_Settle with
+        factoryCid = toInterfaceContractId cash.rulesCid
+        allocationCids
+        extraArgs = cash.extraArgs
+
+  -- Nothing moved, and then the agent settles the very same run: the refusals
+  -- above were about who asked, not about the run being unsettleable.
+  awaitBalance cash cast.alice 0.0
+  _ <- settle cast.payingAgent cash runCid allocationCids
+  awaitBalance cash cast.alice 500.0

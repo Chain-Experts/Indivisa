@@ -369,3 +369,19 @@ errorText err = case err of
   UnhandledException None -> "unhandled exception"
   AuthorizationError msg -> "authorization error: " <> msg
   other -> show other
+
+-- | A submission must have been refused, and the refusal must name the guard
+-- the test is about.
+--
+-- Matching on the text is the point. A submission can fail for several
+-- reasons at once, so a test that only checked "it failed" would pass while a
+-- different guard fired, and would keep passing if the guard under test were
+-- deleted. The message is quoted on failure so a changed error shape says
+-- what it actually saw.
+refusedBy : Text -> Either SubmitError a -> Script ()
+refusedBy expected r = case r of
+  Right _ -> fail ("expected a refusal naming \"" <> expected <> "\", but the submission succeeded")
+  Left err -> do
+    let msg = errorText err
+    assertMsg ("expected a refusal naming \"" <> expected <> "\", got: " <> msg)
+      (expected `T.isInfixOf` msg)

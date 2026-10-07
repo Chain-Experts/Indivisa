@@ -145,3 +145,88 @@ register_snapshotIsVerified = do
     positionCids = [a]
   Some s <- queryContractId c.registrar snap
   s.positions === [(c.alice, 100.0)]
+
+-- | Master data the registrar cannot record, one field at a time.
+--
+-- A bond with no face value, a negative rate, a position of nothing, a
+-- snapshot carrying a zero: each would travel all the way to the entitlement
+-- engine and produce a schedule nobody can pay.
+register_refusesMalformedMasterData : Script ()
+register_refusesMalformedMasterData = do
+  (c, _) <- setupRegister
+  let instrument = Instrument with
+        registrar = c.registrar
+        issuer = c.issuer
+        isin = "XS0000000002"
+        name = "Northwind Rail 4% 2031"
+        currency = "USD"
+        denomination = 1000.0
+        couponRate = 0.04
+        maturity = date 2031 Dec 1
+  -- The control, then the same record with one field changed.
+  _ <- submit c.registrar $ createCmd instrument
+  submitMustFail c.registrar $ createCmd instrument with denomination = 0.0
+  submitMustFail c.registrar $ createCmd instrument with denomination = -1000.0
+  submitMustFail c.registrar $ createCmd instrument with couponRate = -0.04
+
+  let pos = Position with
+        registrar = c.registrar
+        holder = c.alice
+        isin = "XS0000000001"
+        quantity = 100.0
+  _ <- submit c.registrar $ createCmd pos
+  submitMustFail c.registrar $ createCmd pos with quantity = 0.0
+  submitMustFail c.registrar $ createCmd pos with quantity = -100.0
+
+  let snap = RegisterSnapshot with
+        registrar = c.registrar
+        isin = "XS0000000001"
+        recordDate = date 2027 Nov 15
+        positions = [(c.alice, 100.0)]
+  _ <- submit c.registrar $ createCmd snap
+  submitMustFail c.registrar $ createCmd snap with
+    positions = [(c.alice, 100.0), (c.bob, 0.0)]
+
+-- | A transfer moves a positive quantity. The over-transfer is checked in
+-- `register_positionsAndTransfers`; this is the other half of the same guard,
+-- and a zero or negative transfer would otherwise create a `Position` that
+-- its own ensure clause forbids.
+register_transferMustBePositive : Script ()
+register_transferMustBePositive = do
+  (c, _) <- setupRegister
+  a <- position c c.alice 100.0
+  submitMustFail c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = 0.0
+  submitMustFail c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = -10.0
+  -- The control: the same transfer with a positive amount is recorded.
+  _ <- submit c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = 10.0
+  pure ()
+
+-- | The register is the registrar's book. A holder cannot move its own
+-- position, cannot move somebody else's, and cannot freeze the register.
+--
+-- This is the authorisation half of the register claim: `Instrument_Snapshot`
+-- verifies the positions it is given, and that verification would be worth
+-- nothing if any holder could call it.
+register_onlyTheRegistrarMayRecord : Script ()
+register_onlyTheRegistrarMayRecord = do
+  (c, instrumentCid) <- setupRegister
+  a <- position c c.alice 100.0
+  b <- position c c.charlie 50.0
+  let recordDate = date 2027 Nov 15
+
+  submitMustFail c.alice $ exerciseCmd a Position_Transfer with to = c.bob; amount = 10.0
+  submitMustFail c.bob $ exerciseCmd a Position_Transfer with to = c.bob; amount = 10.0
+  submitMustFail c.issuer $ exerciseCmd a Position_Transfer with to = c.bob; amount = 10.0
+  submitMustFail c.alice $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a]
+  submitMustFail c.issuer $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [a]
+
+  -- The control: the registrar does both.
+  _ <- submit c.registrar $ exerciseCmd a Position_Transfer with to = c.bob; amount = 10.0
+  _ <- submit c.registrar $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids = [b]
+  pure ()

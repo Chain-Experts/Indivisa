@@ -227,3 +227,50 @@ governance_noApproverUnchanged = do
   receiptCids <- allocateReceipts cast.payingAgent cash run agreements
   _ <- settle cast.payingAgent cash runCid (sendCid :: receiptCids)
   balance cash cast.charlie >>= (=== 1500.0)
+
+-- | A proposal with nothing to settle is not a proposal.
+--
+-- `allocationCids` is what the members are being asked to approve. Empty, the
+-- action would reach the threshold, execute, and settle a batch with no
+-- allocations in it, which the standard then refuses after the members have
+-- spent their attention on it. Refusing it at creation keeps the vote about
+-- something.
+--
+-- The same submission as `propose` makes, with one field emptied.
+governance_proposalMustCarryAllocations : Script ()
+governance_proposalMustCarryAllocations = do
+  p <- propose
+  let proposal = SettleRunProposal with
+        governanceParty = p.committee.approvers
+        proposer = p.cast.payingAgent
+        runCid = p.runCid
+        factoryCid = toInterfaceContractId p.cash.rulesCid
+        allocationCids = p.allocationCids
+        extraArgs = p.cash.extraArgs
+        description = "a second proposal for the same run"
+  -- The control: the same record, which `propose` already created once.
+  _ <- submit p.cast.payingAgent $ createCmd proposal
+  submitMustFail p.cast.payingAgent $ createCmd proposal with allocationCids = []
+
+-- | Only the paying agent may file one, and a member cannot file for it.
+--
+-- The proposer is the sole signatory, and it is the party the governance rules
+-- admitted as an additional proposer. A member of the committee confirming is
+-- one thing; a member inventing the action it then confirms would be another.
+governance_onlyTheAdmittedProposerMayFile : Script ()
+governance_onlyTheAdmittedProposerMayFile = do
+  p <- propose
+  let proposal = SettleRunProposal with
+        governanceParty = p.committee.approvers
+        proposer = p.cast.payingAgent
+        runCid = p.runCid
+        factoryCid = toInterfaceContractId p.cash.rulesCid
+        allocationCids = p.allocationCids
+        extraArgs = p.cash.extraArgs
+        description = "filed by someone else"
+  let (m1 :: _) = p.committee.members
+  forA_ [m1, p.cast.alice] $ \other ->
+    submitMustFail other $ createCmd proposal
+  -- The control: the agent files the same record.
+  _ <- submit p.cast.payingAgent $ createCmd proposal
+  pure ()

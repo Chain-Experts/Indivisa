@@ -1,0 +1,234 @@
+-- | The holder's consent: how it is given, how it ends, and what it does not
+-- authorise.
+--
+-- `PaymentAgreement` is the most powerful contract in the model. A holder
+-- signs it once at onboarding and from then on the paying agent alone creates
+-- that holder's receipt allocations, for every coupon, without asking again.
+-- That is the product claim, so the limits on it are worth proving rather than
+-- asserting: every negative test below is the passing submission of
+-- `payment_receiptIsCreatedByTheAgentAlone` with exactly one field changed,
+-- which is what makes each one evidence about the guard it names.
+--
+-- The lifecycle tests cover the two ways a proposal ends without an
+-- agreement. The demo never shows either, so nothing else exercised them.
+module Indivisa.Test.Payment where
+
+import DA.Assert ((===))
+
+import Daml.Script
+
+import Splice.Api.Token.AllocationV2 qualified as V2
+import Splice.Api.Token.AllocationInstructionV2 qualified as V2
+import Splice.TokenStandard.Utils (basicAccount)
+
+import Indivisa.Model.Distribution
+import Indivisa.Model.Payment
+import Indivisa.Test.Agent
+import Indivisa.Test.Fixtures
+
+-- ---------------------------------------------------------------------------
+-- The proposal, and the three ways it ends
+-- ---------------------------------------------------------------------------
+
+-- | Accept is the path the product takes and `onboard` covers it. These are
+-- the other two: the holder says no, or the agent takes the offer back. Both
+-- leave the holder with nothing signed, which is the property that matters.
+payment_declineLeavesNothingSigned : Script ()
+payment_declineLeavesNothingSigned = do
+  (cast, cash) <- setup
+  proposalCid <- propose cast cash cast.alice
+  submit cast.alice $ exerciseCmd proposalCid Decline
+  query @PaymentAgreement cast.payingAgent >>= (=== [])
+  queryContractId cast.alice proposalCid >>= (=== None)
+
+payment_withdrawLeavesNothingSigned : Script ()
+payment_withdrawLeavesNothingSigned = do
+  (cast, cash) <- setup
+  proposalCid <- propose cast cash cast.alice
+  submit cast.payingAgent $ exerciseCmd proposalCid Withdraw
+  query @PaymentAgreement cast.payingAgent >>= (=== [])
+  queryContractId cast.alice proposalCid >>= (=== None)
+
+-- | Who may do what. The holder decides whether to be paid; the agent decides
+-- whether to keep offering. Neither can act for the other, and Daml's
+-- authorisation check enforces it rather than anything we wrote.
+payment_theConsentIsTheHoldersAlone : Script ()
+payment_theConsentIsTheHoldersAlone = do
+  (cast, cash) <- setup
+  proposalCid <- propose cast cash cast.alice
+
+  -- The agent cannot sign on the holder's behalf, which is why an onboarding
+  -- step exists at all.
+  submitMustFail cast.payingAgent $ exerciseCmd proposalCid Accept
+  submitMustFail cast.payingAgent $ exerciseCmd proposalCid Decline
+  -- Nor can another holder.
+  submitMustFail cast.bob $ exerciseCmd proposalCid Accept
+  -- And the holder cannot withdraw the agent's offer.
+  submitMustFail cast.alice $ exerciseCmd proposalCid Withdraw
+
+  -- The control: the holder can, and the proposal is consumed by it, so a
+  -- second acceptance has nothing to act on.
+  agreementCid <- submit cast.alice $ exerciseCmd proposalCid Accept
+  submitMustFail cast.alice $ exerciseCmd proposalCid Accept
+  Some signed <- queryContractId cast.payingAgent agreementCid
+  signed.holder === cast.alice
+
+-- | Both templates insist the account belongs to the holder they name.
+-- Without it the agent could onboard a holder against an account the holder
+-- does not own, and the holder's signature would authorise payments into it.
+payment_theAccountMustBelongToTheHolder : Script ()
+payment_theAccountMustBelongToTheHolder = do
+  (cast, cash) <- setup
+  let proposal = PaymentProposal with
+        payingAgent = cast.payingAgent
+        holder = cast.alice
+        account = basicAccount cast.alice
+        instrument = cash.instrument
+  -- The control first, so the account is the only difference below.
+  _ <- submit cast.payingAgent $ createCmd proposal
+  submitMustFail cast.payingAgent $ createCmd proposal with account = basicAccount cast.bob
+
+  let consent = PaymentAgreement with
+        payingAgent = cast.payingAgent
+        holder = cast.alice
+        account = basicAccount cast.alice
+        instrument = cash.instrument
+  _ <- submit (actAs cast.payingAgent <> actAs cast.alice) $ createCmd consent
+  submitMustFail (actAs cast.payingAgent <> actAs cast.alice) $
+    createCmd consent with account = basicAccount cast.bob
+
+-- ---------------------------------------------------------------------------
+-- What the agreement authorises, and what it refuses
+-- ---------------------------------------------------------------------------
+
+-- | The passing submission that the five tests below each change in one way.
+--
+-- Alice is onboarded, a run exists that pays her, and the agent creates her
+-- receipt allocation alone. No holder command appears after onboarding, which
+-- is what the delegation exists for.
+payment_receiptIsCreatedByTheAgentAlone : Script ()
+payment_receiptIsCreatedByTheAgentAlone = do
+  f <- onboardedAlice
+  r <- tryReceipt f (receiptArg f)
+  case r of
+    Right _ -> pure ()
+    Left err -> fail ("the agent could not create a valid receipt allocation: " <> errorText err)
+
+-- | The agent must be executing the settlement it allocates into.
+--
+-- Without this the agent could spend a holder's consent on somebody else's
+-- settlement. The standard's own `ensureIsReceiptAllocation` does not catch
+-- it: we pass `choiceArg.settlement.executors` as its expected executors, so
+-- its executor check compares that list against itself and always holds. The
+-- `require` in `CreateReceiptAllocation` is the only thing standing here, and
+-- it has to be, because a governed run names the approver as a second
+-- executor and a fixed expected list would refuse it.
+payment_receiptMustNameTheAgentAsAnExecutor : Script ()
+payment_receiptMustNameTheAgentAsAnExecutor = do
+  f <- onboardedAlice
+  let arg = receiptArg f
+  r <- tryReceipt f (arg with settlement = arg.settlement with executors = [f.cast.issuer])
+  refusedBy "the paying agent executes this settlement" r
+
+-- | The allocation must authorise the holder's own account.
+--
+-- Changed here to Bob's: the agent tries to spend Alice's consent on a credit
+-- of Bob's account, which would let one holder's signature move another
+-- holder's money.
+payment_receiptMustAuthoriseTheHoldersOwnAccount : Script ()
+payment_receiptMustAuthoriseTheHoldersOwnAccount = do
+  f <- onboardedAlice
+  let arg = receiptArg f
+  r <- tryReceipt f (arg with allocation = arg.allocation with authorizer = basicAccount f.cast.bob)
+  refusedBy "choiceArg.allocation.authorizer" r
+
+-- | A receipt commits nothing and locks nothing.
+--
+-- `committed = True` belongs to the agent's own side: the standard reserves a
+-- committed allocation for the executors and refuses to let its authorizer
+-- withdraw it. Set on a holder's receipt it would bind the holder to a
+-- settlement they cannot step out of. Funding the receipt from the holder's
+-- own holdings is the same abuse through a different field, so both are here.
+payment_receiptCommitsNothingAndFundsNothing : Script ()
+payment_receiptCommitsNothingAndFundsNothing = do
+  f <- onboardedAlice
+  fund f.cash f.cast.alice 500.0
+  aliceHoldings <- unlockedHoldingCids f.cash f.cast.alice
+  let arg = receiptArg f
+
+  committedR <- tryReceipt f (arg with allocation = arg.allocation with committed = True)
+  refusedBy "choiceArg.allocation.committed" committedR
+
+  fundedR <- tryReceipt f (arg with inputHoldingCids = aliceHoldings)
+  refusedBy "choiceArg.inputHoldingCids" fundedR
+
+  -- Alice's cash is where it was: a refused allocation locks nothing.
+  awaitBalance f.cash f.cast.alice 500.0
+
+-- | The consent covers one asset, named when it was signed.
+--
+-- Two guards, one per field that could wander: the allocation's administrator
+-- and every leg's instrument id. A holder who agreed to be paid the
+-- registry's USD has agreed to nothing another administrator issues, and to
+-- no other currency from the same one.
+payment_receiptIsForTheAgreedAssetOnly : Script ()
+payment_receiptIsForTheAgreedAssetOnly = do
+  f <- onboardedAlice
+  let arg = receiptArg f
+
+  -- Any party other than the agreed administrator trips it; the issuer is a
+  -- party in the fixture that is not the cash registry.
+  adminR <- tryReceipt f (arg with allocation = arg.allocation with admin = f.cast.issuer)
+  refusedBy "allocation is for this agreement's instrument admin" adminR
+
+  let eurSides = [ side with instrumentId = "EUR" | side <- arg.allocation.transferLegSides ]
+  legR <- tryReceipt f (arg with allocation = arg.allocation with transferLegSides = eurSides)
+  refusedBy "is for this agreement's instrument" legR
+
+-- ---------------------------------------------------------------------------
+-- Fixture
+-- ---------------------------------------------------------------------------
+
+propose : Cast -> Cash -> Party -> Script (ContractId PaymentProposal)
+propose cast cash holder =
+  submit cast.payingAgent $ createCmd PaymentProposal with
+    payingAgent = cast.payingAgent
+    holder
+    account = basicAccount holder
+    instrument = cash.instrument
+
+-- | Alice onboarded, a funded agent, and a run that pays the three holders.
+data Onboarded = Onboarded
+  with
+    cast         : Cast
+    cash         : Cash
+    run          : DistributionRun
+    agreementCid : ContractId PaymentAgreement
+    now          : Time
+
+onboardedAlice : Script Onboarded
+onboardedAlice = do
+  (cast, cash) <- setup
+  fund cash cast.payingAgent 10000.0
+  agreementCid <- onboard cast.payingAgent cash cast.alice
+  (_, run) <- createRun cast cash "ACME-2031-COUPON-01" (threeLegs cast)
+  now <- requestedAt
+  pure Onboarded with ..
+
+-- | A valid receipt allocation request for Alice. Every negative test above
+-- is this record with one field replaced.
+receiptArg : Onboarded -> V2.AllocationFactory_Allocate
+receiptArg f = V2.AllocationFactory_Allocate with
+  settlement = runSettlementInfo f.run
+  allocation = runReceiptAllocationSpec f.run f.cast.alice
+  requestedAt = f.now
+  inputHoldingCids = []
+  extraArgs = f.cash.extraArgs
+  actors = [f.cast.alice]
+
+tryReceipt : Onboarded -> V2.AllocationFactory_Allocate -> Script (Either SubmitError (ContractId V2.Allocation))
+tryReceipt f choiceArg =
+  trySubmit (actAs f.cast.payingAgent <> disclose f.cash.rules) $
+    exerciseCmd f.agreementCid CreateReceiptAllocation with
+      factoryCid = toInterfaceContractId f.cash.rulesCid
+      choiceArg

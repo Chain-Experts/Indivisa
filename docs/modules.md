@@ -31,7 +31,9 @@ Indivisa/
 │   │   └── Indivisa/Test/
 │   │       ├── Fixtures.daml              cast, cash, funding, onboarding, waits
 │   │       ├── Agent.daml                 the paying agent's client moves
-│   │       ├── Distribution.daml          proofs 1 to 4
+│   │       ├── Distribution.daml          proofs 1 to 4, and what the run refuses
+│   │       ├── Payment.daml               the holder's consent, and its limits
+│   │       ├── Event.daml                 the announcement, and a schedule's provenance
 │   │       ├── Register.daml              positions, transfer, snapshot
 │   │       ├── Entitlement.daml           the rounding arithmetic
 │   │       ├── Coupon.daml                the whole chain, end to end
@@ -127,7 +129,7 @@ Indivisa/
     ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
     ├── demo-script.md             the recording, step by step, for someone who has never seen the project
     ├── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce
-    └── for-a-teenager.md          the whole idea, BitSafe included, from zero: finance words, blockchain, the flow, the vote
+    └── explained-from-zero.md     the whole idea, BitSafe included, from zero: finance words, blockchain, the flow, the vote
 ```
 
 ## `daml/indivisa/`: the model
@@ -152,8 +154,10 @@ Rule for what lives in the model: only what the ledger executes or what the ledg
 |---|---|
 | `Fixtures.daml` | `Cast` (parties), `Cash` (the reference token: rules contract, disclosure, choice context), `setup`, `fund` (simulated cash), balances through the V2 `Holding` interface, `onboard` / `onboardAll`, `threeLegs`, `createRun`, `requestedAt`, `errorText`. Shared by the rest. |
 | `Agent.daml` | The paying agent's client moves: `sendAllocationSpec`, `receiptAllocationSpec` and their `run*` forms, `allocateSend`, `allocateReceipt`, `trySettle`, `settle`. A UI or daemon reimplements exactly this sequence. |
-| `Distribution.daml` | The proofs, assertions only: batch settles (1), per-holder visibility in single-participant form (2), holders authorise once and the delegation cannot be abused (3), one bad leg settles zero with the rejection recorded (4). |
-| `Register.daml` | Positions aggregate and transfer; each holder sees only its own; the snapshot freezes and is verified against real position contracts. |
+| `Distribution.daml` | The proofs, assertions only: batch settles (1), per-holder visibility in single-participant form (2), holders authorise once and the delegation cannot be abused (3), one bad leg settles zero with the rejection recorded (4). Plus the runs the ledger refuses to record (no legs, a leg of nothing, two legs under one id, an account the agent does not own) and the parties that cannot settle one. |
+| `Payment.daml` | What the standing agreement does and does not authorise. The two ways a proposal ends without one (decline, withdraw); only the holder may accept and only the agent may withdraw; the account must belong to the holder. Then five refusals, each the passing receipt submission with one field changed: an executor list without the agent, another holder's account as authorizer, `committed = True`, the holder's own holdings as funding, another administrator or another currency. |
+| `Event.daml` | The announcement must be payable; only the issuer may cancel and only the paying agent may entitle; and the three refusals that make a schedule's provenance checkable, a snapshot of another instrument, of another record date, or kept by another registrar. The foreign snapshot is disclosed on purpose, so the guard refuses it rather than the visibility rules. |
+| `Register.daml` | Positions aggregate and transfer; each holder sees only its own; the snapshot freezes and is verified against real position contracts. Plus the master data the registrar cannot record (no face value, a negative rate, a position of nothing, a snapshot carrying a zero), a transfer that is not positive, and the register as the registrar's book alone. |
 | `Entitlement.daml` | The arithmetic: largest remainder hands out the residual cent; half-up lets the total follow; sums are exact across rates and sizes; zero entitlements dropped; the schedule template ensures its total. |
 | `Coupon.daml` | The whole chain: register, announcement, snapshot, on-ledger schedule (Charlie gets the residual cent), run from schedule, one settlement, balances equal the schedule, receipt links the schedule, holders never see the schedule or the run. IDE and LocalNet. |
 | `Scale.daml` | Proof 5 harness: `scale n` runs the whole day for N holders, `scaleAllocateOnly n` stops before the settle, `scalePrepare` does the same and emits what the JSON API settle client needs (`PreparedOut`). Sizes 3, 10, 50 under `dpm test -p scale`; larger through the runner with an input file, settled by `infra/settle.ps1`. Results in `benchmark.md`. |
@@ -167,7 +171,7 @@ Outside the model package on purpose, so `indivisa` carries no governance depend
 |---|---|
 | `governance-settlement-v0` | `Governance.Settlement.BatchSettlement.BatchSettlementProposal`: a `GovernableAction` whose `executeImpl` is one V2 `SettlementFactory_SettleBatch`, executed with the governance party's and the proposer's authority. Depends on `governance-action-v1` and the Splice V2 API only. The reusable contribution, in BitSafe's package layout. |
 | `indivisa-governance-v0` | `Indivisa.Governance.SettleRunProposal`: the same pattern over `Run_Settle`, so the run is consumed and the receipt written. Forty lines. |
-| `indivisa-governance-test` | `Indivisa.Test.Governance` (three members, threshold two: 1 of 3 refused, agent alone refused, 2 of 3 settles, proposer cancel, no-approver unchanged), `Governance.Settlement.Test.BatchSettlementTest` (the generic module without Indivisa), `Indivisa.Governance.Demo.govern_propose` (the shell-driven proposal). Reuses `indivisa-test`'s cash and agent fixtures. |
+| `indivisa-governance-test` | `Indivisa.Test.Governance` (three members, threshold two: 1 of 3 refused, agent alone refused, 2 of 3 settles, proposer cancel, no-approver unchanged, a proposal with no allocations refused, and only the admitted proposer may file one), `Governance.Settlement.Test.BatchSettlementTest` (the generic module without Indivisa), `Indivisa.Governance.Demo.govern_propose` (the shell-driven proposal). Reuses `indivisa-test`'s cash and agent fixtures. |
 
 ## `ui/`: the settlement console
 

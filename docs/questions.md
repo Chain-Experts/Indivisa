@@ -187,3 +187,19 @@ cd quickstart && docker compose up
 ```
 
 Press the button, watch it refuse, run `docker compose run --rm prepare`, press again. Then open the Privacy tab, which asks each node as one holder alone and shows what it answers.
+
+### How is the model tested?
+
+**59 Daml Script tests, no network needed**, in two packages:
+
+```bash
+cd daml/indivisa-test && dpm test
+cd ../indivisa-governance-test && dpm test
+```
+
+They run against `TestTokenV2`, the Token Standard's own reference asset, the same way Splice's own token tests run. Roughly half of them are refusals rather than successes, because most of what this engine promises is something it will not do: pay four holders out of five, let a paying agent spend a holder's consent on another holder's account, pay from a register nobody attested, or release a governed run on one approval.
+
+**Every refusal test is the passing test with exactly one thing changed**, and the change is the property under test. That rule exists because we broke it once: a test in the contributed BitSafe module asserted a refusal, passed, and would have gone on passing with the check it was testing deleted, because the submission was failing for an unrelated reason. The fix is in `CLAUDE.md` as a rule and in the suite as a shape. It is checked by mutation, not by reading: undo the one changed field and the test has to go red.
+
+Where a test asserts a refusal and the reason matters, it matches the error text rather than just the failure, so a guard that stops firing cannot hide behind a different one.
+

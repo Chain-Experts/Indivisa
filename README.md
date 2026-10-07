@@ -137,9 +137,9 @@ Still to come: one clean `docker compose up` on a machine other than the one it 
 ```bash
 dpm build --all          # model package indivisa-<version> (see daml/indivisa/daml.yaml), scripts indivisa-test
 cd daml/indivisa-test
-dpm test                 # the proofs, the model tests and a 12-holder demo, on the IDE ledger
+dpm test                 # 47 scripts: the proofs, the model tests, the refusals and a 12-holder demo
 cd ../indivisa-governance-test
-dpm test                 # the governance proofs: 1 of 3 refused, 2 of 3 settles
+dpm test                 # 12 scripts: 1 of 3 refused, 2 of 3 settles, and what a proposal must carry
 ```
 
 Daml SDK 3.5.x, `dpm` rather than the `daml` assistant, LF 2.1. The Token Standard V2 DARs are prebuilt in `canton-network/splice` at tag `0.8.1`, path `daml/dars/` and vendored in this repo under the same path; `NOTICE` lists them.
@@ -192,7 +192,7 @@ Worth saying before anyone else says it.
 | `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
 | `docs/demo-script-governed.md` | The same for the governed settlement filmed end to end, with the console in it: a coupon one company cannot pay alone |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |
-| `docs/for-a-teenager.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
+| `docs/explained-from-zero.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
 | `quickstart/README.md` | Run the whole thing with one Docker command, and what to look for |

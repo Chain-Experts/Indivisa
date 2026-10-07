@@ -92,6 +92,12 @@ export function RunBar({
   // settlement attempt, the ledger refuses it, and that refusal is the
   // atomicity guarantee being demonstrated rather than an operator mistake.
   const incomplete = haveAllocations < expectedAllocations;
+  // Once the engine says the threshold is met, the primary button has nothing
+  // left to say. It would read "Waiting for the approvers", disabled, directly
+  // above a live settle button - so an operator who then settles is left
+  // wondering whether they released a payment the approvers had not agreed to,
+  // and reads the page as broken. The execute button below replaces it.
+  const approved = !settled && !!voting?.vote?.canExecute;
   const canPress =
     !!state?.run && !settled && pressed.kind !== "busy" && !(governed && asked) && !(governed && incomplete);
   // The send allocation is the one that locks the agent cash; receiving locks
@@ -162,7 +168,7 @@ export function RunBar({
       </div>
 
       <div className="action">
-        {config.readOnly ? null : (
+        {config.readOnly || approved ? null : (
           <button className="settle" disabled={!canPress} onClick={agent.onSettle}>
             {pressed.kind === "busy"
               ? governed
@@ -214,8 +220,10 @@ export function RunBar({
         </div>
         {state?.run?.approver ? (
           <div className="action-note approver">
-            Approver <strong>{displayName(state.run.approver, seat.tag)}</strong> · a decentralised party; its members must
-            confirm before the settle can execute.
+            Approver <strong>{displayName(state.run.approver, seat.tag)}</strong> · a decentralised party;{" "}
+            {approved
+              ? "its members have confirmed to their threshold."
+              : "its members must confirm before the settle can execute."}
             {voting?.vote ? (
               <>
                 {" "}

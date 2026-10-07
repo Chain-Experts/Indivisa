@@ -1,0 +1,209 @@
+-- | The announcement, and the provenance of a schedule.
+--
+-- `CorporateAction_Entitle` is where the register meets the announcement, and
+-- the claim it makes is strong: the schedule is verifiably the product of
+-- *this* announcement and *that* snapshot, computed on the ledger rather than
+-- supplied by whoever ran the job. Three `assertMsg` guards are what make it
+-- true, and a guard with no test is a comment.
+--
+-- Each negative test here is the passing call in `event_scheduleIsDerived`
+-- with one thing changed: a snapshot of another instrument, of another record
+-- date, or kept by another registrar. The foreign snapshot is disclosed to the
+-- paying agent on purpose, so the refusal comes from the guard and not from
+-- the paying agent being unable to see the contract at all.
+module Indivisa.Test.Event where
+
+import DA.Assert ((===))
+import DA.Date (date, Month(..))
+
+import Daml.Script
+
+import Indivisa.Types
+import Indivisa.Model.Register
+import Indivisa.Model.Event
+
+-- ---------------------------------------------------------------------------
+-- The announcement
+-- ---------------------------------------------------------------------------
+
+-- | An announcement has to be payable: a positive rate, and a record date
+-- that is not after the payment date. Both would otherwise reach the
+-- entitlement engine, which has no way to make sense of either.
+event_theAnnouncementMustBePayable : Script ()
+event_theAnnouncementMustBePayable = do
+  f <- announced
+  let action = couponFor f
+  -- The control is `announced` itself, which created this record; these are
+  -- the same record with one field changed.
+  submitMustFail f.issuer $ createCmd action with amountPerUnit = 0.0
+  submitMustFail f.issuer $ createCmd action with amountPerUnit = -17.1234
+  submitMustFail f.issuer $ createCmd action with recordDate = date 2027 Dec 2
+
+-- | The issuer announces and the issuer withdraws; the paying agent acts on
+-- it and cannot do either. A cancelled announcement cannot then be entitled,
+-- which is the point of being able to cancel one.
+event_onlyTheIssuerMayCancel : Script ()
+event_onlyTheIssuerMayCancel = do
+  f <- announced
+  submitMustFail f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Cancel
+  submitMustFail f.alice $ exerciseCmd f.actionCid CorporateAction_Cancel
+
+  submit f.issuer $ exerciseCmd f.actionCid CorporateAction_Cancel
+  query @CorporateAction f.payingAgent >>= (=== [])
+  submitMustFail f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = f.snapshotCid
+    policy = LargestRemainder
+
+-- | Entitling is the paying agent's job and nobody else's. The issuer
+-- announces the terms; it does not get to decide what each holder is owed.
+event_onlyThePayingAgentMayEntitle : Script ()
+event_onlyThePayingAgentMayEntitle = do
+  f <- announced
+  submitMustFail f.issuer $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = f.snapshotCid
+    policy = LargestRemainder
+  submitMustFail f.alice $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = f.snapshotCid
+    policy = LargestRemainder
+
+-- ---------------------------------------------------------------------------
+-- The schedule, and where it has to come from
+-- ---------------------------------------------------------------------------
+
+-- | The passing call the three tests below each change in one way, and the
+-- property itself: the schedule carries the announcement's terms and the
+-- snapshot's quantities, and the choice is consuming, so one announcement
+-- yields one schedule and cannot be entitled twice against two registers.
+event_scheduleIsDerived : Script ()
+event_scheduleIsDerived = do
+  f <- announced
+  scheduleCid <- submit f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = f.snapshotCid
+    policy = LargestRemainder
+  Some schedule <- queryContractId f.payingAgent scheduleCid
+
+  -- 3 and 7 units at 17.1234: 51.3702 and 119.8638. The announced total is
+  -- the exact total rounded half-up, 171.23, and the two floors already sum
+  -- to it, so there is no residual cent to hand out.
+  schedule.amountPerUnit === 17.1234
+  schedule.recordDate === f.recordDate
+  map (\e -> (e.holder, e.amount)) schedule.entries
+    === [(f.alice, 51.37), (f.bob, 119.86)]
+  schedule.total === 171.23
+
+  submitMustFail f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = f.snapshotCid
+    policy = LargestRemainder
+
+event_entitleRefusesAnotherInstrumentsSnapshot : Script ()
+event_entitleRefusesAnotherInstrumentsSnapshot = do
+  f <- announced
+  otherIsin <- submit f.payingAgent $ createCmd RegisterSnapshot with
+    registrar = f.payingAgent
+    isin = "XS0000000002"
+    recordDate = f.recordDate
+    positions = [(f.alice, 3.0)]
+  submitMustFail f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = otherIsin
+    policy = LargestRemainder
+
+event_entitleRefusesAnotherRecordDate : Script ()
+event_entitleRefusesAnotherRecordDate = do
+  f <- announced
+  otherDate <- submit f.payingAgent $ createCmd RegisterSnapshot with
+    registrar = f.payingAgent
+    isin = f.isin
+    recordDate = date 2027 Nov 14
+    positions = [(f.alice, 3.0)]
+  submitMustFail f.payingAgent $ exerciseCmd f.actionCid CorporateAction_Entitle with
+    snapshotCid = otherDate
+    policy = LargestRemainder
+
+-- | A snapshot of the right instrument and the right date, but attested by
+-- somebody else. Disclosed to the paying agent, so the fetch succeeds and the
+-- guard is what refuses it; without the disclosure this test would pass
+-- because the contract was invisible, which proves nothing.
+event_entitleRefusesAnotherRegistrarsSnapshot : Script ()
+event_entitleRefusesAnotherRegistrarsSnapshot = do
+  f <- announced
+  otherRegistrar <- allocateParty "OtherRegistrar"
+  foreignSnap <- submit otherRegistrar $ createCmd RegisterSnapshot with
+    registrar = otherRegistrar
+    isin = f.isin
+    recordDate = f.recordDate
+    positions = [(f.alice, 3.0)]
+  Some foreignDisclosure <- queryDisclosure otherRegistrar foreignSnap
+  submitMustFail (actAs f.payingAgent <> disclose foreignDisclosure) $
+    exerciseCmd f.actionCid CorporateAction_Entitle with
+      snapshotCid = foreignSnap
+      policy = LargestRemainder
+
+-- ---------------------------------------------------------------------------
+-- Fixture
+-- ---------------------------------------------------------------------------
+
+-- | A register with two holders, a frozen snapshot, and an announced coupon.
+-- The paying agent is the registrar, as it is in the demo and as
+-- `CorporateAction_Entitle` requires.
+data Announced = Announced
+  with
+    payingAgent : Party
+    issuer      : Party
+    alice       : Party
+    bob         : Party
+    isin        : Isin
+    recordDate  : Date
+    paymentDate : Date
+    snapshotCid : ContractId RegisterSnapshot
+    actionCid   : ContractId CorporateAction
+
+announced : Script Announced
+announced = do
+  payingAgent <- allocateParty "PayingAgent"
+  issuer      <- allocateParty "Issuer"
+  alice       <- allocateParty "Alice"
+  bob         <- allocateParty "Bob"
+  let isin = "XS0000000001"
+      recordDate = date 2027 Nov 15
+      paymentDate = date 2027 Dec 1
+  instrumentCid <- submit payingAgent $ createCmd Instrument with
+    registrar = payingAgent
+    issuer
+    isin
+    name = "Northwind Rail 4% 2031"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.04
+    maturity = date 2031 Dec 1
+  positionCids <- forA [(alice, 3.0), (bob, 7.0)] $ \(holder, quantity) ->
+    submit payingAgent $ createCmd Position with
+      registrar = payingAgent
+      holder
+      isin
+      quantity
+  snapshotCid <- submit payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids
+  actionCid <- submit issuer $ createCmd CorporateAction with
+    issuer
+    payingAgent
+    isin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 17.1234
+    recordDate
+    paymentDate
+  pure Announced with ..
+
+-- | The announcement record that `announced` created, so a negative test can
+-- resubmit it with one field changed.
+couponFor : Announced -> CorporateAction
+couponFor f = CorporateAction with
+  issuer = f.issuer
+  payingAgent = f.payingAgent
+  isin = f.isin
+  kind = Coupon
+  currency = "USD"
+  amountPerUnit = 17.1234
+  recordDate = f.recordDate
+  paymentDate = f.paymentDate
