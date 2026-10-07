@@ -69,7 +69,7 @@ That is the same pair the local demo shows, on a network we do not control.
 
 ## What this proves, and what it does not
 
-**Proves:** the real network vets our packages and commits a real Token Standard V2 `SettlementFactory_SettleBatch`. This is the marker BitSafe's Season 2 postmortem calls out. Everything else in most submissions is LocalNet.
+**Proves:** the real network vets our packages and commits a real Token Standard V2 `SettlementFactory_SettleBatch`. This is the marker BitSafe's Season 2 postmortem calls out.
 
 **Does not prove cross-operator privacy.** Chain-Experts runs one validator per network (DevNet, TestNet, MainNet are separate networks, each a different version for a different purpose), so all five participant names resolve to the same node. On one node the guarantee is that the ledger declines to hand one party another party's contracts: real, and enforced by Canton, but weaker than the data never arriving. The console works this out for itself, by comparing each participant's own id rather than the names in its config, and says whichever of the two is true.
 

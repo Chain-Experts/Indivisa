@@ -90,7 +90,7 @@ Five nits with them: the restored checks on the proposer's debit and the archive
 
 `daml/governance-settlement/` here stays `governance-settlement-v0` with its original tests, and that is deliberate.
 
-- **The name is load-bearing here.** `governance-settlement-v0` is the package vetted on DevNet, the DAR `quickstart/canton.Dockerfile` copies and `quickstart/bootstrap.canton` uploads, and the name in `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. Renaming it would break the judges' one-command package in order to tidy a label.
+- **The name is load-bearing here.** `governance-settlement-v0` is the package vetted on DevNet, the DAR `quickstart/canton.Dockerfile` copies and `quickstart/bootstrap.canton` uploads, and the name in `infra/bitsafe/distribute.ps1` and `verify-packages.ps1`. Renaming it would break the one-command `quickstart/` package in order to tidy a label.
 - **The rewritten tests cannot build here.** They are written against `testlib-0.1.0.dar`, which exists only in BitSafe's repository.
 - **The `ensure` fix is real but idle here.** A changed `ensure` is a new package lineage rather than a version bump, and the configuration it rejects is one Indivisa cannot create: `runExecutors run = payingAgent :: approver` is exactly two parties, and the product settles through `indivisa-governance-v0`'s `SettleRunProposal`, not through this module. It is worth adopting as a properly renamed `governance-settlement-v1` after the Grand Final, not before.
 

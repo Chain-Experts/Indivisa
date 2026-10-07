@@ -2,7 +2,7 @@
 
 Two networks, one layout. LocalNet is what the proofs and benchmarks run on today. DevNet is the evidence run for the submission and is handed to DevOps; this page is written so that handover needs no Daml knowledge.
 
-A third way to run the whole thing needs none of this: `quickstart/` packages the network, the seat and the console into `docker compose up`. It is for someone who wants to see it work, not for development or for evidence, LocalNet is faster to iterate on and DevNet is what a judge will believe.
+A third way to run the whole thing needs none of this: `quickstart/` packages the network, the seat and the console into `docker compose up`. It is for someone who wants to see it work, not for development or for evidence, LocalNet is faster to iterate on and DevNet is what an outside reader will believe.
 
 ```
 infra/
@@ -13,7 +13,7 @@ infra/
 ├── publish-ui.ps1                  build the console and gather the read-only public deployment into one folder
 ├── localnet/   participants.json, ui.json, localnet.conf, bootstrap.canton, up.ps1, proofs.ps1
 ├── devnet/     participants.example.json, ui.example.json   (copy, fill in, keep out of git)
-│            nginx.conf.example   the read-only public deployment for judges
+│            nginx.conf.example   the read-only public deployment
 └── bitsafe/    BitSafe's sandbox as a network: participants.json, ui.json (its public dev token), distribute.ps1
 ```
 

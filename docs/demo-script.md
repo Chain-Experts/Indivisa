@@ -173,6 +173,8 @@ If step 5 shows a red box instead of green, something is wrong with the seat, no
 
 ## Part E. Record take 2: the deliberate failure, then the fix (≈ 10 minutes)
 
+**Success first, failure second**, which is why take 1 is the success run. A failure shown cold reads as a bug rather than as a guarantee; shown after a settlement that worked, it reads as the ledger refusing to do half a job.
+
 Switch Chrome to the **5174** tab (Ctrl+Tab, or Ctrl+2). Confirm ALLOCATIONS reads **250 of 251 · waiting for <name>**.
 
 **E1. The refusal.**

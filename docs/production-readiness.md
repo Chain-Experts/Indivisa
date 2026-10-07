@@ -1,6 +1,6 @@
 # From submission to production: the road after the hackathon
 
-**Read this as forward-looking, because that is what it is.** The HackCanton submission is complete: the model, the console, the judges one-command Docker package, the benchmark, a live DevNet settlement and a governed settlement with an independent second operator all exist and work today. Nothing in this document is needed for any of that, and nothing here is outstanding work on the demo.
+**Read this as forward-looking, because that is what it is.** The HackCanton submission is complete: the model, the console, the one-command Docker package, the benchmark, a live DevNet settlement and a governed settlement with an independent second operator all exist and work today. Nothing in this document is needed for any of that, and nothing here is outstanding work on the demo.
 
 What follows is the engineering and commercial road **beyond** the submission - production hardening, and the limits we know about and would rather state ourselves than have someone find.
 

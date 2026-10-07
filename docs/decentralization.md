@@ -160,7 +160,7 @@ The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
 
 - **Real:** the governance engine (BitSafe's, unmodified), the threshold refusal, the settlement through `Run_Settle`, the audit trail, every number on screen.
 - **Simulated:** the cash (`TestTokenV2`, the reference Token Standard V2 asset, with our own registry party); the holders; and, in the sandbox, operator independence, as section 4 says.
-- **Runnable by anyone, since 24 Sep:** the governed settlement is in the judge package. `INDIVISA_GOVERNED=1 docker compose --profile govern up -d` brings up three Decentralization Manager nodes beside the ledger. The page files the request, `govern confirm` holds the vote, and the page executes it once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust: see `quickstart/README.md`.
+- **Runnable by anyone, since 24 Sep:** the governed settlement is in `quickstart/`. `INDIVISA_GOVERNED=1 docker compose --profile govern up -d` brings up three Decentralization Manager nodes beside the ledger. The page files the request, `govern confirm` holds the vote, and the page executes it once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust: see `quickstart/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).** A coupon settled through the decentralised party at 2 of 2: our confirmation and theirs, on their own node.
 
   | | |

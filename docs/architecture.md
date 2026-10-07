@@ -188,32 +188,11 @@ No application backend and nothing cached: each view is a read of the participan
 
 **Two identities meet here, and they are not the same.** The **paying agent** is a ledger party; its credential is a service account, it stays on the server and the browser never sees it. The **operator** is a person; they sign in through the browser, and the proxy carries nothing for a request that cannot prove one. Keeping the first safe says nothing about the second: an application whose claim is that no single party releases a payout unchecked cannot leave its own front door unlatched.
 
-The sign-in is OIDC authorization code with PKCE against the same realm that issues the ledger credential - no client secret, because a secret in a browser is not one. **The check is in the proxy, not the page**: the proxy is what holds the credentials, so that is where "who is asking?" has to be answered, and a check in the page would be theatre. The operator token is verified against the realm published keys, confirmed to have been issued to this application, and then **deleted from the request** rather than forwarded. Deployments with no identity provider to sign in against - a local network, the judges Docker stack - carry no sign-in configuration and the gate is not registered at all.
+The sign-in is OIDC authorization code with PKCE against the same realm that issues the ledger credential - no client secret, because a secret in a browser is not one. **The check is in the proxy, not the page**: the proxy is what holds the credentials, so that is where "who is asking?" has to be answered, and a check in the page would be theatre. The operator token is verified against the realm published keys, confirmed to have been issued to this application, and then **deleted from the request** rather than forwarded. Deployments with no identity provider to sign in against - a local network, the `quickstart/` stack - carry no sign-in configuration and the gate is not registered at all.
 
 **The impressive part is not the styling.** It is that a card opened on one node is conspicuously empty where the executor's schedule has everything, and that the console holds every party's credential and still cannot make one node answer for another.
 
 The plumbing: four ledger connections, one per party, each to the participant that hosts it, through the dev server's proxy because the JSON Ledger API sets no CORS headers. Participant URLs and bearer tokens live in `infra/<network>/ui.json`; the proxy injects the token, so the browser never holds one. In production nginx does the same.
-
----
-
-## The demo
-
-Sixty to ninety seconds, pre-recorded. Season 2's second and third place were won with slides and a one-minute screen capture, so the bar is a recording, not a live run, which also removes stage risk.
-
-**Onboarding, shown once.** N agreements land on the ledger. Caption it: *each holder signs once; never again.* Five seconds, but it is the answer to the first question any judge who has read the CIP will ask.
-
-**Run one, success.** Fire the distribution. One transaction. Then open a holder's card, and another on a different node: each sees only its own payment.
-
-**Run two, deliberate failure.** Label the screen unambiguously as an atomicity demonstration before clicking, so nobody thinks the system broke. One leg is unavailable: one holder's receipt allocation is withheld (`demo.ps1 prepare -Withhold 1`). Result, as the page renders it:
-
-```
-SETTLEMENT REJECTED · 250 payments requested · 0 executed
-NO PARTIAL SETTLEMENT
-```
-
-Fix the leg (`prepare` again, nothing withheld), retry, 250/250.
-
-Success first, failure second. A failure shown cold reads as a bug. The shot list is `demo-script.md`.
 
 ---
 

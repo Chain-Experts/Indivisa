@@ -205,7 +205,7 @@ Docker, for anyone who wants to see it work without a toolchain. Build context i
 | `participants.json` | The five JSON API endpoints inside the compose network, before party routing is added. |
 | `govern.sh` | The governed settlement inside the package: `seat` builds the decentralised party (peer mesh, onboarding at threshold 2, member parties, governance rules, admitting the agent as proposer), then `prepare`, `propose`, `confirm N`, `execute N`, `status`. `confirm` and `execute` fall back to the newest `SettleRunProposal` on the ledger when there is no `proposal.json`, so they act on the proposal whether the page or `propose` filed it. A port of BitSafe's `hackathon/seed.sh` and our `infra/govern.ps1` onto this topology; it skips their DAR-distribution step because `bootstrap.canton` has already vetted everything. |
 | three `decman-*` services | BitSafe's Decentralization Manager `v1.8.0`, unmodified, one per holding participant, all behind the `govern` compose profile so `docker compose up` is unchanged. About 150 MB each. |
-| `README.md` | For the judge: when it is ready, what to press, what is real and what is simulated, and the optional governed run. |
+| `README.md` | For whoever runs it: when it is ready, what to press, what is real and what is simulated, and the optional governed run. |
 
 ## `contrib/bitsafe/`: what we are giving back
 
@@ -225,4 +225,4 @@ Two pull requests prepared for `github.com/DLC-link/decentralization-manager`, f
 - **No announcement-data layer.** Chainlink and DTCC own that; Indivisa is the payment layer.
 - **No registry adapters.** Demo data is synthetic and labelled as such.
 
-About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 3,174 of TypeScript and 373 of CSS; 2,060 of PowerShell, Canton config, shell and Docker, the judge package included (recounted 2 Oct, after the governed console actions and operator sign-in).
+About 620 lines of Daml in the model, 150 in the two governance packages and 2,270 in scripts; 3,174 of TypeScript and 373 of CSS; 2,060 of PowerShell, Canton config, shell and Docker, `quickstart/` included (recounted 2 Oct, after the governed console actions and operator sign-in).
