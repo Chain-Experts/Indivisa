@@ -121,14 +121,15 @@ Indivisa/
 └── docs/
     ├── modules.md                 this file
     ├── questions.md               the questions people ask, answered with pointers to the evidence
-    ├── architecture.md
+    ├── architecture.md            components, settlement flow, boundaries, settled and open questions
     ├── explainer.html             the story for a beginner, standalone page
     ├── logo.png                   the mark, used by the console and the deck
     ├── benchmark.md               proof 5 results: interpreter to 2,000 legs, LocalNet to 1,000
+    ├── canton-coin.md             what a different cash asset would take: nothing in the model, one registry adapter
     ├── devnet-run.md              the DevNet evidence: update id, network, what it proves
     ├── diagrams.md                the templates and their relations; the workflow, start to finish (Mermaid)
-    ├── demo-script.md             the recording, step by step, for someone who has never seen the project
     ├── decentralization.md        the governed settlement: risk, before and after, evidence, how to reproduce
+    ├── production-readiness.md    the road after the hackathon: hardening, known limits, pilot versus real money
     └── explained-from-zero.md     the whole idea, BitSafe included, from zero: finance words, blockchain, the flow, the vote
 ```
 
@@ -213,12 +214,13 @@ Docker, for anyone who wants to see it work without a toolchain. Build context i
 
 ## `contrib/bitsafe/`: what we are giving back
 
-Two pull requests prepared for `github.com/DLC-link/decentralization-manager`, following their `docs/CONTRIBUTING.md`.
+Two pull requests and one design issue for `github.com/DLC-link/decentralization-manager`, following their `docs/CONTRIBUTING.md`. Both pull requests are through two review rounds, with nothing outstanding on our side.
 
 | File | Does |
 |---|---|
-| `README.md` | What was submitted, when, and the decisions behind each PR |
-| `INTEGRATING.md` | The documentation PR itself: seven things not in their docs, each found the hard way while pointing DecMan at our own Canton |
+| `README.md` | What was submitted, when, the decisions behind each one, and what each review round changed |
+| `INTEGRATING.md` | The documentation PR itself: seven things not in their docs, each found the hard way while pointing DecMan at our own Canton. A verbatim copy of the page as it stands on #516, so it keeps their 80-column style rather than ours |
+| `member-governed-cancel-design.md` | Issue #518: retiring a proposal whose proposer can no longer act. Five design questions and an offer to implement, rather than a pull request that implicitly says merge this |
 
 **There is no copy of the module here.** An earlier draft kept one under `contrib/bitsafe/module/` and it drifted: its test still imported Indivisa's fixtures after the submitted one had been cut loose from them. The code that was contributed is the code that builds, `daml/governance-settlement/` and `daml/governance-settlement-test/`, and nothing is kept in step by hand.
 

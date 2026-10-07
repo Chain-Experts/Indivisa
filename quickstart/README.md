@@ -80,7 +80,7 @@ docker compose run --rm govern-seed                      # ~2 min, once
 docker compose run --rm govern prepare
 ```
 
-Open http://localhost:8080. **The button has changed.** It no longer settles. It reads *Ask the approvers to settle 20 legs*, because the run now names an approver and the paying agent alone no longer has the authority to pay. Press it: that files the request, and nothing moves.
+Open http://localhost:8080. **The button has changed.** It no longer settles. It reads *Ask the approvers to settle 20 legs* (or however many holders you seated), because the run now names an approver and the paying agent alone no longer has the authority to pay. Press it: that files the request, and nothing moves.
 
 Now two of the three approvers must agree. Each has their own node:
 

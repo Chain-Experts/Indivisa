@@ -32,6 +32,8 @@ All three were submitted on 4 and 5 October 2026. The module and its tests are *
 | `contrib/bitsafe/INTEGRATING.md` | PR [#516](https://github.com/DLC-link/decentralization-manager/pull/516), `docs/INTEGRATING.md` |
 | `contrib/bitsafe/member-governed-cancel-design.md` | Issue [#518](https://github.com/DLC-link/decentralization-manager/issues/518) |
 
+**`INTEGRATING.md` here is a verbatim copy of the page as it stands on #516**, kept in step with it rather than rewritten for this repository. Two consequences a reader should expect: it keeps BitSafe's 80-column wrapping instead of the one-line-per-paragraph style everything else here uses, and its two relative links (`CUSTOM_DAML_TEMPLATES.md`, `DEPLOYMENT_GUIDE.md`) resolve in their `docs/` folder and not in ours. Changing either would make the copy diverge from what was actually contributed, which is the one thing it exists to show.
+
 **The two copies of the module are no longer identical**, and that is deliberate. Theirs is `governance-settlement-v1` with tests in their own harness; ours stays `governance-settlement-v0`. See "Why the version in this repository is not the version in theirs" below.
 
 An earlier draft kept a second copy of the module under `contrib/bitsafe/module/`. It was removed once the packages existed, because a duplicate that drifts is worse than no duplicate at all - and it had already drifted: its test still imported Indivisa's fixtures after the submitted one had been cut loose.

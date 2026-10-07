@@ -189,8 +189,6 @@ Worth saying before anyone else says it.
 | `docs/production-readiness.md` | **The road after the hackathon**: production hardening, known limits, and the difference between a pilot and real money |
 | `docs/canton-coin.md` | Why the demo settles the standard's reference asset, and exactly what settling Canton Coin instead would take |
 | `docs/diagrams.md` | The model as a drawing (every template, who signs, who sees, what points at what) and the workflow as a sequence |
-| `docs/demo-script.md` | The recording, step by step: commands, screens, cards, recorder, edit |
-| `docs/demo-script-governed.md` | The same for the governed settlement filmed end to end, with the console in it: a coupon one company cannot pay alone |
 | `docs/decentralization.md` | Governed settlement on BitSafe's Decentralization Manager: the risk, before and after, the evidence, how to reproduce |
 | `docs/explained-from-zero.md` | The whole idea from zero, for someone with no finance or blockchain background: every term explained, the flow and the vote as diagrams |
 | `docs/explainer.html` | The story for a beginner, one standalone page |
