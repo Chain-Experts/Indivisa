@@ -56,13 +56,9 @@ A bond pays its coupon. The paying agent must pay every holder. Every figure on 
 The run has been prepared with **one holder deliberately left out**, so:
 
 1. Press **Settle N legs in one transaction**. It is refused. A red strip appears across the page: `SETTLEMENT REJECTED · N payments requested · 0 executed · NO PARTIAL SETTLEMENT`, with the ledger's own reason, which names the holder that is missing. The page names them too, before you press: the note under the button reads **Waiting for <name>**, the **Waiting 1** chip filters the grid down to that one card, and its row in the schedule is the one marked **waiting**. Check the other cards: nothing moved, for anyone. That is atomicity, demonstrated rather than claimed.
-2. Fix the missing holder. **Leave the browser open and leave the first terminal running**: that one is the network itself. Open a *second* terminal, go to the same folder, and run:
+2. Fix the missing holder, on the page. A second button sits under the first: **Create the 1 missing allocation**. Press it. The paying agent creates that holder's receipt allocation alone, under the standing agreement the holder signed at onboarding, so nobody is asked for anything. The allocations meter fills to N+1, the **Waiting for <name>** note disappears and every card turns **ready**. Nothing to reload, nothing to restart.
 
-   ```bash
-   docker compose run --rm prepare
-   ```
-
-   It takes a few seconds and ends with `Done. The page shows every allocation ready`. The page notices by itself: it re-reads the ledger every two seconds, so the allocations meter fills to N+1, the **Waiting for <name>** note disappears and every card turns **ready**. Nothing to reload, nothing to restart.
+   If you would rather watch it happen in a terminal, the same work is `docker compose run --rm prepare` from a second terminal in the same folder. Leave the browser open and leave the first terminal running: that one is the network itself.
 3. Press the button again. Settled. Every holder is paid in the same transaction, the update id of that transaction appears on screen, every card turns green and every row in the schedule turns **paid**, while each holder's counts of other holders stay at zero. Open a card again and check that for yourself.
 
 To start over: `docker compose down && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. (`down` leaves a small volume behind; `docker compose down -v` removes that too.)
@@ -77,10 +73,13 @@ This is BitSafe's Decentralization Manager, unmodified, running as three approve
 docker compose --profile govern down -v                  # start clean
 INDIVISA_GOVERNED=1 docker compose --profile govern up -d
 docker compose run --rm govern-seed                      # ~2 min, once
-docker compose run --rm govern prepare
 ```
 
-Open http://localhost:8080. **The button has changed.** It no longer settles. It reads *Ask the approvers to settle 20 legs* (or however many holders you seated), because the run now names an approver and the paying agent alone no longer has the authority to pay. Press it: that files the request, and nothing moves.
+That is the whole terminal. `govern-seed` builds the decentralised party itself: three nodes, a peer mesh, and rules at a threshold of two. The coupon is then set up on the page.
+
+Open http://localhost:8080. There is no run yet, so the set-up panel is open, prefilled, with **Needs the approvers** already ticked because the stack has a decentralised party. Press **Announce, freeze, derive, create the run**, then **Create the N missing allocations**.
+
+**The button has changed.** It no longer settles. It reads *Ask the approvers to settle 20 legs* (or however many holders you seated), because the run now names an approver and the paying agent alone no longer has the authority to pay. Press it: that files the request, and nothing moves.
 
 Now two of the three approvers must agree. Each has their own node:
 

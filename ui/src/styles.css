@@ -184,7 +184,12 @@ button.danger:focus-visible { outline: 3px solid var(--bad-soft); outline-offset
 
 /* The second command, offered only once the approvers have agreed. It sits
    below the first so the order on screen is the order of events. */
-.action-second { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.action-second { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); flex-basis: 100%; justify-items: start; }
+/* A fix offered beside the problem should not compete with the main action,
+   so it is an outline rather than a filled button and the settle stays the
+   loudest thing on the row. */
+.settle.fix { background: #fff; color: var(--ledger); }
+.settle.fix:hover:not(:disabled) { background: var(--ledger-soft); color: var(--ledger); }
 .settle.go { background: var(--ledger); border-color: var(--ledger); }
 .outcome-title { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em; }
 .outcome-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -380,3 +385,18 @@ ul.others .count.leak { color: var(--bad); }
   .drawer { width: 100vw; }
   .holders.with-drawer { padding-right: 0; }
 }
+
+/* Setting a coupon up. A form on a page that is otherwise read-and-press, so
+   it is kept quiet: the fields sit on one wrapping row and the whole block is
+   secondary to the settle. */
+.coupon-setup { gap: 10px; }
+.coupon-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.coupon-fields label { display: grid; gap: 4px; font-size: 0.74rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.coupon-fields input, .coupon-fields select {
+  font: inherit; font-size: 0.9rem; padding: 7px 9px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: inherit; min-width: 10ch;
+}
+.coupon-fields input:focus-visible, .coupon-fields select:focus-visible { outline: 2px solid var(--ledger); outline-offset: 1px; }
+.coupon-governed { display: flex; align-items: flex-start; gap: 8px; font-size: 0.82rem; color: var(--muted); max-width: 70ch; }
+.coupon-governed input { margin-top: 2px; flex: none; }
+.coupon-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }

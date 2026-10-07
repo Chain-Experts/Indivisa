@@ -338,7 +338,7 @@ case "${1:-seat}" in
     admit_agent
     publish_party
     say "Ready. The approvers exist and the paying agent may propose."
-    printf '    party  %s\n    rules  %s\n\n    Next:  docker compose run --rm govern prepare\n\n' \
+    printf '    party  %s\n    rules  %s\n\n    Next:  open http://localhost:8080 and set the coupon up there. The panel\n           is open because there is no run yet, and it ticks "Needs the\n           approvers" by itself. `govern prepare` still works if you would\n           rather do it from here.\n\n' \
       "$(state_get DEC_PARTY_ID)" "$(state_get RULES_CID)"
     ;;
 

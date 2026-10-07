@@ -157,8 +157,7 @@ cd ui && npm install && INDIVISA_TAG=t1 npm run dev   # http://localhost:5173, p
 Or with Docker, needing none of the above: the same topology, the same contracts, seated and served:
 
 ```bash
-cd quickstart && docker compose up                 # http://localhost:8080
-docker compose run --rm prepare                    # after the first refusal
+cd quickstart && docker compose up                 # http://localhost:8080, then press the buttons
 ```
 
 ---

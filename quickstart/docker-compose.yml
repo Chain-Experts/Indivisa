@@ -72,7 +72,7 @@ services:
   #
   #   docker compose --profile govern up -d
   #   docker compose run --rm govern-seed
-  #   docker compose run --rm govern prepare
+  #   docker compose run --rm govern prepare     optional: the page does this
   #   docker compose run --rm govern propose
   #   docker compose run --rm govern confirm 1
   #   docker compose run --rm govern execute 2     refused, below threshold

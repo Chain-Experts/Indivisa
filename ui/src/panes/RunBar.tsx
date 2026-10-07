@@ -4,6 +4,8 @@ import { StatusPill } from "../components/StatusPill";
 import { displayName, type Config } from "../config";
 import type { AgentHandle } from "../state/useAgent";
 import type { VoteHandle } from "../state/useVote";
+import type { CouponTerms } from "../ledger/queries";
+import type { Party } from "../ledger/client";
 
 export interface RunSummary {
   currency: string;
@@ -62,6 +64,107 @@ function CancelRun({ busy, onCancel }: { busy: boolean; onCancel: () => Promise<
   );
 }
 
+/**
+ * Setting a coupon up, where it used to be a terminal.
+ *
+ * Four ledger steps in the order the model requires: the issuer announces, the
+ * register is frozen on the record date, the schedule is derived from those two
+ * on the ledger, and the run is created from the schedule. Each is idempotent,
+ * so the form doubles as the way to finish a set-up that stopped half way.
+ *
+ * It opens by itself when there is no run, because that is the state an
+ * operator is stuck in and the panel is the way out. Otherwise it is a link,
+ * because the page is about the run, not about making another one.
+ */
+function CouponSetup({
+  busy,
+  open,
+  schedule,
+  approver,
+  onSetUp,
+}: {
+  busy: boolean;
+  open: boolean;
+  schedule: { amountPerUnit: number; recordDate: string; paymentDate: string; policy: string } | null;
+  approver: Party | null;
+  onSetUp: (terms: CouponTerms, approver: Party | null) => Promise<void>;
+}) {
+  const [showing, setShowing] = useState(open);
+  // Prefilled from the coupon on screen, so the common case is "the same terms,
+  // now make the run" and the operator changes only what differs.
+  const [rate, setRate] = useState(schedule ? String(schedule.amountPerUnit) : "");
+  const [recordDate, setRecordDate] = useState(schedule?.recordDate ?? "");
+  const [paymentDate, setPaymentDate] = useState(schedule?.paymentDate ?? "");
+  const [policy, setPolicy] = useState(schedule?.policy ?? "LargestRemainder");
+  const [governed, setGoverned] = useState(!!approver);
+
+  if (!showing) {
+    return (
+      <button className="linklike" disabled={busy} onClick={() => setShowing(true)}>
+        Set up another coupon
+      </button>
+    );
+  }
+
+  const ready = rate.trim() !== "" && recordDate !== "" && paymentDate !== "";
+  return (
+    <div className="action-second coupon-setup">
+      <div className="coupon-fields">
+        <label>
+          Per unit
+          <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" id="coupon-rate" />
+        </label>
+        <label>
+          Record date
+          <input value={recordDate} onChange={(e) => setRecordDate(e.target.value)} type="date" id="coupon-record" />
+        </label>
+        <label>
+          Payment date
+          <input value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} type="date" id="coupon-payment" />
+        </label>
+        <label>
+          Rounding
+          <select value={policy} onChange={(e) => setPolicy(e.target.value)} id="coupon-policy">
+            <option value="LargestRemainder">Largest remainder</option>
+            <option value="RoundHalfUpResidualToIssuer">Half up, residual to the issuer</option>
+          </select>
+        </label>
+      </div>
+      {approver ? (
+        <label className="coupon-governed">
+          <input type="checkbox" checked={governed} onChange={(e) => setGoverned(e.target.checked)} id="coupon-governed" />
+          Needs the approvers. The run names the decentralised party as a second executor, so the agent cannot
+          settle it alone.
+        </label>
+      ) : null}
+      <div className="coupon-actions">
+        <button
+          className="settle fix"
+          disabled={busy || !ready}
+          onClick={() =>
+            void onSetUp(
+              { amountPerUnit: rate.trim(), recordDate, paymentDate, policy: policy as CouponTerms["policy"] },
+              governed ? approver : null,
+            )
+          }
+        >
+          {busy ? "Setting up…" : "Announce, freeze, derive, create the run"}
+        </button>
+        <button className="linklike" disabled={busy} onClick={() => setShowing(false)}>
+          Not now
+        </button>
+      </div>
+      <span className="action-note">
+        Four ledger steps, in order. The announcement is submitted <strong>as the issuer</strong>, which this
+        console can do only because it is a demo harness holding every party's credential; in a deployment the
+        announcement arrives from the issuer and the agent acts on it. The register is frozen as the registrar,
+        which here is the paying agent. The schedule is then derived on the ledger from those two, so it is
+        checkable rather than uploaded.
+      </span>
+    </div>
+  );
+}
+
 export function RunBar({
   config,
   agent,
@@ -114,7 +217,12 @@ export function RunBar({
   // worth something. Offering a button that the ledger would refuse would be
   // worse than offering none.
   const cancellable = !!state?.run && !settled && !asked && sendLocked && !governed;
-  const cancelled = !!state?.run && !settled && !asked && !sendLocked && (state?.allocations.length ?? 0) > 0;
+  // A cancelled run is one whose SEND allocation is gone while every receipt
+  // is still there, because cancelling takes only the send. A run that merely
+  // never finished being prepared also has no send, and announcing that one as
+  // cancelled is a lie the operator cannot check: seen 7 October, when the
+  // send failed and five receipts had landed.
+  const cancelled = !!state?.run && !settled && !asked && !sendLocked && haveAllocations >= legs;
   const ready = Math.min(haveAllocations, expectedAllocations);
   const pct = expectedAllocations > 0 ? Math.round((ready / expectedAllocations) * 100) : 0;
 
@@ -184,7 +292,7 @@ export function RunBar({
           </button>
         )}
         {cancellable && !config.readOnly ? <CancelRun busy={pressed.kind === "busy"} onCancel={agent.onCancelRun} /> : null}
-        {pressed.kind === "failed" ? (
+        {pressed.kind === "failed" && pressed.what === "cancel" ? (
           <span className="cancel-failed">
             <b>The run was not cancelled.</b> {pressed.reason}
           </span>
@@ -192,9 +300,10 @@ export function RunBar({
         <div className="action-note">
           {cancelled ? (
             <span>
-              <b>This run was cancelled.</b> The agent locked cash has been released and the batch can no longer
-              settle. The holders authorisations are untouched, so preparing the run again does not ask them twice:{" "}
-              <code>demo.ps1 prepare -Tag {seat.tag}</code>
+              <b>No send allocation.</b> Either this run was cancelled and its locked cash released, or it was
+              never finished: from the active contracts alone the two look the same. Either way the batch cannot
+              settle until the agent allocates again, and the holders authorisations are untouched, so preparing
+              it again does not ask them twice.
             </span>
           ) : config.readOnly
             ? settled
@@ -203,7 +312,7 @@ export function RunBar({
             : settled
               ? "This run has settled. Every holder was paid in the same transaction."
               : !state?.run
-                ? `Prepare the run first: demo.ps1 prepare -Tag ${seat.tag}`
+                ? "No run yet. Set one up below: the issuer announces, the register is frozen on the record date, the schedule is derived from those two on the ledger, and the run follows from the schedule."
                 : governed
                   ? asked
                     ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
@@ -218,6 +327,42 @@ export function RunBar({
             </span>
           ) : null}
         </div>
+        {/* The fix, where the problem is stated. This was a terminal until
+            7 October: demo.ps1 prepare, or docker compose run --rm prepare.
+            It creates only what is absent, so pressing it twice is safe and
+            it is deliberately not disabled after a press. */}
+        {/* Gated on the allocation count, not on holders waiting: a run can be
+            short of its SEND allocation alone, and then no holder is waiting
+            and the fix still has work to do. Seen 7 October. */}
+        {!settled && !config.readOnly && state?.run && incomplete ? (
+          <div className="action-second">
+            <button className="settle fix" disabled={pressed.kind === "busy"} onClick={agent.onPrepare}>
+              {pressed.kind === "busy"
+                ? "Creating…"
+                : `Create the ${expectedAllocations - haveAllocations} missing allocation${expectedAllocations - haveAllocations === 1 ? "" : "s"}`}
+            </button>
+            <span className="action-note">
+              The paying agent creates them alone, under the standing agreement each holder signed at
+              onboarding. No holder is asked for anything.
+            </span>
+          </div>
+        ) : null}
+        {pressed.kind === "failed" && pressed.what === "prepare" ? (
+          <div className="action-note warn">The allocations were not created. {pressed.reason}</div>
+        ) : null}
+        {!settled && !config.readOnly ? (
+          <CouponSetup
+            key={state?.schedule?.cid ?? "no-schedule"}
+            busy={pressed.kind === "busy"}
+            open={!state?.run}
+            schedule={state?.schedule ?? null}
+            approver={config.decmanParty}
+            onSetUp={agent.onSetUpCoupon}
+          />
+        ) : null}
+        {pressed.kind === "failed" && pressed.what === "coupon" ? (
+          <div className="action-note warn">{pressed.reason}</div>
+        ) : null}
         {state?.run?.approver ? (
           <div className="action-note approver">
             Approver <strong>{displayName(state.run.approver, seat.tag)}</strong> · a decentralised party;{" "}

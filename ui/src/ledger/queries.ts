@@ -31,7 +31,7 @@ export interface HoldingView {
 
 export interface AgentState {
   instrument: { name: string; isin: string; currency: string; couponRate: number; maturity: string } | null;
-  schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string } | null;
+  schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string; kind: string } | null;
   run: { cid: ContractId; legs: number; total: number; approver: Party | null } | null;
   allocations: { cid: ContractId; authorizer: Party | null; legs: number; isSend: boolean }[];
   rejections: { cid: ContractId; attemptedAt: string; legsRequested: number; reason: string }[];
@@ -105,6 +105,8 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
           recordDate: sched.createdEvent.createArgument.recordDate,
           paymentDate: sched.createdEvent.createArgument.paymentDate,
           policy: sched.createdEvent.createArgument.policy,
+          // The run id is derived from it, so the page has to carry it.
+          kind: sched.createdEvent.createArgument.kind,
         }
       : null,
     run: run ? { cid: run.createdEvent.contractId, legs: run.createdEvent.createArgument.legs.length, total: run.createdEvent.createArgument.legs.reduce((s: number, l: any) => s + num(l.amount), 0), approver: run.createdEvent.createArgument.approver ?? null } : null,
@@ -283,6 +285,389 @@ export async function settle(agent: Ledger, runCid: ContractId, allocationCids: 
     [factory],
   );
   return { ...r, ms: Math.round(performance.now() - t0) };
+}
+
+// ---------------------------------------------------------------------------
+// Setting a coupon up: announce, freeze, derive, create the run
+// ---------------------------------------------------------------------------
+
+/** What an operator fills in for the next coupon. The engine takes all of it;
+ *  the demo used to pass the same values as script arguments. */
+export interface CouponTerms {
+  amountPerUnit: string;
+  recordDate: string;
+  paymentDate: string;
+  policy: "LargestRemainder" | "RoundHalfUpResidualToIssuer";
+}
+
+/** `runFromSchedule`'s derivation, in the one place the page has to agree with
+ *  the model: `isin <> "/" <> show kind <> "/" <> show paymentDate`. If the
+ *  model's changes, the run is not found rather than silently wrong. */
+export const runIdFor = (isin: string, kind: string, paymentDate: string) => `${isin}/${kind}/${paymentDate}`;
+
+const findAction = (cs: ActiveContract[], isin: string, t: CouponTerms) =>
+  cs.find((c) => {
+    const a = c.createdEvent.createArgument;
+    return a.isin === isin && a.recordDate === t.recordDate && a.paymentDate === t.paymentDate;
+  });
+
+/**
+ * Announce the event. **Submitted by the issuer, not the paying agent.**
+ *
+ * This is the one step on the screen that is somebody else's. `CorporateAction`
+ * is signed by the issuer and only observed by the agent: in a deployment the
+ * announcement arrives from the issuer and the agent acts on it. The console
+ * can submit it at all only because it is a demo harness holding every party's
+ * credential, which it says on the page, and the panel says so again beside
+ * this step.
+ *
+ * Idempotent, like every step here: an announcement already on the ledger for
+ * these terms is reused, so retrying after a later step failed does not file a
+ * second one.
+ */
+export async function announce(
+  issuer: Ledger,
+  agentParty: Party,
+  isin: string,
+  kind: string,
+  currency: string,
+  terms: CouponTerms,
+): Promise<ContractId> {
+  const already = findAction(await issuer.templates(T.action), isin, terms);
+  if (already) return already.createdEvent.contractId;
+  await issuer.submitAndWait([
+    {
+      CreateCommand: {
+        templateId: T.action,
+        createArguments: {
+          issuer: issuer.party,
+          payingAgent: agentParty,
+          isin,
+          kind,
+          currency,
+          amountPerUnit: terms.amountPerUnit,
+          recordDate: terms.recordDate,
+          paymentDate: terms.paymentDate,
+        },
+      },
+    },
+  ]);
+  const made = findAction(await issuer.templates(T.action), isin, terms);
+  if (!made) throw new Error("the announcement was submitted but could not be read back");
+  return made.createdEvent.contractId;
+}
+
+/**
+ * Freeze the register as of the record date.
+ *
+ * The registrar's action, and in this deployment the registrar **is** the
+ * paying agent: `Instrument.registrar` is the agent, and
+ * `CorporateAction_Entitle` refuses a snapshot kept by anybody else. Where a
+ * separate company keeps the register this is their step, and the agent
+ * receives the snapshot rather than taking it.
+ *
+ * `Instrument_Snapshot` verifies every position contract it is handed and
+ * aggregates per holder, so the agent can leave a position out and cannot
+ * invent one.
+ */
+export async function freezeRegister(agent: Ledger, isin: string, recordDate: string): Promise<ContractId> {
+  const match = (cs: ActiveContract[]) =>
+    cs.find((c) => c.createdEvent.createArgument.isin === isin && c.createdEvent.createArgument.recordDate === recordDate);
+  const already = match(await agent.templates(T.snapshot));
+  if (already) return already.createdEvent.contractId;
+
+  const instrument = (await agent.templates(T.instrument)).find((c) => c.createdEvent.createArgument.isin === isin);
+  if (!instrument) throw new Error(`no instrument on the ledger for ${isin}`);
+  const positionCids = (await agent.templates(T.position))
+    .filter((c) => c.createdEvent.createArgument.isin === isin && c.createdEvent.createArgument.registrar === agent.party)
+    .map((c) => c.createdEvent.contractId);
+  if (!positionCids.length) throw new Error(`no positions on the ledger for ${isin}`);
+
+  await agent.submitAndWait([
+    {
+      ExerciseCommand: {
+        templateId: T.instrument,
+        contractId: instrument.createdEvent.contractId,
+        choice: "Instrument_Snapshot",
+        choiceArgument: { recordDate, positionCids },
+      },
+    },
+  ]);
+  const made = match(await agent.templates(T.snapshot));
+  if (!made) throw new Error("the register was frozen but the snapshot could not be read back");
+  return made.createdEvent.contractId;
+}
+
+/**
+ * Derive the schedule from the announcement and the snapshot, on the ledger.
+ *
+ * The paying agent's own, and the step that makes a schedule checkable rather
+ * than asserted: the choice recomputes every entitlement from the frozen
+ * positions instead of accepting a table somebody uploaded, and it refuses a
+ * snapshot of another instrument, of another record date, or kept by another
+ * registrar.
+ */
+export async function entitle(
+  agent: Ledger,
+  actionCid: ContractId,
+  snapshotCid: ContractId,
+  isin: string,
+  paymentDate: string,
+  policy: string,
+): Promise<ContractId> {
+  const match = (cs: ActiveContract[]) =>
+    cs.find((c) => c.createdEvent.createArgument.isin === isin && c.createdEvent.createArgument.paymentDate === paymentDate);
+  const already = match(await agent.templates(T.schedule));
+  if (already) return already.createdEvent.contractId;
+  await agent.submitAndWait([
+    {
+      ExerciseCommand: {
+        templateId: T.action,
+        contractId: actionCid,
+        choice: "CorporateAction_Entitle",
+        choiceArgument: { snapshotCid, policy },
+      },
+    },
+  ]);
+  const made = match(await agent.templates(T.schedule));
+  if (!made) throw new Error("the schedule was derived but could not be read back");
+  return made.createdEvent.contractId;
+}
+
+/**
+ * Create the run the schedule pays, leg for leg.
+ *
+ * This is `runFromSchedule` in the model, and the two have to agree: the run
+ * id and the leg ids are derived the same way, and `Run_Settle` rebuilds the
+ * transfer legs from these fields when it settles.
+ *
+ * **`approver` is what makes a run governed.** Set, it joins the executors, so
+ * the settle needs that party's authority as well as the agent's and the agent
+ * can no longer release the payout alone. This is the step that used to be
+ * `docker compose run --rm govern prepare`.
+ */
+export async function createRun(
+  agent: Ledger,
+  cashRegistry: Party,
+  scheduleCid: ContractId,
+  schedule: { isin: string; kind: string; currency: string; paymentDate: string; entries: Entitlement[] },
+  approver: Party | null,
+): Promise<string> {
+  const runId = runIdFor(schedule.isin, schedule.kind, schedule.paymentDate);
+  const already = (await agent.templates(T.run)).find((c) => c.createdEvent.createArgument.runId === runId);
+  if (already) return runId;
+  await agent.submitAndWait([
+    {
+      CreateCommand: {
+        templateId: T.run,
+        createArguments: {
+          payingAgent: agent.party,
+          runId,
+          instrument: { admin: cashRegistry, id: schedule.currency },
+          agentAccount: basicAccount(agent.party),
+          legs: schedule.entries.map((e, i) => ({
+            legId: `${runId}#${i + 1}`,
+            recipient: e.holder,
+            amount: e.amount,
+          })),
+          schedule: scheduleCid,
+          approver,
+        },
+      },
+    },
+  ]);
+  return runId;
+}
+
+// ---------------------------------------------------------------------------
+// Preparing a run: the allocations, from the page
+// ---------------------------------------------------------------------------
+
+/** `basicAccount` in Daml: an owner, no provider, no id. A receipt
+ *  allocation's authorizer is compared against this exactly, so it has to
+ *  match exactly. */
+const basicAccount = (owner: Party) => ({ owner, provider: null, id: "" });
+
+const EMPTY_META = { values: {} };
+
+/** The registry's choice context, in the shape `settle` already sends. */
+const rulesContext = (rulesCid: ContractId) => ({
+  context: { values: { "testTokenV2/tokenRules": { tag: "AV_ContractId", value: rulesCid } } },
+  meta: EMPTY_META,
+});
+
+/** A participant stamps ledger time from its own clock, and a container's can
+ *  sit behind the browser's. Five minutes in the past is what
+ *  `Fixtures.requestedAt` uses for the same reason. */
+const requestedAt = () => new Date(Date.now() - 5 * 60_000).toISOString();
+
+/** Receipt allocations per command. Fifty is `Agent.daml`'s number and it was
+ *  measured: a command costs about a second of round trip on a real
+ *  synchronizer, so 250 holders is five commands rather than 250. The settle
+ *  itself is never batched; it is the one transaction. */
+const RECEIPTS_PER_COMMAND = 50;
+
+interface RunArgs {
+  payingAgent: Party;
+  runId: string;
+  instrument: { admin: Party; id: string };
+  agentAccount: { owner: Party | null; provider: Party | null; id: string };
+  legs: { legId: string; recipient: Party; amount: string }[];
+  approver: Party | null;
+}
+
+/**
+ * Create the allocations a prepared run is still missing, as the paying agent.
+ *
+ * This is `Indivisa.Test.Demo:demo_prepare` without the withholding, and
+ * deliberately the same shape: look at which accounts have already authorised
+ * something for this run, and create only what is absent. Pressing it twice is
+ * therefore safe, which matters, because an operator presses it after a
+ * refusal and cannot be sure what landed before the refusal.
+ *
+ * **Every command here is the paying agent's own.** The receipts go through
+ * each holder's `PaymentAgreement`, so no holder submits anything: that is what
+ * the standing agreement is for, and it is the reason this belongs on the
+ * agent's screen at all. `Instrument` and `Position` are the registrar's book
+ * and are **not** created here; `Accept` on a `PaymentProposal` is each
+ * holder's own submission on its own node and must never move onto this screen.
+ */
+export async function allocateMissing(
+  agent: Ledger,
+  runCid: ContractId,
+  existing: { authorizer: Party | null; isSend: boolean }[],
+  rulesCid: ContractId,
+  factory: DisclosedContract,
+): Promise<{ receipts: number; send: boolean }> {
+  const runs = await agent.templates(T.run);
+  const found = runs.find((c) => c.createdEvent.contractId === runCid);
+  if (!found) throw new Error("the run is no longer on the ledger; reload the page");
+  const run = found.createdEvent.createArgument as RunArgs;
+
+  // Exactly `runExecutors`: the agent, and the approver when the run names
+  // one. The standard compares this list against the batch's, so a mismatch
+  // would pass here and fail at the settle.
+  const executors = run.approver ? [run.payingAgent, run.approver] : [run.payingAgent];
+  const settlement = { executors, id: run.runId, cid: null, meta: EMPTY_META };
+  const transferLegs = run.legs.map((l) => ({
+    transferLegId: l.legId,
+    sender: run.agentAccount,
+    receiver: basicAccount(l.recipient),
+    amount: l.amount,
+    instrumentId: run.instrument.id,
+    meta: EMPTY_META,
+  }));
+
+  const allocated = new Set(existing.map((a) => a.authorizer).filter((p): p is Party => !!p));
+  const haveSend = existing.some((a) => a.isSend);
+
+  // The receipts. One allocation per holder carrying only that holder's own
+  // legs, which is what stops a holder's allocation naming anybody else.
+  const wanted = Array.from(new Set(run.legs.map((l) => l.recipient).filter((p) => !allocated.has(p))));
+  let receipts = 0;
+  if (wanted.length) {
+    const agreements = await agent.templates(T.agreement);
+    const byHolder = new Map<Party, ContractId>();
+    for (const c of agreements) {
+      const a = c.createdEvent.createArgument;
+      if (a.instrument.id === run.instrument.id && a.instrument.admin === run.instrument.admin)
+        byHolder.set(a.holder, c.createdEvent.contractId);
+    }
+    const commands = wanted.map((holder) => {
+      const cid = byHolder.get(holder);
+      // The holder never signed, so there is nothing to allocate under. It is
+      // the one failure here an operator can act on, so it names the holder.
+      if (!cid) throw new Error(`no standing agreement for ${holder}: that holder has not been onboarded`);
+      return {
+        ExerciseCommand: {
+          templateId: T.agreement,
+          contractId: cid,
+          choice: "CreateReceiptAllocation",
+          choiceArgument: {
+            factoryCid: rulesCid,
+            choiceArg: {
+              settlement,
+              allocation: {
+                admin: run.instrument.admin,
+                authorizer: basicAccount(holder),
+                transferLegSides: transferLegs
+                  .filter((l) => l.receiver.owner === holder)
+                  .map((l) => ({
+                    transferLegId: l.transferLegId,
+                    side: "ReceiverSide",
+                    otherside: l.sender,
+                    amount: l.amount,
+                    instrumentId: l.instrumentId,
+                    meta: EMPTY_META,
+                  })),
+                settlementDeadline: null,
+                nextIterationFunding: null,
+                committed: false,
+                meta: EMPTY_META,
+              },
+              requestedAt: requestedAt(),
+              inputHoldingCids: [],
+              extraArgs: rulesContext(rulesCid),
+              actors: [holder],
+            },
+          },
+        },
+      };
+    });
+    for (let i = 0; i < commands.length; i += RECEIPTS_PER_COMMAND) {
+      const batch = commands.slice(i, i + RECEIPTS_PER_COMMAND);
+      await agent.submitAndWait(batch, [factory]);
+      receipts += batch.length;
+    }
+  }
+
+  if (haveSend) return { receipts, send: false };
+
+  // The agent's own side: one committed allocation carrying every leg, funded
+  // from its unlocked holdings. Committed on purpose, so the agent cannot
+  // withdraw it and race the settlement. `cancelRun` is the way back out.
+  const holdings = await agent.interfaces(I.holding);
+  const inputHoldingCids = holdings
+    .map((c) => ({ cid: c.createdEvent.contractId, v: view<HoldingView>(c, ":Holding") }))
+    .filter(({ v }) => v && v.lock == null && v.account.owner === agent.party && v.instrumentId.id === run.instrument.id)
+    .map(({ cid }) => cid);
+  if (!inputHoldingCids.length) throw new Error("the paying agent holds no unlocked cash in this instrument");
+  await agent.submitAndWait(
+    [
+      {
+        ExerciseCommand: {
+          templateId: I.allocationFactory,
+          contractId: rulesCid,
+          choice: "AllocationFactory_Allocate",
+          choiceArgument: {
+            settlement,
+            allocation: {
+              admin: run.instrument.admin,
+              authorizer: run.agentAccount,
+              transferLegSides: transferLegs.map((l) => ({
+                transferLegId: l.transferLegId,
+                side: "SenderSide",
+                otherside: l.receiver,
+                amount: l.amount,
+                instrumentId: l.instrumentId,
+                meta: EMPTY_META,
+              })),
+              settlementDeadline: null,
+              nextIterationFunding: null,
+              committed: true,
+              meta: EMPTY_META,
+            },
+            requestedAt: requestedAt(),
+            inputHoldingCids,
+            extraArgs: rulesContext(rulesCid),
+            actors: [agent.party],
+          },
+        },
+      },
+    ],
+    [factory],
+  );
+  return { receipts, send: true };
 }
 
 /**

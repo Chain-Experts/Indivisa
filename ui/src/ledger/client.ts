@@ -37,6 +37,7 @@ export const T = {
   instrument: "#indivisa:Indivisa.Model.Register:Instrument",
   position: "#indivisa:Indivisa.Model.Register:Position",
   snapshot: "#indivisa:Indivisa.Model.Register:RegisterSnapshot",
+  action: "#indivisa:Indivisa.Model.Event:CorporateAction",
   schedule: "#indivisa:Indivisa.Model.Entitlement:EntitlementSchedule",
   agreement: "#indivisa:Indivisa.Model.Payment:PaymentAgreement",
   run: "#indivisa:Indivisa.Model.Distribution:DistributionRun",
@@ -51,6 +52,11 @@ export const T = {
 export const I = {
   holding: "#splice-api-token-holding-v2:Splice.Api.Token.HoldingV2:Holding",
   allocation: "#splice-api-token-allocation-v2:Splice.Api.Token.AllocationV2:Allocation",
+  // The send allocation is created by exercising the registry rules contract
+  // THROUGH this interface. Naming the TokenRules template instead answers
+  // `Invalid template`, because the choice is the interface's, not the
+  // template's: Agent.daml reaches it with toInterfaceContractId.
+  allocationFactory: "#splice-api-token-allocation-instruction-v2:Splice.Api.Token.AllocationInstructionV2:AllocationFactory",
 };
 
 type IdentifierFilter =

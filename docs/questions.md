@@ -186,7 +186,7 @@ Yes, and it is one command with nothing to install but Docker:
 cd quickstart && docker compose up
 ```
 
-Press the button, watch it refuse, run `docker compose run --rm prepare`, press again. Then open the Privacy tab, which asks each node as one holder alone and shows what it answers.
+Press the button and watch it refuse, press **Create the missing allocation**, press the first button again. Nothing but Docker is needed: the fix is a button because every command behind it is the paying agent's own, through the standing agreement each holder signed once. Then open the Privacy tab, which asks each node as one holder alone and shows what it answers.
 
 ### How is the model tested?
 
