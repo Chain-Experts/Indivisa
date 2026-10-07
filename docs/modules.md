@@ -1,7 +1,6 @@
 # Modules
 
-Every file, and what is in it.
-For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
+Every file, and what is in it. For the order of work see `TASKS.md`; for the reasoning see `architecture.md`.
 
 ```
 Indivisa/
@@ -143,15 +142,9 @@ Indivisa/
 | `Model/Event.daml` | `CorporateAction` (issuer signs, agent observes): kind, currency, `amountPerUnit`, record and payment dates. `CorporateAction_Entitle` attaches the snapshot and derives the schedule on-ledger; `CorporateAction_Cancel`. | no |
 | `Model/Entitlement.daml` | `entitlements`: quantity x amountPerUnit under a `RoundingPolicy`; largest-remainder by default so the legs sum to the announced total exactly; zero entitlements dropped. `EntitlementSchedule` records exact and paid amounts per holder, the policy, and ensures the total. | no |
 
-**Token Standard V2 is touched by `Indivisa.Utils` and `Indivisa.Model.*`, and
-nothing else.** `Types`, `Register`, `Event` and `Entitlement` are plain Daml. If V2 changes, `Utils`, `Model/Payment` and
-`Model/Distribution` change.
+**Token Standard V2 is touched by `Indivisa.Utils` and `Indivisa.Model.*`, and nothing else.** `Types`, `Register`, `Event` and `Entitlement` are plain Daml. If V2 changes, `Utils`, `Model/Payment` and `Model/Distribution` change.
 
-Rule for what lives in the model: only what the ledger executes or what the
-ledger's own choices call. Functions used solely by scripts belong in the test
-package, however product-like they are. The allocation-spec builders are the
-example: they are the paying agent's client logic, so they sit in
-`Indivisa.Test.Agent`.
+Rule for what lives in the model: only what the ledger executes or what the ledger's own choices call. Functions used solely by scripts belong in the test package, however product-like they are. The allocation-spec builders are the example: they are the paying agent's client logic, so they sit in `Indivisa.Test.Agent`.
 
 ## `daml/indivisa-test/`: scripts
 
@@ -168,8 +161,7 @@ example: they are the paying agent's client logic, so they sit in
 
 ## `daml/governance-*`, `daml/indivisa-governance*`: the BitSafe packages
 
-Outside the model package on purpose, so `indivisa` carries no governance
-dependency; LF 2.2 because BitSafe's interface package is.
+Outside the model package on purpose, so `indivisa` carries no governance dependency; LF 2.2 because BitSafe's interface package is.
 
 | Package | Holds |
 |---|---|
@@ -201,9 +193,7 @@ dependency; LF 2.2 because BitSafe's interface package is.
 
 ## `quickstart/`: run it with one command
 
-Docker, for anyone who wants to see it work without a toolchain. Build
-context is the repository root, so the images carry the same DARs and the
-same scripts the proofs run.
+Docker, for anyone who wants to see it work without a toolchain. Build context is the repository root, so the images carry the same DARs and the same scripts the proofs run.
 
 | File | Does |
 |---|---|
@@ -219,20 +209,14 @@ same scripts the proofs run.
 
 ## `contrib/bitsafe/`: what we are giving back
 
-Two pull requests prepared for
-`github.com/DLC-link/decentralization-manager`, following their
-`docs/CONTRIBUTING.md`.
+Two pull requests prepared for `github.com/DLC-link/decentralization-manager`, following their `docs/CONTRIBUTING.md`.
 
 | File | Does |
 |---|---|
 | `README.md` | What was submitted, when, and the decisions behind each PR |
 | `INTEGRATING.md` | The documentation PR itself: seven things not in their docs, each found the hard way while pointing DecMan at our own Canton |
 
-**There is no copy of the module here.** An earlier draft kept one under
-`contrib/bitsafe/module/` and it drifted: its test still imported Indivisa's
-fixtures after the submitted one had been cut loose from them. The code that
-was contributed is the code that builds, `daml/governance-settlement/` and
-`daml/governance-settlement-test/`, and nothing is kept in step by hand.
+**There is no copy of the module here.** An earlier draft kept one under `contrib/bitsafe/module/` and it drifted: its test still imported Indivisa's fixtures after the submitted one had been cut loose from them. The code that was contributed is the code that builds, `daml/governance-settlement/` and `daml/governance-settlement-test/`, and nothing is kept in step by hand.
 
 ## Not built, deliberately
 

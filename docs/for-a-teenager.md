@@ -202,5 +202,4 @@ That is most of what engineering is.
 - The short version for grown-ups, one page: `docs/explainer.html`.
 - The numbers, with how they were measured: `docs/benchmark.md`.
 - The shared-control part in full: `docs/decentralization.md`.
-- The code itself starts in `daml/indivisa/Indivisa/Model/`. `Distribution.daml`
-  is the one with the button.
+- The code itself starts in `daml/indivisa/Indivisa/Model/`. `Distribution.daml` is the one with the button.
