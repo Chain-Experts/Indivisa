@@ -98,6 +98,8 @@ One honest note on that **2 of 3**. Counting members is not counting companies. 
 
 Now two of the three approvers must agree, and that happens on the **Approver** desk at the top of the page. It lists the three members, the threshold read from the party's own governance rules, and where each member stands on the request in front of it. Open one and confirm as that member; open a second and do the same. The strip goes from one of two to two of two, read live from the approvers' own software.
 
+**Try taking an agreement back, because it is the more interesting half.** On a member that has confirmed, press **Withdraw this confirmation**. The count goes *down*, and the settle on the agent's desk stops being pressable again. That is what a "no" is in a threshold model: there is no reject button and there does not need to be, because a member that does not want the payment released simply never confirms and the threshold is never reached. What a member can do is change its mind, and that is a contract it signed and then archived, visible to everyone who can see the party.
+
 At two, the greyed-out *Waiting for the approvers* button on the paying agent's desk disappears and a green **Settle N legs, now approved** takes its place, so there is only ever one thing to press. Press it, and the coupon settles.
 
 **Read the note on a member's page before you press anything there.** That button would not exist in a deployment: a member confirms in its own application, at its own company, behind its own sign-in, and the paying agent's console would have no route to it. It is on this stack because the demo holds every party's credential. What is not theatre is the rule it cannot get around, and you can check that yourself: with one confirmation in, ask the ledger to execute anyway.
@@ -112,9 +114,9 @@ It is not our code declining; it is the ledger:
 The requirement 'Enough confirmations to execute action' was not met.
 ```
 
-`docker compose run --rm govern status` shows where a vote stands at any point. The three approver nodes have their own web interfaces on http://localhost:8081, 8082 and 8083, linked from each member's page, if you want to see the party, the peers and the audit trail from their side. One honest note about them: v1.8.0 does not list a **custom** proposal like ours under its own Approvals view, which is why the confirming is on our page at all, and it is a finding we owe BitSafe.
+`docker compose run --rm govern status` shows where a vote stands at any point. The three approver nodes have their own web interfaces on http://localhost:8081, 8082 and 8083, linked from each member's page, if you want to see the party, the peer mesh and the audit trail from their side.
 
-If you would rather not use the page at all, the whole thing also runs from the terminal: `govern propose` files the same request, and `govern execute 3` settles it once two approvers have confirmed.
+There is no terminal route for the vote any more. `govern prepare` and `govern propose` were removed on 8 October, because both were hardwired to the first coupon on the bond and that one is settled by the paying agent alone before you reach this point. The page files the request and executes it; `govern confirm N`, `govern execute N` and `govern status` remain, and `execute` below the threshold is the refusal above.
 ## What is real and what is not
 
 **Real:** the ledger (Canton 3.5, five participants, one synchronizer), the Daml contracts, the settlement, the refusal, the privacy, every number on screen. The transaction is a genuine Token Standard V2 `SettlementFactory_SettleBatch`.

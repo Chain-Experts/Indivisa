@@ -9,12 +9,17 @@
 // **It also confirms, and that was not the first plan.** The intent was a read
 // page and a link: a Confirm button in the paying agent's own console looks
 // like the agent casting the approvers' votes, which would hollow out the only
-// claim the governed path makes. Then the fact checked out differently.
-// Decentralization Manager v1.8.0 does not surface a **custom domain action**
-// in its Approvals view at all - measured 8 October, node 1's own API
-// reporting our pending proposal while its own UI read "Needs you 0" - so the
-// link cannot act and the alternative was leaving a terminal command in the
-// middle of the demo.
+// claim the governed path makes.
+//
+// The link cannot act in THIS package, and the reason is our own deployment
+// rather than their product. The three nodes run with `DECPM_INSECURE` so a
+// judge needs no identity provider, and in that mode a node reports its
+// session as `mock`; their approvals view skips a party whose session is not
+// `authenticated` with act-as rights, so it never issues the governance query
+// and lists nothing to confirm. On DevNet, behind Keycloak, the card and its
+// Confirm button are there, which is what the recording shows. Asking a judge
+// to stand up a Keycloak to watch a threshold work is not a reasonable price,
+// so the button is here instead.
 //
 // What makes the button defensible is what it actually does: it posts to
 // `/decman/<node>/`, which is THAT member's own node, and the confirmation is
@@ -33,7 +38,7 @@
 import { useState } from "react";
 import type { Config } from "../config";
 import type { Party } from "../ledger/client";
-import { confirmAs, type Committee } from "../ledger/decman";
+import { confirmAs, revokeAs, type Committee } from "../ledger/decman";
 import type { VoteHandle } from "../state/useVote";
 
 /** A member, and whether it has acted on the request in front of it. */
@@ -42,11 +47,14 @@ interface Seat {
   member: Party;
   url: string;
   confirmed: boolean;
+  /** Its own confirmation, when it has given one. Only the member that signed
+   *  a confirmation may withdraw it. */
+  ownCid: string | null;
 }
 
 function seats(config: Config, voting?: VoteHandle): Seat[] {
-  const done = new Set(voting?.vote?.confirmedBy ?? []);
-  return config.approverNodes.map((n) => ({ ...n, confirmed: done.has(n.member) }));
+  const mine = new Map((voting?.vote?.byMember ?? []).map((c) => [c.party, c.cid]));
+  return config.approverNodes.map((n) => ({ ...n, confirmed: mine.has(n.member), ownCid: mine.get(n.member) ?? null }));
 }
 
 /** Party ids carry a 68-character fingerprint; the hint is the readable half,
@@ -144,6 +152,7 @@ export function ApproverList({
                 ) : (
                   <span className="leg-status unauthorised">not yet</span>
                 )}
+                {r.confirmed ? <span className="muted"> · can withdraw</span> : null}
               </td>
             </tr>
           ))}
@@ -185,6 +194,19 @@ export function ApproverPage({
     setFailure(null);
     try {
       await confirmAs(node, config.decmanParty, vote.rulesCid, voting.proposalCid);
+    } catch (e) {
+      setFailure(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revoke = async () => {
+    if (!config.decmanParty || !seat?.ownCid) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      await revokeAs(node, config.decmanParty, seat.ownCid);
     } catch (e) {
       setFailure(e instanceof Error ? e.message : String(e));
     } finally {
@@ -254,20 +276,37 @@ export function ApproverPage({
             {busy ? "Confirming…" : "Confirm this payment, as this member"}
           </button>
         ) : vote ? (
-          <p className="action-note">
-            This member has confirmed. {vote.canExecute
-              ? "The threshold is met, so the paying agent can now execute the settlement."
-              : "The run still needs another member before anything can move."}
-          </p>
+          <>
+            <p className="action-note">
+              This member has confirmed. {vote.canExecute
+                ? "The threshold is met, so the paying agent can now execute the settlement."
+                : "The run still needs another member before anything can move."}
+            </p>
+            {/* Taking it back is the real "no" in a threshold model, and until
+                9 October this desk let a member agree and not un-agree. There
+                is no veto to offer: a member that does not want the payment
+                simply never confirms, and the threshold is not reached. */}
+            <button className="danger" disabled={busy} onClick={() => void revoke()}>
+              {busy ? "Withdrawing…" : "Withdraw this confirmation"}
+            </button>
+            <p className="action-note">
+              A member can take its agreement back for as long as the settlement has not executed. The count goes
+              down and the payment stops being releasable. It is not a veto: the others can still reach the
+              threshold without this member, and a member that simply never confirms has the same effect without
+              pressing anything.
+            </p>
+          </>
         ) : (
           <p className="action-note">Nothing is waiting on this member.</p>
         )}
         {failure ? <p className="action-note warn">{failure}</p> : null}
         <p className="action-note">
-          Or do it in this member's own software: <a href={seat.url} target="_blank" rel="noreferrer">{seat.url}</a>,
-          which is BitSafe's Decentralization Manager running on this node. Note that v1.8.0 does not list a
-          custom proposal like ours under its Approvals view, which is why the button above exists at all and is
-          a finding we owe them.
+          This member's own software is at <a href={seat.url} target="_blank" rel="noreferrer">{seat.url}</a>,
+          BitSafe's Decentralization Manager running on this node, where you can see the party, the peer mesh and
+          the audit trail from its side. It will not offer you a confirmation to make: these nodes run without an
+          identity provider so that this package needs no sign-in anywhere, and their approvals view lists a
+          party's actions only for an authenticated session. On a deployment with a real identity provider, that
+          view is where a member confirms and this button does not exist.
         </p>
       </div>
 

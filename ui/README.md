@@ -1,6 +1,17 @@
 # The settlement console
 
-One page, one command, as many ledger connections as there are parties on screen. A working header says what is being paid and how ready it is; four tabs are four ways of reading the same run.
+Four desks, one command, as many ledger connections as there are parties on screen.
+
+In a deployment the paying agent, the issuer, each holder and each approver are four different companies, each running its own application and signing in to it. Here they are four pages so you can walk between them, and every page says so rather than letting the split imply more isolation than it has.
+
+| Desk | What it is for |
+|---|---|
+| **Paying agent** (`/`) | The register down the left, one row per coupon rather than per bond, because a bond pays twice a year for ten years and the unit of work is the event. Then the figures, the coupon set-up, the release choice and the settle. Four tabs below it read the selected coupon four ways. |
+| **Issuer** (`/issuer`) | Declares the terms of an event and nothing else. No holders, no schedule, no settlement, because an issuer has no business in any of them. |
+| **Holder** (`/holders`) | Every holder on the register, and a page each read **as that holder from that holder's own node**: their cash, their positions, whether their settlement instructions are on file, and the one action a holder ever takes. |
+| **Approver** (`/approvers`) | The members of the decentralised party, the threshold read from its own governance rules, and where each member stands on the request in front of it. A member confirms, and can **take that agreement back** for as long as the settlement has not executed, which drops the count and makes the payment unreleasable again. There is no reject button, because a threshold does not need one: a member that does not want the payment simply never confirms. |
+
+The paying agent's four tabs:
 
 | Tab | What it is |
 |---|---|
@@ -26,7 +37,7 @@ cd ui && npm install
 INDIVISA_TAG=sep18 npm run dev                       # PowerShell: $env:INDIVISA_TAG="sep18"; npm run dev
 ```
 
-Open http://localhost:5173. Press the button: the ledger refuses, the pane says so, and a `SettlementRejected` record is written. Then `demo.ps1 prepare -Tag sep18` (nothing withheld) and press again: settled, every holder paid in one transaction, update id on screen.
+Open http://localhost:5173. Press settle: the ledger refuses, because one holder has given the paying agent no settlement instructions, and a `SettlementRejected` record is written. Open that holder on the **Holder** desk and press **Provide settlement instructions**, then **Authorise** on the agent's desk, then settle again: every holder paid in one transaction, update id on screen. No terminal step in the middle; `demo.ps1 prepare` does the same thing from a shell if you prefer.
 
 Environment variables the dev server reads:
 

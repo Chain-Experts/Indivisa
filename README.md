@@ -38,7 +38,7 @@ Bond coupons are our chosen example. A dividend is the same engine with a differ
 A paying agent needs to distribute one coupon across a holder base. Indivisa turns that into a single atomic settlement:
 
 ```
-Holder signs one payment agreement      ← once, at onboarding
+Holder provides settlement instructions  ← once, and only the holder can
      │
      ▼
 Coupon announced by the issuer
@@ -193,7 +193,7 @@ Worth saying before anyone else says it.
 | `docs/explainer.html` | The story for a beginner, one standalone page |
 | `infra/README.md` | LocalNet, the demo from a shell, the DevNet handover |
 | `quickstart/README.md` | Run the whole thing with one Docker command, and what to look for |
-| `ui/README.md` | The settlement console: four tabs, and what each one reads |
+| `ui/README.md` | The settlement console: four desks, and what each one reads |
 
 ---
 

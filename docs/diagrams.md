@@ -135,8 +135,8 @@ sequenceDiagram
   end
 ```
 
-Reading it: steps 1–3 happen once in a holder's life. Steps 4–9 are the paying agent's ordinary work and produce no payment. Steps 10–13 are the only place cash is touched before the settle, and every one of them is a single-party command. Step 14 is the product: the one transaction. On LocalNet it commits in 1.6 s for 250 holders and 11.1 s for 1,000 (`benchmark.md`).
+Reading it: steps 1–3 happen once in a holder's life, and they are the holder providing their settlement instructions, which is the only thing a holder ever does. Steps 4–9 are the paying agent's ordinary work and produce no payment. Steps 10–13 are the only place cash is touched before the settle, and every one of them is a single-party command. Step 14 is the product: the one transaction. On LocalNet it commits in 1.6 s for 250 holders and 11.1 s for 1,000 (`benchmark.md`).
 
-What the recording shows of this: the state after step 13 (the console: prepared, allocations counted, every holder's card "ready", and any card opened showing zeros about everyone else), then step 14 both ways: settled on one seat, and on a second seat refused with one holder withheld, then settled after the fix. See `demo-script.md`.
+What the recording shows of this: the state after step 13 (the console: prepared, payments counted, and any holder's card opened showing zeros about everyone else), then step 14 both ways on **one** seat. The first coupon is refused because one holder has given the paying agent no settlement instructions, that holder provides them on their own page, the agent authorises and it settles. The second coupon on the same bond then settles under the approvers instead, which is step 14 as a governed execution.
 
 Since 0.4.0 a run may name an **approver**, a decentralised party managed by BitSafe's Decentralization Manager. It joins the executors, so step 14 can only happen as a governed execution: the agent proposes, two of three members confirm, the engine executes. `decentralization.md` has that flow.

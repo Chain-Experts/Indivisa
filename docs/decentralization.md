@@ -160,7 +160,7 @@ The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
 
 - **Real:** the governance engine (BitSafe's, unmodified), the threshold refusal, the settlement through `Run_Settle`, the audit trail, every number on screen.
 - **Simulated:** the cash (`TestTokenV2`, the reference Token Standard V2 asset, with our own registry party); the holders; and, in the sandbox, operator independence, as section 4 says.
-- **Runnable by anyone, since 24 Sep:** the governed settlement is in `quickstart/`. `docker compose --profile govern up -d` adds three Decentralization Manager nodes beside the ledger, and the seat carries a second coupon for them to release. The page files the request, `govern confirm` holds the vote, and the page executes it once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust: see `quickstart/README.md`.
+- **Runnable by anyone, since 24 Sep:** the governed settlement is in `quickstart/`. One command, `docker compose --profile govern up -d`, brings up the ledger, the console and three Decentralization Manager nodes, and the seat carries a second coupon on the same bond for them to release. Everything after that is on the page: it files the request, the approvers desk holds the vote, and the page executes once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust, and no terminal after the first command: see `quickstart/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).** A coupon settled through the decentralised party at 2 of 2: our confirmation and theirs, on their own node.
 
   | | |
@@ -175,7 +175,33 @@ The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
   This is the claim the rest of this page was written to support, and it is now a settlement that happened rather than a configuration that exists. Chain-Experts could not have executed it alone: BitSafe's confirmation was required, on infrastructure we do not run. Reproduce the read with `pwsh infra/bitsafe/govern-devnet.ps1 evidence`.
 
   Getting there cost two things worth knowing. Their node needed every package the action touches, asset packages included, or the settlement fails with `UNRESOLVED_PACKAGE_NAME` long after the distribution step that caused it. And the paying agent had to be admitted as an additional proposer, which exists in their Daml and their API but not in their UI - BitSafe confirmed this and are adding it.
-- **Unfinished, and being worked on (1-2 October):** showing the governed run in the console. It shows the settled state today, not the vote, so the recording drives `propose` and `execute` from a terminal. Those are being moved into the page, with the confirmations visible as they arrive. The one step that will stay outside the page is each approver's own confirmation, which belongs on that approver's own node and in their own Decentralization Manager - an approver confirming in software the proposer wrote and hosts would weaken the very independence the design is for.
+- **Done 1 October:** the governed run is driven from the console. The button files the proposal, a strip shows the confirmations arriving, and a second button executes once the threshold is met.
+- **Done 8 October, and it reverses something this page used to promise.** The paragraph here said each approver's own confirmation would stay outside our console, because an approver confirming in software the proposer wrote and hosts weakens the independence the design is for. That reasoning still stands, and the console confirms anyway. Both halves of that need stating plainly.
+
+  **Why it changed, and the reason is our own deployment rather than their product.** The intended route was a link out, so that each member confirmed in its own Decentralization Manager, which is where a confirmation belongs. In the judges' package that interface lists nothing to confirm, and the cause is a choice we made: the three nodes run with `DECPM_INSECURE` so that a judge needs no identity provider, and in that mode the node reports its session as `mock` rather than `authenticated`. Their Approvals view skips a party unless the session is authenticated with act-as rights, so it never issues the governance query at all.
+
+  On DevNet, where their manager is wired to Keycloak and the operator signs in, the card and its Confirm button are there, and that is the clip in our recording. So the mechanism is theirs and it works; what the judges' package lacks is an identity provider, and asking a judge to stand one up to watch a threshold work is not a reasonable price.
+
+  Hence the button, on each member's page, posting to that member's own node. The page says in as many words that it would not exist in a deployment.
+
+**What a member can and cannot do, since "can an approver reject it?" is the first question anyone asks.** There are four moves and only three of them exist, which is a property of thresholds rather than a gap:
+
+| Move | Choice exercised | Controlled by |
+| --- | --- | --- |
+| Agree | a `GovernanceConfirmation` is created | that member |
+| Take the agreement back | `GovernanceConfirmation_Cancel` | that member |
+| Retract the request | `GovernableAction_ProposerCancel` | the proposer, which is the paying agent |
+| Reject | nothing exists, and nothing should | - |
+
+**There is no veto, and adding one would be theatre.** A member that does not want a payment released simply does not confirm: the threshold is never reached, the settlement never executes, and no contract was needed to record the refusal. A reject button would write nothing to the ledger and change no outcome.
+
+What is real is a member **taking its agreement back**, for as long as the settlement has not executed. The confirmation is archived, the count falls, and a payment that was one confirmation from release stops being releasable. On the console's approvers desk that is a second button on a member that has confirmed, and the count visibly goes down.
+
+All four of these are BitSafe's own interface. None is ours.
+
+  **What the console does, exactly.** The approvers desk posts the confirmation to **that member's own node**, and the contract it writes is signed by that member. `docker compose run --rm govern confirm 1` is the identical request from a script we also wrote, so in a package that deliberately holds every party's credential, a button is no weaker than a command. The page says in as many words that the button would not exist in a deployment, where a member confirms in its own application at its own company behind its own sign-in, and where this console would have no route to it.
+
+  **What is not weakened.** The threshold is enforced by the governance rules on the ledger and an execution below it is refused by Canton, whoever pressed what. The independence claim rests on the DevNet run, not on the local one: there the second confirmation came from BitSafe, on infrastructure we do not run, and we could not have produced that transaction alone.
 
 ## 8. What comes next
 

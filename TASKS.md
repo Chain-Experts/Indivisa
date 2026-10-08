@@ -1,12 +1,14 @@
 # Tasks
 
-**7 October 2026. Submitted 5 October. Grand Final 21 October, finalists announced on the 19th.**
+**9 October 2026. Submitted 5 October. Grand Final 21 October, finalists announced on the 19th.**
 
 ## Where we stand
 
-**Submitted on the platform, and approved by BitSafe on 5 October** - four days before the deadline. Repository public and scrubbed, three contributions open in their repo, the film cut, the deck in sync.
+**Submitted on the platform, and approved by BitSafe on 5 October** - four days before the deadline. Repository public and scrubbed, three contributions open in their repo, the deck in sync.
 
-Nothing is outstanding. What remains is the Grand Final on 21 October, if the project is one of the ten announced on the 19th: a five-minute pitch and two minutes of questions.
+**Nothing is outstanding for the submission.** What remains is the Grand Final on 21 October, if the project is one of the ten announced on the 19th: a five-minute pitch and two minutes of questions.
+
+**The product moved a long way on 7 and 8 October, and the film has not caught up.** The console became four desks, the holder provides their own settlement instructions, one stack carries two coupons (one released by the paying agent alone and one by the approvers), and nothing needs a terminal after the single command that starts it. `Indivisa-S3.mp4` shows a console that no longer exists, so it is being re-recorded for the final: script in `private/video-script-s4.md`, local for the spine with a DevNet ending cut from the footage already in hand. **Until that film exists, `Indivisa-S3.mp4` is still the submitted and approved one** and nothing about the submission is at risk.
 
 **Done and verifiable by someone else:**
 
@@ -630,9 +632,9 @@ Done:
 
 - [x] **An approvers desk, and the last terminal commands are gone** (8 October). Avraham asked for an approvers page in the shape of the holders one, with an approve button doing what `govern confirm` does.
 
-  **The page was clearly right; the button took a reversal.** The first build deliberately had no Confirm: a button in the paying agent's own console looks like the agent casting the approvers' votes, which would hollow out the only claim the governed path makes, and BitSafe's own UI has a working Confirm for a custom domain action in its source. **Running it said otherwise.** On v1.8.0 node 1's own Approvals view read "Needs you 0" while that same node's API reported our pending proposal, so their UI does not surface a **custom** domain action and a member cannot act on ours by clicking there. Reading their code was not evidence; running it was. A fourth finding we owe them.
+  **The page was clearly right; the button took a reversal.** The first build deliberately had no Confirm: a button in the paying agent's own console looks like the agent casting the approvers' votes, which would hollow out the only claim the governed path makes. The intended route was a link out, each member confirming in its own Decentralization Manager, and in the judges' package that view lists nothing. **It was written up as a fourth finding for BitSafe and withdrawn on 9 October, because the cause is ours:** our compose runs the three nodes with `DECPM_INSECURE` so a judge needs no identity provider, and in that mode `GET /auth/status` reports the session as `mock`; their Approvals view skips a party whose session is not `authenticated` with act-as rights, so it never issues the governance query. On DevNet, with Keycloak behind it, the card and its Confirm button are there, which is the clip in the film. Nothing to report, and the mechanism was never in question.
 
-  **So the desk confirms, through each member's own node**, with nginx routing `/decman/<node>/` per member, and the page carries the disclosure in full: that button would not exist in a deployment, where a member confirms in its own application at its own company. What makes it defensible is that the alternative was `docker compose run --rm govern confirm 1`, the identical POST from a script we also wrote, and the guarantee lives on the ledger rather than in who clicked. It appears only where `approverNodes` is published, which is the judges' stack and not a real deployment.
+  **So the desk confirms, through each member's own node**, with nginx routing `/decman/<node>/` per member, and the page carries the disclosure in full: that button would not exist in a deployment, where a member confirms in its own application at its own company. The justification that stands on its own is the package: it holds every party's credential by design, and the alternative was `docker compose run --rm govern confirm 1`, the identical request from a script we also wrote. The guarantee lives on the ledger rather than in who clicked. It appears only where `approverNodes` is published, which is the judges' stack and not a real deployment.
 
   **One bug it found:** the desk reused the agent's `useVote`, which is keyed to the selected coupon, so it reported "no request outstanding" while a request was live. A member has no idea which coupon the agent has open. Two instances now, and they must not be merged: the agent's on its own run, the approvers' on whatever is outstanding.
 
@@ -655,6 +657,14 @@ Done:
   **But it ends on DevNet, and that is not optional.** Three Decentralization Manager nodes on one workstation are not three operators, so a film that shows us confirming both halves of a two-of-three threshold and says nothing else inverts the central claim. The closing segment cuts from footage already recorded - `raw/take3-confirm-theirs.mp4`, `take3-governed-settled.mp4`, `take3-evidence.mp4` - so nothing new has to be run on DevNet.
 
   **No title cards**, because the narration is an AI voice and the cards were mostly covering waiting time that is now edited out. Two consequences handled in the script: every claim has to be in a line, and subtitles get burned in for the judges who watch muted. The two-of-three local party and the two-of-two DevNet party must not have their numbers cross over between segments.
+
+- [x] **A member can take its agreement back** (9 October). Avraham asked for a Reject button beside Confirm. **There is no veto in a threshold model and nothing to build for one**: a member that does not want a payment released simply never confirms, the threshold is not reached, and no contract is needed to say so. A Reject button would write nothing to the ledger.
+
+  What a member really can do is withdraw the confirmation it gave, which **is** a ledger event (`GovernanceConfirmation_Cancel`, controlled by the confirming member). Built on each member's page, posted to that member's own node, and only for that member's own confirmation. Until now the desk let a member agree and not un-agree, which is worse than offering neither.
+
+  **Verified**: confirmed as member one (0 of 2 to 1 of 2), withdrew it (back to 0 of 2), with the node's own API agreeing with the page at every step.
+
+  **No third coupon for it.** The arc fits on the second one: ask, confirm, withdraw, the count falls and the settle stays dead, then confirm twice and release. A coupon left permanently rejected would be less realistic rather than more, because a refused coupon payment gets re-proposed, not abandoned.
 
 - [ ] Post the benchmark to the Canton forum.
 - [ ] **Withdraw through `GovernableAction_ProposerCancel`** rather than archiving `SettleRunProposal` directly. Same outcome, but it is BitSafe's published interface rather than our template, it is what they assume we already do, and it would work for any `GovernableAction`. Needs a DevNet test, so it was deliberately not done on recording day. Then correct `decentralization.md`, which still implies the mechanism was missing when only the button was.

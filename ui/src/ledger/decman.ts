@@ -33,6 +33,9 @@ export interface Vote {
   /** The member parties that have confirmed. The approvers desk shows a row
    *  per member, so a count is not enough. */
   confirmedBy: Party[];
+  /** Each confirmation paired with the member that signed it. Only that member
+   *  may withdraw it, so the desk needs the pairing and not just the set. */
+  byMember: { party: Party; cid: string }[];
   /** The live governance rules contract; it changes with every self-action. */
   rulesCid: string;
 }
@@ -125,6 +128,9 @@ export async function vote(party: string, proposalCid: string): Promise<Vote | n
     canExecute: !!entry.can_execute,
     confirmationCids: cids,
     confirmedBy: (entry.confirmations ?? []).map((c) => c.confirming_party).filter((p): p is Party => !!p),
+    byMember: (entry.confirmations ?? [])
+      .filter((c) => !!c.confirming_party)
+      .map((c) => ({ party: c.confirming_party as Party, cid: c.contract_id })),
     rulesCid: state.state.contract_id,
   };
 }
@@ -150,11 +156,20 @@ export async function vote(party: string, proposalCid: string): Promise<Vote | n
  * local stack. On a real deployment there is no route to another company's
  * node and the button is absent, which is the honest shape.
  *
- * Why a member cannot simply do this in its own manager instead: v1.8.0's UI
- * does not surface a custom domain action under Approvals at all. Measured on
- * 8 October - node 1's own API reported the pending proposal while its own
- * Approvals view read "Needs you 0". That is a fourth finding for BitSafe,
- * and the same family as the three already offered on #516.
+ * **Why a member cannot simply do this in its own manager instead, and it is
+ * our doing rather than theirs.** The quickstart runs the three nodes with
+ * `DECPM_INSECURE` so that a judge needs no identity provider. In that mode a
+ * node reports its session as `mock`, and their approvals view skips a party
+ * whose session is not `authenticated` with act-as rights - so it never
+ * issues the governance query and lists nothing to confirm. Their server and
+ * their client are both fine: the API returns the pending proposal all along,
+ * unconfirmed ones included, and on DevNet behind Keycloak the Confirm card is
+ * there, which is what the recording shows.
+ *
+ * This was briefly written up as a finding for BitSafe and withdrawn on
+ * 9 October once `/auth/status` was read. **"Their product is broken" has now
+ * been the wrong hypothesis twice** (see CLAUDE.md, 5 October); both times the
+ * cheap check was reading what our own deployment hands them.
  */
 export async function confirmAs(
   node: string,
@@ -171,6 +186,35 @@ export async function confirmAs(
     action: { type: "governance_set_threshold", new_threshold: 0 },
     governance_type: "core_domain",
     proposal_cid: proposalCid,
+  });
+}
+
+/**
+ * One member withdraws the confirmation it gave.
+ *
+ * **This is what "rejecting" actually is in a threshold model, and the
+ * distinction matters.** There is no veto to build: a member that does not
+ * want a payment to go out simply does not confirm, and the threshold is never
+ * reached. A Reject button would write nothing to the ledger and change
+ * nothing about the outcome, which would make it the one thing this project
+ * has spent two days removing - a control that looks like authority and has
+ * none.
+ *
+ * What a member can really do is take back its own agreement, and that is a
+ * ledger event: `GovernanceConfirmation_Cancel`, controlled by the confirming
+ * member. The count goes **down**, and the settlement that was one
+ * confirmation away stops being executable. Until 9 October a member could
+ * agree on this desk and not un-agree, which is worse than offering neither.
+ *
+ * Only the member that signed a confirmation may cancel it, which is why
+ * `Vote.byMember` carries the pairing. The request goes to that member's own
+ * node, like the confirmation did.
+ */
+export async function revokeAs(node: string, party: string, confirmationCid: string): Promise<void> {
+  await post(`/${node}/governance/cancel`, {
+    party_id: party,
+    confirmation_cid: confirmationCid,
+    governance_type: "core_domain",
   });
 }
 
