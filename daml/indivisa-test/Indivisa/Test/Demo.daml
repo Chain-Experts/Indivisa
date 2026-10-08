@@ -155,6 +155,59 @@ data DemoSeat = DemoSeat
 demoIsin : Text
 demoIsin = "XS2999912340"
 
+-- | Announce a coupon, freeze the register on its record date, derive the
+-- schedule, create the run, allocate and settle. One coupon, start to finish,
+-- and the total it paid.
+--
+-- This exists because a paying agent's book is mostly **finished** work. A
+-- register holding one live coupon and nothing else looks like a test
+-- harness; a register with a payment history looks like a job. Every row it
+-- creates is a real settlement with a real receipt and a real update id, not
+-- a decoration: open one in the console and the evidence is there.
+--
+-- **It funds itself with exactly what it pays**, which keeps the seat's
+-- arithmetic checkable: the agent is left holding its float and nothing else,
+-- which is what `demo_smoke` asserts at the end.
+--
+-- `positionCids` is a parameter rather than "the whole register" on purpose.
+-- A record-date snapshot captures whoever held the bond **then**, so a holder
+-- who bought in later is legitimately absent from an earlier coupon. That is
+-- what makes the demo bond's own history settleable at all: its newest holder
+-- has given the agent no settlement instructions yet, so a coupon that
+-- included them could not settle, and a coupon from before they arrived can.
+paidCoupon
+  :  Party -> Party -> Party -> Cash
+  -> ContractId Instrument -> Text
+  -> [ContractId Position]
+  -> [(Party, ContractId PaymentAgreement)]
+  -> Decimal -> Date -> Date
+  -> Script Decimal
+paidCoupon registry issuer payingAgent cash instrumentCid isin positionCids agreements rate recordDate paymentDate = do
+  actionCid <- submit issuer $ createCmd CorporateAction with
+    issuer
+    payingAgent
+    isin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = rate
+    recordDate
+    paymentDate
+  awaitVisible payingAgent actionCid
+  snapshotCid <- submit payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids
+  scheduleCid <- submit payingAgent $ exerciseCmd actionCid CorporateAction_Entitle with
+    snapshotCid
+    policy = LargestRemainder
+  Some schedule <- queryContractId payingAgent scheduleCid
+  let run = runFromSchedule registry scheduleCid schedule
+  fund cash payingAgent schedule.total
+  runCid <- submit payingAgent $ createCmd run
+  sendCid <- allocateSend payingAgent cash run
+  receiptCids <- allocateReceipts payingAgent cash run agreements
+  _ <- settle payingAgent cash runCid (sendCid :: receiptCids)
+  pure schedule.total
+
 demo_seat : DemoSeatArgs -> Script DemoSeat
 demo_seat args = do
   let n = args.holders
@@ -309,39 +362,71 @@ demo_seat args = do
       holder
       isin = pentlandIsin
       quantity = if i == 1 then 400.0 else 125.0
-  let bRecordDate = date 2027 May 15
-      bPaymentDate = date 2027 Jun 1
-  bActionCid <- submit issuer $ createCmd CorporateAction with
+  -- Its coupon, paid, so the register opens with something finished on it.
+  _ <- paidCoupon registry issuer payingAgent cash bInstrumentCid pentlandIsin
+         bPositionCids bAgreements 16.25 (date 2027 May 15) (date 2027 Jun 1)
+
+  -- A second coupon on the second bond, so the register shows a history
+  -- rather than a single row per instrument.
+  --
+  -- **The demo bond gets no paid history, and that is deliberate.** It was
+  -- tried on 9 October and `demo_smoke` caught it immediately: paying this
+  -- bond's holders before the demo runs leaves them holding cash, and a card
+  -- going from 0.00 to its amount is the shot the whole film is built on. The
+  -- comment above this one had already said so about the second bond's
+  -- holders; the fill has to come from instruments whose holders the demo
+  -- never pays. **A register row is cheap, a holder's starting balance is
+  -- not.**
+  _ <- paidCoupon registry issuer payingAgent cash bInstrumentCid pentlandIsin
+         bPositionCids bAgreements 16.25 (date 2026 Nov 15) (date 2026 Dec 1)
+
+  -- A third instrument, with two holders of its own: one coupon paid and one
+  -- only announced.
+  --
+  -- The announced one is the state the agent's own panel exists for - the
+  -- issuer has declared the terms and nobody has frozen the register yet - and
+  -- the register had no row in that state before. It is deliberately NOT on
+  -- the demo bond: an un-entitled announcement there would take over the
+  -- agent's panel and hide the governed coupon's release choice, which is the
+  -- one control the second half of the walkthrough is about.
+  let caledonIsin = "XS3041559820"
+  cHolders <- forA [1, 2] $ \i ->
+    named (["Rowan-Mutual", "Thameside-Life"] !! (i - 1)) (holderParticipant (i + 1))
+  cAgreements <- onboardAll payingAgent cash cHolders
+  cInstrumentCid <- submit payingAgent $ createCmd Instrument with
+    registrar = payingAgent
+    issuer
+    isin = caledonIsin
+    name = "Caledon Energy 5.125% 2033"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.05125
+    maturity = date 2033 Mar 1
+  cPositionCids <- forA (zip [1, 2] cHolders) $ \(i, holder) ->
+    submit payingAgent $ createCmd Position with
+      registrar = payingAgent
+      holder
+      isin = caledonIsin
+      quantity = if i == 1 then 250.0 else 90.0
+  _ <- paidCoupon registry issuer payingAgent cash cInstrumentCid caledonIsin
+         cPositionCids cAgreements 25.625 (date 2027 Feb 15) (date 2027 Mar 1)
+  -- Announced only: no snapshot, no schedule, no run, nothing funded.
+  _ <- submit issuer $ createCmd CorporateAction with
     issuer
     payingAgent
-    isin = pentlandIsin
+    isin = caledonIsin
     kind = Coupon
     currency = "USD"
-    amountPerUnit = 16.25
-    recordDate = bRecordDate
-    paymentDate = bPaymentDate
-  awaitVisible payingAgent bActionCid
-  bSnapshotCid <- submit payingAgent $ exerciseCmd bInstrumentCid Instrument_Snapshot with
-    recordDate = bRecordDate
-    positionCids = bPositionCids
-  bScheduleCid <- submit payingAgent $ exerciseCmd bActionCid CorporateAction_Entitle with
-    snapshotCid = bSnapshotCid
-    policy = LargestRemainder
-  Some bSchedule <- queryContractId payingAgent bScheduleCid
+    amountPerUnit = 25.625
+    recordDate = date 2027 Aug 15
+    paymentDate = date 2027 Sep 1
 
-  -- Fund the agent for every coupon this seat leaves workable, plus a float.
-  -- Three runs now: this bond's two coupons and the second bond's one. The
-  -- seat funded exactly one run's worth once and the agent ran out mid-demo
+  -- Fund the agent for the two coupons this seat leaves WORKABLE, plus a
+  -- float. Everything already paid funded itself with exactly what it paid,
+  -- so the float is the only surplus and `demo_smoke` asserts it at the end.
+  -- The seat once funded one run's worth and the agent ran out mid-demo
   -- (1 October), so this is counted rather than estimated. SIMULATED cash.
-  fund cash payingAgent (schedule.total + schedule2.total + bSchedule.total + 10000.0)
-
-  -- Pay the second bond now, so the selector opens with a coupon that is
-  -- done: a receipt, an update id, and both of its holders paid.
-  let bRun = runFromSchedule registry bScheduleCid bSchedule
-  bRunCid <- submit payingAgent $ createCmd bRun
-  bSendCid <- allocateSend payingAgent cash bRun
-  bReceiptCids <- allocateReceipts payingAgent cash bRun bAgreements
-  _ <- settle payingAgent cash bRunCid (bSendCid :: bReceiptCids)
+  fund cash payingAgent (schedule.total + schedule2.total + 10000.0)
 
   let run = runFromSchedule registry scheduleCid schedule
       seat = DemoSeat with

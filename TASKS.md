@@ -666,6 +666,12 @@ Done:
 
   **No third coupon for it.** The arc fits on the second one: ask, confirm, withdraw, the count falls and the settle stays dead, then confirm twice and release. A coupon left permanently rejected would be less realistic rather than more, because a refused coupon payment gets re-proposed, not abandoned.
 
+- [x] **The register is a book now: three instruments, six rows** (9 October). Avraham asked for more coupons so the page looks filled rather than like a fixture. The seat carries the demo bond's live coupon and its governed one, two paid coupons on the second bond, and on a third bond one paid and one only **announced** - a state the register had no row for before, and the one the agent's panel exists to clear. Every paid row is a real settlement with its own receipt and update id, openable in the console.
+
+  `paidCoupon` is a new top-level helper in `Demo.daml` doing announce, freeze, entitle, run, allocate, settle, and **funding itself with exactly what it pays**, so the agent still ends the seat holding its float and nothing else, which is what `demo_smoke` asserts. 47 scripts green, no failures, no warnings.
+
+  **The first attempt gave the demo bond its own payment history and `demo_smoke` caught it in a minute** (`expected 218.74 == 0.0`): paying that bond's holders before the demo runs leaves them holding cash, and a card going from 0.00 to its amount is the shot the film is built on. The rule, now written down: fill the register from instruments whose holders the demo never pays. An announced-only coupon on the demo bond was rejected for the same family of reason - `CouponSetup` checks `pending` first, so it would hide the governed coupon's release choice.
+
 - [ ] Post the benchmark to the Canton forum.
 - [ ] **Withdraw through `GovernableAction_ProposerCancel`** rather than archiving `SettleRunProposal` directly. Same outcome, but it is BitSafe's published interface rather than our template, it is what they assume we already do, and it would work for any `GovernableAction`. Needs a DevNet test, so it was deliberately not done on recording day. Then correct `decentralization.md`, which still implies the mechanism was missing when only the button was.
 - [ ] **Write up member-governed cancel for BitSafe** - retiring a proposal whose proposer can no longer act. They invited it in writing on 5 October: *"a bigger change, and we would welcome your write-up for it."* A third contribution, after the 9th.
