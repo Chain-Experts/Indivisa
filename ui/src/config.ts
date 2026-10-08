@@ -9,6 +9,11 @@ export interface Seat {
   tag: string;
   registry: Party;
   issuer: Party;
+  /** Every issuer the seat allocated, one per bond. Optional, because a seat
+   *  written by a seed image older than 9 October has a single issuer for all
+   *  three bonds and no such field; the issuer desk falls back to `[issuer]`
+   *  so an old seat still works, with one company's name on three bonds. */
+  issuers?: Party[];
   payingAgent: Party;
   holders: Party[];
   rulesCid: string;

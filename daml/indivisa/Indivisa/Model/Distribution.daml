@@ -6,8 +6,9 @@
 -- here at all; only the cash moves.
 module Indivisa.Model.Distribution where
 
+import DA.Foldable (forA_)
 import DA.List (unique)
-import DA.Optional (optionalToList)
+import DA.Optional (isSome, optionalToList)
 
 import Splice.Api.Token.MetadataV1 (ExtraArgs)
 import Splice.Api.Token.HoldingV2 qualified as V2
@@ -61,6 +62,31 @@ template DistributionRun
         extraArgs      : ExtraArgs
       controller runExecutors this
       do
+        -- The issuer's term, enforced at the payment rather than at
+        -- bookkeeping.
+        --
+        -- Guarding run CREATION would have been the obvious place and it is
+        -- the wrong one: a client that ignored the requirement would simply
+        -- create the run anyway, and nothing on the ledger would have
+        -- objected. Here the requirement is checked by the party-authority
+        -- rules at the moment money moves, which is the same place every
+        -- other guarantee in this model lands. A run built without the
+        -- approver it needed can exist; it cannot pay.
+        --
+        -- Only when there is a schedule to ask. The proofs and the scale
+        -- tests build runs directly, with no announcement behind them, and
+        -- a run with no schedule carries no issuer term to honour.
+        forA_ (optionalToList schedule) $ \scheduleCid -> do
+          s <- fetch scheduleCid
+          assertMsg
+            -- "cannot", not "may not", and the wording matches the console
+            -- word for word on purpose. "May not" reads in English as a
+            -- possibility as readily as a prohibition, and on a payment that
+            -- turns a term of the event into a maybe. "Cannot" is also what
+            -- is true here: this is the guard refusing, not advising.
+            ( "this coupon cannot be released by the paying agent alone: the issuer "
+                <> "required approvers on it, and this run names none" )
+            (s.requiresApprovers /= Some True || isSome approver)
         result <- exercise factoryCid V2.SettlementFactory_SettleBatch with
           settlement = runSettlementInfo this
           transferLegs = runTransferLegs this

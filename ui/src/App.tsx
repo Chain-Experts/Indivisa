@@ -15,8 +15,22 @@ import { completeSignIn, currentOperator, resumeSession, signIn, signOut, type O
 import { useAgent } from "./state/useAgent";
 import { useVote } from "./state/useVote";
 import { groupByNode, useHolders } from "./state/useHolders";
-import { Ledger } from "./ledger/client";
-import { book as readBook, announcements, type Coupon, type Announcement, type CouponTerms } from "./ledger/queries";
+import { Ledger, type Party } from "./ledger/client";
+import { book as readBook, announcements, issuerBonds, type Coupon, type Announcement, type CouponTerms, type IssuerBond } from "./ledger/queries";
+
+/**
+ * A ledger timestamp as something an operator can read.
+ *
+ * Falls back to the raw string on anything it cannot parse, because a refusal
+ * with an odd timestamp is still a refusal and the formatting must never be
+ * the thing that blanks the line.
+ */
+function whenRefused(at: string | undefined): string {
+  if (!at) return "at an unrecorded time";
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return at;
+  return d.toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
 
 // The console: one working header, one command, and four ways of looking at
 // the same run. Every figure is read from the participant that holds it;
@@ -359,103 +373,278 @@ function RegisterRail({ book, picked, onPick }: { book: Coupon[]; picked: string
  * about the isolation.
  */
 function IssuerDesk({
-  book,
-  isin,
-  announced,
+  config,
+  issuers,
+  seatIsin,
+  tag,
   busy,
   failure,
   onAnnounce,
 }: {
-  book: Coupon[];
-  isin: string;
-  announced: Announcement[];
+  config: Config;
+  issuers: Party[];
+  seatIsin: string;
+  tag: string;
   busy: boolean;
   failure: string | null;
-  onAnnounce: (terms: CouponTerms) => Promise<void>;
+  /** Resolves true only if the announcement actually landed on the ledger, so
+   *  the desk confirms what happened rather than what was attempted. */
+  onAnnounce: (issuerParty: Party, isin: string, currency: string, terms: CouponTerms) => Promise<boolean>;
 }) {
-  const bond = book.find((b) => b.isin === isin) ?? null;
+  // Read as the ISSUER, from the issuer's own node.
+  //
+  // This desk used to take its bond list and its announcements from the paying
+  // agent's read of the register, and to work out which bond you meant from
+  // the register rail on the left, which is the agent's own blotter. An issuer
+  // has no sight of the agent's book and no route to its node, so the desk was
+  // borrowing another company's view to answer a question of its own.
+  // `Instrument` is observed by the issuer and `CorporateAction` is signed by
+  // it, so both of these lists are genuinely the issuer's to read - and the
+  // instrument carries the currency, which was the last thing this screen
+  // needed the agent's panes for.
+  // A reader per issuer, because each bond has its own issuer since
+  // 9 October and an issuer observes only its own `Instrument` contracts.
+  // There is deliberately no party here that can see all three: the paying
+  // agent can, and borrowing its view is what this desk stopped doing.
+  const readers = useMemo(
+    () => issuers.map((p) => new Ledger(config.baseOf(config.participantOf(p)), p)),
+    [config, issuers],
+  );
+  const [bonds, setBonds] = useState<IssuerBond[]>([]);
+  const [announced, setAnnounced] = useState<Announcement[]>([]);
+  // Lifted out of the effect so the press can call it. The five-second tick is
+  // the background case; measured on this stack, a row took most of a minute
+  // to appear after a successful announcement, because the console starves its
+  // own timers (see "One poll, one reader"). Re-reading on the press puts the
+  // row up at the one moment anybody is looking at it, which is also the
+  // moment that is on camera.
+  const read = useCallback(() => {
+    void Promise.all(readers.map(issuerBonds))
+      .then((rs) => setBonds(rs.flat().sort((x, y) => (x.name < y.name ? -1 : 1))))
+      .catch(() => {});
+    void Promise.all(readers.map((r) => announcements(r)))
+      .then((rs) => setAnnounced(rs.flat().sort((x, y) => (x.paymentDate < y.paymentDate ? 1 : -1))))
+      .catch(() => {});
+  }, [readers]);
+  useEffect(() => {
+    read();
+    const t = setInterval(read, 5000);
+    return () => clearInterval(t);
+  }, [read]);
+
+  // The bond is chosen HERE, rather than inherited from a selection made on
+  // another desk. The old behaviour was a hazard dressed as a convenience: the
+  // announcement landed on whatever the rail happened to have selected, there
+  // is no undo, and a coupon announced on the wrong bond stays in the register
+  // until the stack is reseated.
+  const [isin, setIsin] = useState("");
+  const chosen = bonds.find((b) => b.isin === isin) ?? null;
+  useEffect(() => {
+    if (isin !== "" || bonds.length === 0) return;
+    setIsin(bonds.some((b) => b.isin === seatIsin) ? seatIsin : bonds[0].isin);
+  }, [bonds, isin, seatIsin]);
+
   const [rate, setRate] = useState("");
   const [recordDate, setRecordDate] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
-  const ready = rate.trim() !== "" && recordDate !== "" && paymentDate !== "";
+  // The issuer's release term. Default off, because releasing on the agent's
+  // own authority is the ordinary case and the main product; requiring more
+  // than one company is the exception an issuer chooses for a payment it
+  // wants guarded.
+  const [requiresApprovers, setRequiresApprovers] = useState(false);
+  // What was announced by the last press, if it landed.
+  //
+  // Without this the press said nothing at all: the button stayed enabled,
+  // the three values stayed in the boxes, and the only evidence was a row
+  // appearing in a table further down the page. Avraham hit it during the
+  // shoot and could not tell whether to press again. Pressing again was in
+  // fact harmless, because `announce` is idempotent on the bond and the two
+  // dates, but "harmless" is not the same as "legible".
+  const [just, setJust] = useState<{ name: string; paymentDate: string } | null>(null);
+  const ready = !!chosen && rate.trim() !== "" && recordDate !== "" && paymentDate !== "";
+  const nameOf = (i: string) => bonds.find((b) => b.isin === i)?.name ?? i;
 
   return (
     <div className="issuer">
       <div className="issuer-head">
         <h2>Announce an event</h2>
         <p>
-          You are at the <strong>issuer's</strong> desk. An issuer declares the terms of a coupon, a dividend or a
-          redemption and nothing else: it does not see the register, work out the entitlements or move the cash.
-          The paying agent picks the announcement up on its own screen.
+          You are at the <strong>issuer&apos;s</strong> desk. An issuer declares the terms of a coupon, a dividend
+          or a redemption and nothing else: it does not see the register, work out the entitlements or move the
+          cash. The paying agent picks the announcement up on its own screen.
+        </p>
+        <p>
+          <strong>There is no register on this desk, deliberately.</strong> The list of coupons on the paying
+          agent&apos;s screen is the agent&apos;s own book, and an issuer has no sight of who holds its bond and
+          no route to the agent&apos;s node. Everything here is read from the issuer&apos;s own participant: the
+          bonds it has issued, and the announcements it has made that the agent has not worked yet.
         </p>
       </div>
 
-      {bond ? (
+      {bonds.length === 0 ? (
+        <p className="action-note">Reading your bonds from your own node…</p>
+      ) : (
         <div className="issuer-form">
+          <div className="coupon-fields bond">
+            <label>
+              Bond
+              <select value={isin} onChange={(e) => { setIsin(e.target.value); setJust(null); }} id="ann-bond">
+                {bonds.map((b) => (
+                  <option key={b.isin} value={b.isin}>{b.name} · {b.isin}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {chosen ? (
+            <p className="action-note acting">
+              Announcing as <strong>{displayName(chosen.issuer, tag)}</strong>, the issuer of this bond. Each bond on
+              this desk has an issuer of its own, and the announcement is signed by that company and no other.
+            </p>
+          ) : null}
           <div className="coupon-fields">
             <label>
               Per unit
-              <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" id="ann-rate" />
+              <input value={rate} onChange={(e) => { setRate(e.target.value); setJust(null); }} inputMode="decimal" id="ann-rate" />
             </label>
             <label>
               Record date
-              <input value={recordDate} onChange={(e) => setRecordDate(e.target.value)} type="date" id="ann-record" />
+              <input value={recordDate} onChange={(e) => { setRecordDate(e.target.value); setJust(null); }} type="date" id="ann-record" />
             </label>
             <label>
               Payment date
-              <input value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} type="date" id="ann-payment" />
+              <input value={paymentDate} onChange={(e) => { setPaymentDate(e.target.value); setJust(null); }} type="date" id="ann-payment" />
             </label>
           </div>
+          {/* The one control on this screen with a consequence for somebody
+              else, and the reason it is on THIS screen. The approvers exist to
+              stop a paying agent releasing a payout unchecked, and until
+              indivisa 0.5.0 the agent ticked this box itself, which protected
+              nobody: the party being guarded against chose the guard. The cash
+              is the issuer's, the agent is a conduit, and CorporateAction is
+              the issuer's own contract. The term is set here, the agent reads
+              it, and the ledger refuses a settlement that ignores it. */}
+          <fieldset className="release" disabled={busy}>
+            <legend>How may this coupon be released?</legend>
+            <label className={requiresApprovers ? "release-opt" : "release-opt on"}>
+              <input
+                type="radio"
+                name="issuer-release"
+                id="issuer-release-agent"
+                checked={!requiresApprovers}
+                onChange={() => setRequiresApprovers(false)}
+              />
+              <span className="release-main">By the paying agent, on its own authority</span>
+              <span className="release-sub">
+                The ordinary case, and how a paying agent works today. It pays when it is ready.
+              </span>
+            </label>
+            <label className={requiresApprovers ? "release-opt on" : "release-opt"}>
+              <input
+                type="radio"
+                name="issuer-release"
+                id="issuer-release-approvers"
+                checked={requiresApprovers}
+                onChange={() => setRequiresApprovers(true)}
+              />
+              {/* "cannot", not "may not". "May not" carries two readings in
+                  English, a prohibition and a possibility, and on a payments
+                  screen the possibility reading is the wrong one entirely: it
+                  turns a term of the event into a maybe. "Cannot" is also the
+                  literally true statement, because the guard is on
+                  `Run_Settle` and the ledger refuses the settlement rather
+                  than merely discouraging it. */}
+              <span className="release-main">This coupon cannot be released by the paying agent alone</span>
+              <span className="release-sub">
+                A term of the event, recorded on this announcement and carried to the payment schedule. The
+                paying agent can read it and cannot change it, and the ledger refuses a settlement that names no
+                second authority against it. Who that second authority is, is the agent&apos;s own arrangement
+                and not yours to name.
+              </span>
+            </label>
+          </fieldset>
           <div className="coupon-actions">
             <button
               className="settle"
               disabled={busy || !ready}
-              onClick={() =>
-                void onAnnounce({ amountPerUnit: rate.trim(), recordDate, paymentDate, policy: "LargestRemainder" })
-              }
+              onClick={() => {
+                if (!chosen) return;
+                const announcing = { name: chosen.name, paymentDate };
+                void onAnnounce(chosen.issuer, chosen.isin, chosen.currency, {
+                  amountPerUnit: rate.trim(),
+                  recordDate,
+                  paymentDate,
+                  policy: "LargestRemainder",
+                  requiresApprovers,
+                }).then((landed) => {
+                  read();
+                  if (!landed) return;
+                  // Empty the form, because the next announcement is a
+                  // different coupon. The release choice is left as it is:
+                  // it is a visible radio, so nothing is hidden by keeping it.
+                  setJust(announcing);
+                  setRate("");
+                  setRecordDate("");
+                  setPaymentDate("");
+                });
+              }}
             >
-              {busy ? "Announcing…" : `Announce a coupon on ${bond.name}`}
+              {busy ? "Announcing…" : chosen ? `Announce a coupon on ${chosen.name}` : "Announce a coupon"}
             </button>
           </div>
+          {just ? (
+            <p className="action-note announced">
+              <strong>Announced.</strong> The {just.name} coupon paying {just.paymentDate} is on the ledger and is
+              now waiting on the paying agent, which can freeze the register and derive the schedule from it. It
+              is in the list below. Nothing further is needed from this desk.
+            </p>
+          ) : null}
           <p className="action-note">
             The rate is cash per unit of quantity, so 21.875 on a 1,000 denomination is a 4.375% semi-annual
             coupon. The record date decides who is paid; the payment date decides when, and names the run. How the
-            rounding is done is the paying agent's decision, not yours, so it is not on this form.
+            rounding is done is the paying agent&apos;s decision, not yours, so it is not on this form.
           </p>
           <p className="action-note disclosure">
-            <strong>A real issuer would not type these three figures.</strong> A bond's terms are fixed in its
-            prospectus at issuance, so the rate and the coupon dates for its whole life are already known: the
-            issuer's own system announces the next one from that calendar, and an operator confirms rather than
-            composes it. This form stands in for that calendar, and for the register feed that would carry the
-            instrument and the positions. The ledger steps it files are the real ones.
+            <strong>A real issuer would not type these three figures.</strong> A bond&apos;s terms are fixed in
+            its prospectus at issuance, so the rate and the coupon dates for its whole life are already known:
+            the issuer&apos;s own system announces the next one from that calendar, and an operator confirms
+            rather than composes it. This form stands in for that calendar, and for the register feed that would
+            carry the instrument and the positions. The ledger steps it files are the real ones.
           </p>
           {failure ? <p className="action-note warn">{failure}</p> : null}
         </div>
-      ) : null}
+      )}
 
       <div className="issuer-list">
         <h3>Waiting on the paying agent</h3>
         {announced.length ? (
           <table className="plain">
             <thead>
-              <tr><th>Pays</th><th>Record</th><th>Per unit</th><th>Kind</th></tr>
+              <tr><th>Bond</th><th>Pays</th><th>Record</th><th>Per unit</th><th>Kind</th><th>Release</th></tr>
             </thead>
             <tbody>
               {announced.map((a) => (
                 <tr key={a.cid}>
+                  <td>{nameOf(a.isin)}</td>
                   <td>{a.paymentDate}</td>
                   <td>{a.recordDate}</td>
                   <td className="num">{a.amountPerUnit}</td>
                   <td>{a.kind}</td>
+                  <td>
+                    {a.requiresApprovers ? (
+                      <span className="leg-status unauthorised">not by the agent alone</span>
+                    ) : (
+                      <span className="muted">the agent&apos;s own authority</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
           <p className="action-note">
-            Nothing waiting. An announcement leaves this list when the paying agent works it: entitling one
-            archives it and puts an entitlement schedule in its place, so the ledger keeps the result rather than
-            the request.
+            Nothing waiting, on any of your bonds. An announcement leaves this list when the paying agent works
+            it: entitling one archives it and puts an entitlement schedule in its place, so the ledger keeps the
+            result rather than the request.
           </p>
         )}
       </div>
@@ -465,6 +654,15 @@ function IssuerDesk({
 
 function Console({ config, operator, auth }: { config: Config; operator: Operator | null; auth: OperatorAuth | null }) {
   const { seat } = config;
+
+  // Every issuer this console holds a credential for, one per bond. A seat
+  // written before 9 October has a single issuer for all three bonds and no
+  // "issuers" field, so fall back to it rather than showing an empty desk:
+  // the result is simply the old behaviour, three bonds under one name.
+  const issuerParties = useMemo<Party[]>(
+    () => (seat.issuers?.length ? seat.issuers : [seat.issuer]),
+    [seat.issuers, seat.issuer],
+  );
 
   // The book: every bond on the agent's register, re-read with the page. The
   // seat file names only the one it created, and a paying agent keeps more
@@ -533,6 +731,7 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
     agent.ledgers.agent,
     agent.ledgers.registry,
     seat.rulesCid,
+    agent.state?.schedule?.cid ?? null,
     agent.refresh,
   );
   // Read before the votes below: one of them polls only while the approvers'
@@ -549,6 +748,10 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
     agent.ledgers.agent,
     agent.ledgers.registry,
     seat.rulesCid,
+    // Null on purpose: this handle never executes, and the schedule on the
+    // agent's screen may belong to a different coupon from the request the
+    // approvers are looking at.
+    null,
     agent.refresh,
   );
   const currency = agent.state?.instrument?.currency ?? picked?.currency ?? "USD";
@@ -714,21 +917,24 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
           )}
         </div>
       ) : null}
-      {desk === "holders" || desk === "approvers" ? null : (
+      {desk === "issuer" ? (
+        <div className="desk-page">
+          <IssuerDesk
+            config={config}
+            issuers={issuerParties}
+            seatIsin={seat.isin}
+            tag={seat.tag}
+            busy={agent.pressed.kind === "busy"}
+            failure={agent.pressed.kind === "failed" && agent.pressed.what === "coupon" ? agent.pressed.reason : null}
+            onAnnounce={agent.onAnnounce}
+          />
+        </div>
+      ) : null}
+      {desk === "holders" || desk === "approvers" || desk === "issuer" ? null : (
       <div className="with-rail">
       <RegisterRail book={book} picked={picked?.key ?? seat.runId} onPick={setPickedKey} />
       <div className="rail-main">
-      {desk === "issuer" ? (
-        <IssuerDesk
-          book={book}
-          isin={isin}
-          announced={allAnnounced}
-          busy={agent.pressed.kind === "busy"}
-          failure={agent.pressed.kind === "failed" && agent.pressed.what === "coupon" ? agent.pressed.reason : null}
-          onAnnounce={agent.onAnnounce}
-        />
-      ) : null}
-      {desk === "issuer" ? null : <RunBar config={config} agent={agent} run={run} voting={voting} />}
+      <RunBar config={config} agent={agent} run={run} voting={voting} />
 
       {settled && state?.receipt ? (
         <div className="outcome ok">
@@ -782,21 +988,47 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
             onWithdraw={agent.onWithdraw}
           />
         </div>
-      ) : agent.pressed.kind === "rejected" || (state?.rejections.length && !settled) ? (
+      ) : agent.pressed.kind === "rejected" ? (
+        /* A refusal this operator just caused, by pressing settle. Loud, because
+           it IS news: it happened a second ago and it is the atomicity
+           guarantee being demonstrated. */
         <div className="outcome bad">
           <div className="outcome-title">
             SETTLEMENT REJECTED · {legs.toLocaleString("en-GB")} payments requested · 0 executed · NO PARTIAL SETTLEMENT
           </div>
-          <div className="outcome-reason">
-            {agent.pressed.kind === "rejected" ? agent.pressed.reason : state?.rejections[0]?.reason}
+          <div className="outcome-reason">{agent.pressed.reason}</div>
+        </div>
+      ) : state?.rejections.length && !settled ? (
+        /* The same fact read back from the ledger rather than witnessed, and
+           deliberately much quieter.
+
+           `SettlementRejected` is never archived, so until 9 October the full
+           red banner above sat on the page from the first refused press until
+           that coupon settled. It survived a reload, which made a perfectly
+           correct page look as though something had just gone wrong, and it
+           made every clean pre-press shot of a coupon one-shot per seat.
+
+           The fix is not to hide the contract. An agent whose last attempt
+           failed has to know, and a page that forgot would be worse. What the
+           page could not support was the urgency: it had no idea when the
+           refusal happened. So it says when, and stops shouting. Same
+           discipline as the cancelled-run wording, and the same fault as the
+           stale approval button of 7 October. */
+        <div className="outcome stale">
+          <div className="outcome-line">
+            <strong>The last attempt on this run was refused</strong>
+            <span className="muted">· {whenRefused(state.rejections[0].attemptedAt)}</span>
+            <span className="muted">
+              · {state.rejections[0].legsRequested.toLocaleString("en-GB")} payments requested, none executed
+            </span>
           </div>
+          <div className="outcome-reason">{state.rejections[0].reason}</div>
         </div>
       ) : null}
 
-      {/* The agent's panes. The issuer sees none of this: it declares the
-          terms of an event and has no business in the register, the
-          schedule, the privacy readings or the settlement. */}
-      {desk === "issuer" ? null : (<>
+      {/* The agent's panes. The issuer reaches none of this, and no longer by
+          a guard here: its desk renders above, outside the rail layout
+          entirely, so there is nothing left for a check to exclude. */}
       <Tabs
         active={tab}
         onPick={setTab}
@@ -851,7 +1083,6 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
         {tab === "privacy" ? <Privacy config={config} currency={currency} byNode={byNode} isin={isin} runId={agent.runId} /> : null}
         {tab === "activity" ? <Activity agent={agent} run={run} /> : null}
       </main>
-      </>)}
       </div>
       </div>
       )}

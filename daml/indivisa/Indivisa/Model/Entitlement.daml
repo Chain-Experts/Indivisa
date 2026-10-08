@@ -41,6 +41,12 @@ template EntitlementSchedule
     policy        : RoundingPolicy
     entries       : [Entitlement]
     total         : Decimal
+    requiresApprovers : Optional Bool
+      -- ^ Copied from the `CorporateAction` this schedule was derived from,
+      -- so the issuer's term survives the announcement being archived.
+      -- `CorporateAction_Entitle` is consuming: once a coupon is entitled the
+      -- announcement is gone and the schedule is the only record of what the
+      -- issuer asked for. Added in 0.5.0, last field.
   where
     signatory payingAgent
 

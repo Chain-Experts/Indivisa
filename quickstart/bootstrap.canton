@@ -30,7 +30,7 @@ val dars = Seq(
   "/indivisa/dars/splice-api-token-transfer-events-v2-1.0.0.dar",
   "/indivisa/dars/splice-token-standard-utils-2.0.0.dar",
   "/indivisa/dars/splice-test-token-v2-1.0.1.dar",
-  "/indivisa/dars/indivisa-0.4.0.dar",
+  "/indivisa/dars/indivisa-0.6.0.dar",
   // BitSafe's governance engine, our proposal template on top of it, and
   // the generic batch-settlement module offered back to them.
   "/indivisa/dars/governance-action-v1-0.1.0.dar",

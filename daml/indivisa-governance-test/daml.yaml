@@ -11,7 +11,7 @@ dependencies:
   - daml-stdlib
   - daml-script
 data-dependencies:
-  - ../indivisa/.daml/dist/indivisa-0.4.0.dar
+  - ../indivisa/.daml/dist/indivisa-0.6.0.dar
   - ../indivisa-test/.daml/dist/indivisa-test-0.1.0.dar
   - ../indivisa-governance/.daml/dist/indivisa-governance-v0-0.1.0.dar
   - ../governance-settlement/.daml/dist/governance-settlement-v0-0.1.0.dar

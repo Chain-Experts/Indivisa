@@ -7,7 +7,7 @@ In a deployment the paying agent, the issuer, each holder and each approver are 
 | Desk | What it is for |
 |---|---|
 | **Paying agent** (`/`) | The register down the left, one row per coupon rather than per bond, because a bond pays twice a year for ten years and the unit of work is the event. Then the figures, the coupon set-up, the release choice and the settle. Four tabs below it read the selected coupon four ways. |
-| **Issuer** (`/issuer`) | Declares the terms of an event and nothing else. No holders, no schedule, no settlement, because an issuer has no business in any of them. |
+| **Issuer** (`/issuer`) | Declares the terms of an event and nothing else. No holders, no schedule, no settlement and **no register**, because an issuer has no business in any of them and no sight of the paying agent's book. Its bond list and its outstanding announcements are read from the issuer's own participant, and it picks the bond on its own form. |
 | **Holder** (`/holders`) | Every holder on the register, and a page each read **as that holder from that holder's own node**: their cash, their positions, whether their settlement instructions are on file, and the one action a holder ever takes. |
 | **Approver** (`/approvers`) | The members of the decentralised party, the threshold read from its own governance rules, and where each member stands on the request in front of it. A member confirms, and can **take that agreement back** for as long as the settlement has not executed, which drops the count and makes the payment unreleasable again. There is no reject button, because a threshold does not need one: a member that does not want the payment simply never confirms. |
 

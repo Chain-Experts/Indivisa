@@ -81,6 +81,7 @@ entitlementSchedule_ensuresTheTotal = do
         policy = LargestRemainder
         entries = [entry]
         total = 20.0
+        requiresApprovers = None
   _ <- submit agent $ createCmd schedule
   submitMustFail agent $ createCmd schedule with total = 20.01
   submitMustFail agent $ createCmd schedule with entries = []

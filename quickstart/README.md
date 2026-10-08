@@ -37,7 +37,7 @@ What you see before them, so you can tell progress from a stall:
 | `Container indivisa-canton Healthy` | the network is ready for a client | |
 | `==> Waiting for the ledger` … `all five participants are answering` | | seconds |
 | `==> Seating N holders` | each holder is a party, and a party takes a few seconds. Nothing prints while it works | 2 min for 8, 4 min for 20 |
-| `seated N holders; schedule total …` | the two bonds, the register, the onboarding and two coupons exist. One holder has given no settlement instructions, and the second coupon is deliberately left without a run | |
+| `seated N holders; schedule total …` | three bonds, the register, the onboarding and four coupons exist, three of them already paid. One holder has given no settlement instructions, so the first press will be refused | |
 | `==> Preparing the first coupon. One holder has not provided settlement instructions` | the cash is set aside and every payment the agent can authorise is authorised | ~20 s |
 | `==> Ready…` | go to the browser | |
 
@@ -48,7 +48,7 @@ The terminal stays busy after that: Canton and the web server keep running in th
 A bond pays its coupon. The paying agent must pay every holder. Every figure on the page is read live from the participant that holds it. There is no application server in between, and nothing is cached:
 
 - **The header**: the bond, the event, how many holders, the total due, and how many allocations are on the ledger out of how many the batch needs. That count is one more than the number of holders: each holder authorises its own receipt, and the paying agent adds one send allocation carrying every leg. Token Standard V2 wants both sides of every leg. Below it, the one button.
-The register down the left is a book, not a single bond: three instruments and six coupons, four of them finished. Every paid row is a real settlement with its own receipt and update id, so open one and check it rather than taking the word for it. One row is only **announced**, which is the state before anybody has frozen the register, and it is the one the paying agent's own panel exists to clear.
+The register down the left is a book, not a single bond: three instruments and four coupons, three of them finished. Every paid row is a real settlement with its own receipt and update id, so open one and check it rather than taking the word for it. The fourth is the one you are about to work.
 
 - **Holders**: a card for every holder, all twenty, each read from the participant that hosts it, showing its units, what it is due and what cash it has. Search them, filter by leg state, sort by amount. Each card carries one of four states, and between them they say whose move it is: **NO DETAILS** (the holder has given no settlement instructions, so nothing on the agent's screen can fix it), **TO AUTHORISE** (instructions on file, the payment not authorised yet, which the agent does alone), **READY** (authorised and waiting for the batch) and **PAID**. The same four are counted on one line beside the button, so you can see where a run stands without opening a tab.
 - **Click any card.** The page asks that holder's node, as that holder and nobody else, what it will hand over: its own position, agreement, allocation and cash, and then six counts of what that node holds about *anyone else*. They are zero, and they stay zero through the settlement. Not filtered. Never delivered.
@@ -76,7 +76,7 @@ To start over: `docker compose down -v && docker compose up`. The demo is seated
 
 Everything above settles on the paying agent pressing one button. A coupon worth millions should not. The package can also run the same settlement **governed**: a party that no single company controls, which acts only when two of its three members agree.
 
-This is BitSafe's Decentralization Manager, unmodified, running as three approver nodes beside the ledger. Nothing above changes, and **nothing has to be torn down**: the same seat carries a second coupon on the same bond, six months later, deliberately left without a run. The coupon you just paid was released by the paying agent alone; this one will need the approvers.
+This is BitSafe's Decentralization Manager, unmodified, running as three approver nodes beside the ledger. Nothing above changes, and **nothing has to be torn down**: you declare the next coupon on the same bond and give it a term the first one did not have. The coupon you just paid was released by the paying agent alone; this one will not be.
 
 **If you started with `--profile govern` at the top, you have everything already** and there is nothing to run here: the approvers were built while the holders were being seated. If you started with the plain `docker compose up`, add them now, to the stack you already have:
 
@@ -86,9 +86,25 @@ docker compose --profile govern up -d
 
 That is the whole terminal, and it is the same command either way. It builds the decentralised party itself: three nodes, a peer mesh, and rules at a threshold of two. Everything after this is on the page.
 
-Open http://localhost:8080. In the **register** down the left, the first bond now has two coupons: the one you paid, marked **paid**, and the next one, marked **entitled**. Click the second one.
+Open http://localhost:8080. The bond you just paid has **no next coupon yet**, because declaring one is not the paying agent's to do. Go to the **Issuer** desk and declare it.
 
-The panel offers the one step left: **Create the run for <date>**. The entitlements are already on the ledger, because the seat froze the register on that coupon's record date and derived the schedule from it.
+That desk has no register down the side, deliberately: an issuer has no sight of the paying agent's book and no route to its node. It reads its own participant instead, so the Bond field lists only bonds it has actually issued, and it tells you which company it is announcing as. Each of the three bonds here has an issuer of its own.
+
+Check the Bond field reads **Northwind Rail 4.375% 2031**, then a rate of 21.875, a record date of 2028-05-15, a payment date of 2028-06-01, and then the term that matters:
+
+> **This coupon cannot be released by the paying agent alone.**
+
+Press **Announce**. That is the whole point of the issuer having a desk at all. The approvers exist to stop a paying agent releasing a payout unchecked, so the agent deciding whether that applies would protect nobody: the party being guarded against would be choosing the guard. The issuer's money, the issuer's term.
+
+Now go back to **Paying agent**. The new coupon is in the register, and the panel states the term read-only - the agent can read it and cannot change it.
+
+Press **Freeze the register, derive the schedule, create the run**. Three ledger steps in order, and worth knowing what they are:
+
+- **Freeze the register.** A register changes every day as people buy and sell, and a coupon is owed to whoever held the bond on one particular day. A copy is taken on that day and kept, so trading afterwards cannot change who is paid. The industry calls that day the record date.
+- **Derive the schedule.** Units times the rate per unit, rounded to the cent, for every holder in that frozen copy. The word doing the work is *derive*: it is computed on the ledger from the announcement and the snapshot rather than typed in or uploaded, so you can check the arithmetic instead of trusting it.
+- **Create the run.** The payment, leg for leg from the schedule, carrying the issuer's term.
+
+`Run_Settle` refuses a settlement that names no second authority against that term, so nothing on the paying agent's screen can waive it.
 
 Above that button is the choice that matters, and the page makes you look at it: **how should this run be released?** Either the paying agent alone, which settles the moment it presses the button, or the approvers must agree. The second option is selected by itself here because this stack has a decentralised party, and it is filled in from that party's live governance rules rather than from anything we wrote in this document: the threshold it shows (**2 of 3**) and the three member names under it are read from the rules contract through the approvers' own software. Press **Create the run**, then **Authorise the N remaining payments**.
 

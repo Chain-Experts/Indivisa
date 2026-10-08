@@ -16,7 +16,7 @@ $dars = @(
   "daml\dars\splice-api-token-transfer-events-v2-1.0.0.dar",
   "daml\dars\splice-api-token-allocation-request-v2-1.0.0.dar",
   "daml\dars\splice-test-token-v2-1.0.1.dar",
-  "daml\indivisa\.daml\dist\indivisa-0.4.0.dar",
+  "daml\indivisa\.daml\dist\indivisa-0.6.0.dar",
   "daml\governance-settlement\.daml\dist\governance-settlement-v0-0.1.0.dar",
   "daml\indivisa-governance\.daml\dist\indivisa-governance-v0-0.1.0.dar"
 ) | ForEach-Object { Join-Path $root $_ }

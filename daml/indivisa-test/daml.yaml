@@ -12,7 +12,7 @@ dependencies:
 # splice-test-token-v2 is the CIP's reference cash token. It is a test fixture
 # here: the model never depends on it, only the proofs do.
 data-dependencies:
-  - ../indivisa/.daml/dist/indivisa-0.4.0.dar
+  - ../indivisa/.daml/dist/indivisa-0.6.0.dar
   - ../dars/splice-api-token-metadata-v1-1.0.0.dar
   - ../dars/splice-api-token-holding-v2-1.0.0.dar
   - ../dars/splice-api-token-allocation-v2-1.0.0.dar

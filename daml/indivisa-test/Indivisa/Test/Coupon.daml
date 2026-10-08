@@ -24,6 +24,94 @@ import Indivisa.Test.Fixtures
 coupon_endToEnd : Script ()
 coupon_endToEnd = couponWith Ide
 
+
+-- | The issuer's term, honoured at the settlement.
+--
+-- **This is `coupon_endToEnd` above with exactly one field changed**:
+-- `requiresApprovers = Some True` on the announcement instead of `None`.
+-- Everything else is identical, which is what makes the refusal evidence
+-- about that field and nothing else (the rule from 6 October, after BitSafe
+-- found a negative test of ours passing for the wrong reason).
+--
+-- What it proves is the point of the 0.5.0 model change. The approvers exist
+-- to stop a paying agent releasing a payout unchecked, and until 0.5.0 the
+-- paying agent decided for itself whether that applied - so the party being
+-- guarded against chose the guard. Now the issuer sets the term on its own
+-- `CorporateAction`, it travels to the schedule, and `Run_Settle` refuses a
+-- run that names no approver against it. The agent can build such a run. It
+-- cannot pay with it.
+coupon_issuerTermNeedsAnApprover : Script ()
+coupon_issuerTermNeedsAnApprover = do
+  (cast, cash) <- setupOn Ide
+  fund cash cast.payingAgent 1000.0
+  agreements <- onboardAll cast.payingAgent cash [cast.alice]
+
+  let isin = "XS9999999999"
+  instrumentCid <- submit cast.payingAgent $ createCmd Instrument with
+    registrar = cast.payingAgent
+    issuer = cast.issuer
+    isin
+    name = "Issuer Term 4% 2031"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.04
+    maturity = date 2031 Dec 1
+  positionCids <- forA [(cast.alice, 10.0)] $ \(holder, quantity) ->
+    submit cast.payingAgent $ createCmd Position with
+      registrar = cast.payingAgent
+      holder
+      isin
+      quantity
+
+  let recordDate = date 2027 Nov 15
+      paymentDate = date 2027 Dec 1
+  actionCid <- submit cast.issuer $ createCmd CorporateAction with
+    issuer = cast.issuer
+    payingAgent = cast.payingAgent
+    isin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 20.0
+    recordDate
+    paymentDate
+    -- The one variable.
+    requiresApprovers = Some True
+  awaitVisible cast.payingAgent actionCid
+
+  snapshotCid <- submit cast.payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate
+    positionCids
+  scheduleCid <- submit cast.payingAgent $ exerciseCmd actionCid CorporateAction_Entitle with
+    snapshotCid
+    policy = LargestRemainder
+  Some schedule <- queryContractId cast.payingAgent scheduleCid
+
+  -- The term survived the announcement being archived. `CorporateAction_Entitle`
+  -- is consuming, so the schedule is the only record of what the issuer asked
+  -- for by the time anybody settles.
+  schedule.requiresApprovers === Some True
+
+  -- `runFromSchedule` names no approver, which is the state a paying agent
+  -- reaches by ignoring the term.
+  let run = runFromSchedule cast.registry scheduleCid schedule
+  run.approver === None
+  runCid <- submit cast.payingAgent $ createCmd run
+  sendCid <- allocateSend cast.payingAgent cash run
+  receiptCids <- allocateReceipts cast.payingAgent cash run agreements
+
+  -- Building it was allowed. Paying with it is not.
+  r <- trySettle cast.payingAgent cash runCid (sendCid :: receiptCids)
+  refusedBy "cannot be released by the paying agent alone" r
+
+  -- Nobody was paid, which is the part that matters.
+  awaitBalance cash cast.alice 0.0
+  -- And the agent's cash is still locked behind the send allocation: 200.00
+  -- of the 1,000 committed to a settlement that was refused. A committed
+  -- allocation is ended by its executors, not by a failed attempt, which is
+  -- why cancelling a prepared run is not the agent's to do alone. The term
+  -- stops the payment; it does not tidy up after it.
+  awaitBalance cash cast.payingAgent 800.0
+
 couponWith : Topology -> Script ()
 couponWith topology = do
   (cast, cash) <- setupOn topology
@@ -62,6 +150,7 @@ couponWith topology = do
     amountPerUnit = 17.1234
     recordDate
     paymentDate
+    requiresApprovers = None
   awaitVisible cast.payingAgent actionCid
 
   -- Record date: freeze the register, derive the schedule on-ledger.

@@ -28,6 +28,25 @@ template CorporateAction
       -- per-holder products is the schedule's job.
     recordDate    : Date
     paymentDate   : Date
+    requiresApprovers : Optional Bool
+      -- ^ The issuer's term: True means this payment cannot be released by
+      -- the paying agent alone. Added in 0.5.0, last field: Smart Contract
+      -- Upgrade appends.
+      --
+      -- **Why the issuer and not the agent.** The approvers protect against a
+      -- paying agent releasing a payout unchecked, and until 0.5.0 the agent
+      -- itself decided whether that protection applied - which is no
+      -- protection at all, because the party being guarded against chose the
+      -- guard. The cash is the issuer's, the paying agent is a conduit, and
+      -- this contract is already signed by the issuer and only observed by
+      -- the agent. So the requirement belongs here, where the agent can read
+      -- it and cannot change it.
+      --
+      -- **A Bool and not a Party, deliberately.** An issuer stipulates that
+      -- one party may not release the money alone. WHICH second party
+      -- satisfies that is the agent's deployment, not the issuer's business,
+      -- and naming a specific decentralised party on a specific ledger in a
+      -- term of the event would be wrong. `Run_Settle` is where the two meet.
   where
     signatory issuer
     observer payingAgent
@@ -60,6 +79,7 @@ template CorporateAction
           policy
           entries
           total
+          requiresApprovers
 
     choice CorporateAction_Cancel : ()
       controller issuer

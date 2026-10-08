@@ -168,6 +168,16 @@ button.settle:focus-visible { outline: 3px solid var(--ledger-soft); outline-off
 /* Waiting on a vote is neither a success nor a refusal, and should not be
    coloured as either: nothing has gone wrong and nothing has happened. */
 .outcome.wait { background: #f4f1e6; color: #6b5a2a; border-color: #ddd2ae; }
+/* A refusal read back from the ledger rather than one that just happened. It
+   keeps the fact and drops the alarm: no full-width red, no shouting title,
+   and it carries the time so an operator can tell history from news. */
+.outcome.stale { background: var(--panel); color: var(--muted); }
+/* The issuer's press said nothing at all until 9 October. Green because the
+   ledger has done something, which is what green means here. */
+.action-note.announced { background: var(--ledger-soft); color: var(--ledger); border: 1px solid #b9dcc9; border-radius: var(--radius); padding: 8px 12px; }
+.action-note.announced strong { color: var(--ledger); }
+.outcome.stale strong { color: var(--ink); font-weight: 600; }
+.outcome.stale .outcome-reason { opacity: 0.75; }
 
 /* Withdrawing sits inside the amber strip, so it inherits that colour: a
    quiet link until it is armed, and only then a red button. Nothing about
@@ -413,6 +423,9 @@ ul.others .count.leak { color: var(--bad); }
   border-radius: 8px; background: #fff; color: inherit; min-width: 10ch;
 }
 .coupon-fields input:focus-visible, .coupon-fields select:focus-visible { outline: 2px solid var(--ledger); outline-offset: 1px; }
+/* The bond is its own row on the issuer's form: a different kind of decision
+   from the three figures under it, and the one with no undo. */
+.coupon-fields.bond select { min-width: min(46ch, 100%); }
 /* Who may release the payment. Two options, both spelled out, because the
    checkbox this replaced named nobody and made the one choice with a
    consequence outside this company look like a preference. */
@@ -554,3 +567,12 @@ button.rowlink {
 }
 button.rowlink:hover { text-decoration: underline; }
 button.rowlink:focus-visible { outline: 2px solid var(--ledger); outline-offset: 2px; border-radius: 3px; }
+
+/* The issuer's release term, as the paying agent reads it: a statement, not a
+   control. The agent cannot change it, so it must not look like something it
+   could change. */
+.release.stated { display: grid; gap: 6px; }
+.release-head { font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.release.stated .release-main { font-size: 0.92rem; }
+.release.required { border-left: 3px solid var(--ledger); }
+.release-sub.warn { color: var(--bad); }

@@ -23,7 +23,7 @@ COPY daml/dars/splice-api-token-metadata-v1-1.0.0.dar \
      daml/dars/governance-action-v1-0.1.0.dar \
      daml/dars/governance-core-v1-0.1.0.dar \
      dars/
-COPY daml/indivisa/indivisa-0.4.0.dar dars/
+COPY daml/indivisa/indivisa-0.6.0.dar dars/
 # Our governance layer and the generic module under it. Vetted here so the
 # judge stack carries the whole product, not just the ungoverned path.
 COPY daml/indivisa-governance/indivisa-governance-v0-0.1.0.dar dars/

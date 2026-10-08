@@ -30,6 +30,12 @@ export function useVote(
   agent: Ledger,
   registry: Ledger,
   rulesCid: ContractId,
+  /** The schedule this run pays, disclosed to the approvers' node on execute
+   *  because `Run_Settle` fetches it and that node does not host the paying
+   *  agent. Null where the handle never executes, which is the approvers'
+   *  own desk: it votes on whatever request is outstanding and has no way to
+   *  know which coupon that is. */
+  scheduleCid: ContractId | null,
   refreshLedger: () => Promise<void>,
 ): VoteHandle {
   const [v, setV] = useState<Vote | null>(null);
@@ -72,7 +78,7 @@ export function useVote(
     if (!party || !proposalCid || !v?.canExecute) return;
     setExecuting({ kind: "busy" });
     try {
-      const disclosed = await executeDisclosures(agent, registry, rulesCid);
+      const disclosed = await executeDisclosures(agent, registry, rulesCid, scheduleCid);
       await execute(party, v, proposalCid, disclosed);
       setExecuting({ kind: "idle" });
     } catch (e) {
@@ -82,7 +88,7 @@ export function useVote(
       await refreshLedger();
       await poll();
     }
-  }, [agent, party, poll, proposalCid, refreshLedger, registry, rulesCid, v]);
+  }, [agent, party, poll, proposalCid, refreshLedger, registry, rulesCid, scheduleCid, v]);
 
   return { vote: v, proposalCid, error, executing, onExecute };
 }

@@ -35,10 +35,12 @@ export interface AgentHandle {
   onCancelRun: () => Promise<void>;
   /** Create the allocations the run is still missing. Safe to press twice. */
   onPrepare: () => Promise<void>;
-  /** Announce, freeze, derive and create the run, in that order. Each step is
-   *  idempotent, so this both sets a coupon up from scratch and finishes one
-   *  that stopped half way. `approver` set makes the run governed. */
-  onAnnounce: (terms: CouponTerms) => Promise<void>;
+  /** File an announcement, signed by the bond's own issuer. The caller passes
+   *  the issuer, the bond and its currency, because the ISSUER desk reads all
+   *  three from the issuers' own nodes; nothing here comes from the agent's
+   *  view of the register, and since 9 October the three bonds have three
+   *  different issuers, so there is no single party this could assume. */
+  onAnnounce: (issuerParty: Party, isin: string, currency: string, terms: CouponTerms) => Promise<boolean>;
   /** The agent's three steps on an announcement the issuer has already made. */
   onEntitle: (actionCid: string, recordDate: string, paymentDate: string, policy: string, approver: Party | null) => Promise<void>;
   /** The last step on a coupon whose schedule exists but whose run does not. */
@@ -63,13 +65,6 @@ export function useAgent(config: Config, isin: string, selectedRunId: string): A
   const registry = useMemo(
     () => new Ledger(config.baseOf(config.participantOf(seat.registry)), seat.registry),
     [config, seat.registry],
-  );
-  // The announcement is the issuer's contract, not the agent's. The console
-  // can submit it only because it is a harness holding every credential, and
-  // the panel that offers it says so.
-  const issuer = useMemo(
-    () => new Ledger(config.baseOf(config.participantOf(seat.issuer)), seat.issuer),
-    [config, seat.issuer],
   );
 
   // The run the panes read. It follows the operator's choice of bond, and
@@ -232,22 +227,30 @@ export function useAgent(config: Config, isin: string, selectedRunId: string): A
   // company: `CorporateAction` is signed by the issuer and only observed by
   // the agent. Keeping it on the agent's console made one screen act for two
   // firms, which is not what a deployment looks like and is not what we claim.
-  const onAnnounce = useCallback(async (terms: CouponTerms) => {
-    const currency = state?.instrument?.currency;
-    if (!currency) {
-      setPressed({ kind: "failed", what: "coupon", reason: "the instrument has not been read yet; wait for the page to load" });
-      return;
-    }
+  // The bond and its currency are arguments now, and they come from the
+  // issuer's own read of its own `Instrument` contracts. Two things went with
+  // that change. The announcement no longer lands on whatever bond another
+  // desk happened to have selected, which had no undo. And the currency no
+  // longer comes from `agentState`, so announcing in the first seconds after
+  // opening the desk stopped failing with "the instrument has not been read
+  // yet" - a race against a poll this screen does not own.
+  const onAnnounce = useCallback(async (issuerParty: Party, bondIsin: string, currency: string, terms: CouponTerms) => {
+    // Built per call rather than memoised, because which issuer signs depends
+    // on which bond was picked and each bond has its own. A Ledger is a base
+    // URL and a party, so this costs nothing.
+    const issuer = new Ledger(config.baseOf(config.participantOf(issuerParty)), issuerParty);
     setPressed({ kind: "busy" });
     try {
-      await announce(issuer, agent.party, isin, "Coupon", currency, terms);
+      await announce(issuer, agent.party, bondIsin, "Coupon", currency, terms);
       setPressed({ kind: "idle" });
+      return true;
     } catch (e) {
       setPressed({ kind: "failed", what: "coupon", reason: `could not announce the event: ${reasonOf(e)}` });
+      return false;
     } finally {
       refresh();
     }
-  }, [agent, isin, issuer, refresh, state]);
+  }, [agent, config, refresh]);
 
   // A schedule that has no run yet.
   //

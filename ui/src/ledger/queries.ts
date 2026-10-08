@@ -31,7 +31,7 @@ export interface HoldingView {
 
 export interface AgentState {
   instrument: { name: string; isin: string; currency: string; couponRate: number; maturity: string } | null;
-  schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string; kind: string } | null;
+  schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string; kind: string; requiresApprovers: boolean } | null;
   run: { cid: ContractId; legs: number; total: number; approver: Party | null } | null;
   allocations: { cid: ContractId; authorizer: Party | null; legs: number; isSend: boolean }[];
   /** Holders who have given this agent settlement instructions for the cash
@@ -139,6 +139,8 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
           recordDate: sched.createdEvent.createArgument.recordDate,
           paymentDate: sched.createdEvent.createArgument.paymentDate,
           policy: sched.createdEvent.createArgument.policy,
+          // The issuer's term, surviving the announcement it came from.
+          requiresApprovers: sched.createdEvent.createArgument.requiresApprovers === true,
           // The run id is derived from it, so the page has to carry it.
           kind: sched.createdEvent.createArgument.kind,
         }
@@ -279,10 +281,12 @@ export async function executeDisclosures(
   agent: Ledger,
   registry: Ledger,
   rulesCid: ContractId,
+  scheduleCid: ContractId | null,
 ): Promise<{ contract_id: string; blob: string }[]> {
-  const [rules, holdings] = await Promise.all([
+  const [rules, holdings, schedules] = await Promise.all([
     registry.templates(T.tokenRules, true),
     agent.interfaces(I.holding, true),
+    scheduleCid ? agent.templates(T.schedule, true) : Promise.resolve([] as ActiveContract[]),
   ]);
   const out: { contract_id: string; blob: string }[] = [];
 
@@ -296,6 +300,31 @@ export async function executeDisclosures(
     out.push({ contract_id: c.createdEvent.contractId, blob: c.createdEvent.createdEventBlob });
   }
   if (out.length < 2) throw new Error("no locked holding found for the paying agent; was the run prepared?");
+
+  // The schedule, and ONLY the one this run pays.
+  //
+  // `Run_Settle` fetches it to honour the issuer's release term, which arrived
+  // in 0.5.0. On an ungoverned settle the agent submits from its own
+  // participant and already has it. On a GOVERNED execute the submitter is the
+  // decentralised party, on its own node, which does not host the paying agent
+  // and cannot resolve an `EntitlementSchedule` signed by it: the ledger
+  // answers CONTRACT_NOT_FOUND for a contract that is perfectly alive one
+  // participant away. Measured 9 October, with `indivisa-approvers` on
+  // `alice` and the agent on `agent`.
+  //
+  // One schedule, not every schedule the agent holds. The executor already
+  // sees every leg of the batch it is settling, which is the standard's own
+  // design, but a schedule names every holder and amount for its coupon, and
+  // handing over the ones for coupons it is not settling would give away
+  // exactly what this product exists to keep.
+  if (scheduleCid) {
+    const s = schedules.find((c) => c.createdEvent.contractId === scheduleCid);
+    // Loud rather than silent: omitting it produces a CONTRACT_NOT_FOUND from
+    // deep inside the Decentralization Manager, minutes later, naming a raw
+    // contract id and nothing else. That is how this was found.
+    if (!s) throw new Error("this run's entitlement schedule was not found on the paying agent's participant, so the approvers' node could not be given it");
+    out.push({ contract_id: s.createdEvent.contractId, blob: s.createdEvent.createdEventBlob });
+  }
   return out;
 }
 
@@ -544,6 +573,17 @@ export interface CouponTerms {
   recordDate: string;
   paymentDate: string;
   policy: "LargestRemainder" | "RoundHalfUpResidualToIssuer";
+  /** The issuer's term: true means this payment cannot be released by the
+   *  paying agent alone.
+   *
+   *  **It is the issuer's and not the agent's, and that is the whole point.**
+   *  The approvers exist to stop a paying agent releasing a payout unchecked,
+   *  and until `indivisa` 0.5.0 the agent ticked a box on its own screen to
+   *  decide whether that applied - so the party being guarded against chose
+   *  the guard. The cash is the issuer's and `CorporateAction` is the
+   *  issuer's contract, so the requirement lives there, the agent reads it,
+   *  and `Run_Settle` refuses a run that names no approver against it. */
+  requiresApprovers: boolean;
 }
 
 /** `runFromSchedule`'s derivation, in the one place the page has to agree with
@@ -565,35 +605,83 @@ const findAction = (cs: ActiveContract[], isin: string, t: CouponTerms) =>
  *  by definition one still waiting on the agent. */
 export interface Announcement {
   cid: ContractId;
+  /** The bond. The agent's panel knows it already, because it asked about one
+   *  bond; the issuer's own list spans its whole book and has to show it. */
+  isin: string;
   kind: string;
   amountPerUnit: number;
   recordDate: string;
   paymentDate: string;
+  /** The issuer's term, which the agent reads and cannot change. */
+  requiresApprovers: boolean;
 }
 
 /**
- * The announcements on one bond that are still waiting on the agent, newest
- * first.
+ * Announcements still waiting on the agent, newest first. One bond with an
+ * `isin`, the reader's whole book without one.
  *
- * The agent observes these; it does not make them. This is the list the
- * agent's set-up panel offers, and a bond with nothing on it is a bond
- * waiting on the issuer rather than on the agent.
+ * **Read by either side, and they want different scopes.** The agent's set-up
+ * panel asks about the bond on screen, so it passes an `isin`, and a bond with
+ * nothing on it is one waiting on the issuer rather than on the agent. The
+ * issuer's own desk asks about everything it has announced and passes none:
+ * `CorporateAction` is signed by the issuer, so those are its own contracts on
+ * its own node, and an issuer filtering its outstanding announcements by a
+ * bond somebody else happened to select was how that list came up empty after
+ * a successful announcement.
  */
-export async function announcements(agent: Ledger, isin: string): Promise<Announcement[]> {
-  const actions = await agent.templates(T.action);
+export async function announcements(reader: Ledger, isin?: string): Promise<Announcement[]> {
+  const actions = await reader.templates(T.action);
   return actions
-    .filter((c) => c.createdEvent.createArgument.isin === isin)
+    .filter((c) => isin === undefined || c.createdEvent.createArgument.isin === isin)
     .map((c) => {
       const a = c.createdEvent.createArgument;
       return {
         cid: c.createdEvent.contractId,
+        isin: a.isin,
         kind: a.kind,
         amountPerUnit: num(a.amountPerUnit),
         recordDate: a.recordDate,
         paymentDate: a.paymentDate,
+        requiresApprovers: a.requiresApprovers === true,
       };
     })
     .sort((x, y) => (x.paymentDate < y.paymentDate ? 1 : -1));
+}
+
+/** One of an issuer's own bonds, as its own node reports it. `issuer` is the
+ *  party that must sign an announcement on it: each bond has its own since
+ *  9 October, so the desk reads several issuers and has to carry which is
+ *  which rather than assume one. */
+export interface IssuerBond { isin: string; name: string; currency: string; issuer: Party }
+
+/**
+ * The bonds this issuer has issued, read from the ISSUER's participant.
+ *
+ * `Instrument` is signed by the registrar and carries `observer issuer`, so
+ * these are contracts the issuer can genuinely see for itself. The issuer desk
+ * used to get its bond list from the paying agent's read of the register,
+ * which is the agent's blotter: another company's view, and one no issuer
+ * would have a route to in a deployment.
+ *
+ * It returns the `currency` too, which matters more than it looks. That was
+ * the last thing the announce step took from `agentState`, so the issuer desk
+ * now needs nothing at all from the agent's polls - no borrowed view, and no
+ * race against a poll it does not own.
+ */
+export async function issuerBonds(issuer: Ledger): Promise<IssuerBond[]> {
+  const instruments = await issuer.templates(T.instrument);
+  return instruments
+    .filter((c) => c.createdEvent.createArgument.issuer === issuer.party)
+    .map((c) => {
+      const a = c.createdEvent.createArgument;
+      return {
+        isin: a.isin as string,
+        name: a.name as string,
+        currency: a.currency as string,
+        issuer: a.issuer as Party,
+      };
+    })
+    .sort((x, y) => (x.name < y.name ? -1 : 1));
 }
 
 /**
@@ -633,6 +721,7 @@ export async function announce(
           amountPerUnit: terms.amountPerUnit,
           recordDate: terms.recordDate,
           paymentDate: terms.paymentDate,
+          requiresApprovers: terms.requiresApprovers,
         },
       },
     },

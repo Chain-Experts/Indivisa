@@ -97,22 +97,13 @@ function CancelRun({ busy, onCancel }: { busy: boolean; onCancel: () => Promise<
  * Whether those members are independent operators is a property of the
  * deployment, and the DevNet run is where that was shown.
  */
-function Release({
-  approver,
-  governed,
-  onChange,
-  busy,
-}: {
-  approver: Party;
-  governed: boolean;
-  onChange: (governed: boolean) => void;
-  busy: boolean;
-}) {
+function Release({ approver, required }: { approver: Party | null; required: boolean }) {
   const [seats, setSeats] = useState<Committee | null>(null);
   // Read once per party. A committee changes only through a self-governance
   // action, which is rare and never while this panel is open; polling it would
   // be a request every two seconds for a number that does not move.
   useEffect(() => {
+    if (!approver) return;
     let live = true;
     committee(approver)
       .then((c) => { if (live) setSeats(c); })
@@ -130,43 +121,68 @@ function Release({
     return h.length > 24 ? h.slice(0, 12) + "…" : h;
   };
 
+  if (!required) {
+    return (
+      <div className="release stated">
+        <div className="release-head">Release</div>
+        <span className="release-main">By this paying agent, on its own authority</span>
+        <span className="release-sub">
+          The issuer set no release term on this coupon, so the agent settles it when it is ready. That is the
+          ordinary case and the main product.
+        </span>
+      </div>
+    );
+  }
   return (
-    <fieldset className="release" disabled={busy}>
-      <legend>How should this run be released?</legend>
-      <label className={governed ? "release-opt" : "release-opt on"}>
-        <input type="radio" name="release" id="release-alone" checked={!governed} onChange={() => onChange(false)} />
-        <span className="release-main">The paying agent alone</span>
-        <span className="release-sub">
-          It settles the moment the agent presses the button. One company decides, which is how a paying agent
-          works today and is the main product.
-        </span>
-      </label>
-      <label className={governed ? "release-opt on" : "release-opt"}>
-        <input type="radio" name="release" id="release-approvers" checked={governed} onChange={() => onChange(true)} />
-        <span className="release-main">
-          The approvers must agree
-          {seats ? <span className="release-th">{seats.threshold} of {seats.members.length}</span> : null}
-        </span>
-        <span className="release-sub">
-          The run names <strong>{hint(approver)}</strong> as a second executor, so the agent cannot settle it
-          alone. The button files a request instead, and the settlement executes only once{" "}
-          {seats ? <strong>{seats.threshold}</strong> : "enough"} of its members have confirmed, each on their own
-          Decentralization Manager node.
-        </span>
-        {seats ? (
-          <span className="release-members">
-            {seats.members.map((m) => (
-              <span key={m} className="release-member">{hint(m)}</span>
-            ))}
+    <div className="release stated required">
+      <div className="release-head">Release, as the issuer required it</div>
+      <span className="release-main">
+        {/* "cannot", not "may not": Avraham, 9 October. "May not" reads two
+            ways in English, as a prohibition and as a possibility, and on a
+            payments screen the possibility reading turns a term of the event
+            into a maybe. "Cannot" is also the true statement here, because
+            `Run_Settle` refuses the settlement outright. The issuer's form
+            carries the identical sentence, so the agent reads back exactly
+            what the issuer set. */}
+        This coupon cannot be released by the paying agent alone
+        {seats ? <span className="release-th">{seats.threshold} of {seats.members.length}</span> : null}
+      </span>
+      <span className="release-sub">
+        <strong>A term of the event, not a setting on this screen.</strong> The issuer recorded it on the
+        announcement, it travelled to the payment schedule, and the ledger refuses a settlement that names no
+        second authority against it. Nothing the paying agent does here can waive it.
+      </span>
+      {approver ? (
+        <>
+          <span className="release-sub">
+            This deployment satisfies it with <strong>{hint(approver)}</strong>, a party on the ledger that no
+            single company controls. The run names it as a second executor, so the settle button files a request
+            instead of paying, and the settlement executes only once{" "}
+            {seats ? <strong>{seats.threshold}</strong> : "enough"} of its members have confirmed, each on their
+            own node.
           </span>
-        ) : null}
-        <span className="release-sub quiet">
-          {seats
-            ? "Three member parties, each confirming on its own Decentralization Manager node, and the paying agent operates one of them - so this is not an outside veto, it is a payment no single member can release on its own. Whether those nodes are run by separate companies is a property of the deployment rather than of this control."
-            : "The approvers own manager is not answering, so the membership cannot be shown here. The choice is still real: the run would name the party as a second executor either way."}
+          {seats ? (
+            <span className="release-members">
+              {seats.members.map((m) => (
+                <span key={m} className="release-member">{hint(m)}</span>
+              ))}
+            </span>
+          ) : null}
+          <span className="release-sub quiet">
+            Who satisfies the issuer's term is the agent's own arrangement, which is why the issuer names a
+            requirement and not a party. The paying agent operates one of these members, so this is not an
+            outside veto: it is a payment no single member can release on its own. Whether those nodes are run by
+            separate companies is a property of the deployment rather than of this control.
+          </span>
+        </>
+      ) : (
+        <span className="release-sub warn">
+          <strong>This deployment has no second authority configured, so this coupon cannot be paid here.</strong>{" "}
+          The issuer requires one and the ledger will refuse the settlement without it. That is the term working:
+          an agent with no approvers cannot quietly release a payment the issuer guarded.
         </span>
-      </label>
-    </fieldset>
+      )}
+    </div>
   );
 }
 
@@ -193,15 +209,15 @@ function CouponSetup({
   busy: boolean;
   open: boolean;
   pending: Announcement[];
-  /** A coupon already entitled and not yet prepared: the run is all it needs. */
-  scheduleWithoutRun: { paymentDate: string; total: number } | null;
+  /** A coupon already entitled and not yet prepared: the run is all it needs,
+   *  and the issuer's release term travels with it. */
+  scheduleWithoutRun: { paymentDate: string; total: number; requiresApprovers: boolean } | null;
   approver: Party | null;
   onEntitle: (actionCid: string, recordDate: string, paymentDate: string, policy: string, approver: Party | null) => Promise<void>;
   onCreateRun: (approver: Party | null) => Promise<void>;
 }) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [policy, setPolicy] = useState("LargestRemainder");
-  const [governed, setGoverned] = useState(!!approver);
 
   // No toggle. The panel shows what the SELECTED coupon still needs, and the
   // register rail is how you move between coupons. It used to collapse to a
@@ -215,18 +231,9 @@ function CouponSetup({
       <div className="action-second">
         {scheduleWithoutRun ? (
           <>
-            {approver ? (
-              <Release approver={approver} governed={governed} onChange={setGoverned} busy={busy} />
-            ) : (
-              <span className="action-note quiet">
-                This run will be released by the paying agent alone, because this deployment has no approvers.
-                If you started the stack with <code>--profile govern</code>, the choice appears here by itself
-                once their party has been built, which takes a minute or two after the holders are seated. No
-                reload needed.
-              </span>
-            )}
+            <Release approver={approver} required={!!scheduleWithoutRun?.requiresApprovers} />
             <div className="coupon-actions">
-              <button className="settle fix" disabled={busy} onClick={() => void onCreateRun(governed ? approver : null)}>
+              <button className="settle fix" disabled={busy} onClick={() => void onCreateRun(scheduleWithoutRun.requiresApprovers ? approver : null)}>
                 {busy ? "Creating…" : `Create the run for ${scheduleWithoutRun.paymentDate}`}
               </button>
             </div>
@@ -263,12 +270,12 @@ function CouponSetup({
           </select>
         </label>
       </div>
-      {approver ? <Release approver={approver} governed={governed} onChange={setGoverned} busy={busy} /> : null}
+      <Release approver={approver} required={pick.requiresApprovers} />
       <div className="coupon-actions">
         <button
           className="settle fix"
           disabled={busy}
-          onClick={() => void onEntitle(pick.cid, pick.recordDate, pick.paymentDate, policy, governed ? approver : null)}
+          onClick={() => void onEntitle(pick.cid, pick.recordDate, pick.paymentDate, policy, pick.requiresApprovers ? approver : null)}
         >
           {busy ? "Working…" : "Freeze the register, derive the schedule, create the run"}
         </button>
@@ -532,7 +539,7 @@ export function RunBar({
             busy={pressed.kind === "busy"}
             open={!state?.run}
             pending={run.pending}
-            scheduleWithoutRun={!state?.run && state?.schedule ? { paymentDate: state.schedule.paymentDate, total: state.schedule.total } : null}
+            scheduleWithoutRun={!state?.run && state?.schedule ? { paymentDate: state.schedule.paymentDate, total: state.schedule.total, requiresApprovers: state.schedule.requiresApprovers } : null}
             approver={config.decmanParty}
             onEntitle={agent.onEntitle}
             onCreateRun={agent.onCreateRun}

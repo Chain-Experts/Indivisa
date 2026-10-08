@@ -9,7 +9,8 @@
 #   There is no `prepare` or `propose` here any more. Both were hardwired to
 #   the seat's own schedule, which is the FIRST coupon, and that one is
 #   settled by the paying agent alone before anybody reaches the governed
-#   demonstration. The page sets the second coupon up and files the request;
+#   demonstration. The issuer declares the governed coupon on the page and the
+#   agent files the request from there;
 #   `confirm`, `execute` and `status` below find that proposal on the ledger
 #   whoever filed it.
 #   govern.sh propose   the paying agent files the proposal
@@ -396,7 +397,7 @@ case "${1:-seat}" in
     else
       cid=$(ledger_proposal_cid || true)
     fi
-    [ -n "$cid" ] || die "nothing has been proposed yet. Set the second coupon up on the page and press \"Ask the approvers to settle N legs\"."
+    [ -n "$cid" ] || die "nothing has been proposed yet. Declare the next coupon on the Issuer desk with the term that it may not be released by the paying agent alone, work it on the agent desk, and press \"Ask the approvers to settle N legs\"."
 
     # The engine identifies a domain action by proposal_cid. The action field
     # is required by the request schema and ignored in this mode, so it

@@ -30,7 +30,7 @@ module Indivisa.Test.Demo where
 import DA.Assert ((===))
 import DA.Date (date, Month(..))
 import DA.Foldable (forA_)
-import DA.List ((!!), maximumBy)
+import DA.List ((!!))
 import DA.Set qualified as Set
 import DA.Text qualified as T
 import DA.Time (convertRelTimeToMicroseconds, subTime)
@@ -139,6 +139,14 @@ data DemoSeat = DemoSeat
     tag           : Text
     registry      : Party
     issuer        : Party
+      -- ^ The DEMO bond's issuer, and the issuer desk's default selection.
+      -- Kept as a single party for every caller that works the demo bond.
+    issuers       : [Party]
+      -- ^ Every issuer this seat allocated, one per bond. The issuer desk
+      -- reads its bonds as each of these in turn, because an issuer observes
+      -- only its own `Instrument` contracts and no issuer can see another's.
+      -- Before 9 October there was one issuer for all three bonds and this
+      -- field did not exist.
     payingAgent   : Party
     holders       : [Party]
     rulesCid      : ContractId TestTokenV2.TokenRules
@@ -192,6 +200,7 @@ paidCoupon registry issuer payingAgent cash instrumentCid isin positionCids agre
     amountPerUnit = rate
     recordDate
     paymentDate
+    requiresApprovers = None
   awaitVisible payingAgent actionCid
   snapshotCid <- submit payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
     recordDate
@@ -219,6 +228,23 @@ demo_seat args = do
   registry    <- named "USD-Registry" "registry"
   issuer      <- named "Northwind-Rail" "agent"
   payingAgent <- named "Meridian-Paying-Agent" "agent"
+
+  -- **One issuer party per bond**, because a paying agent serves several
+  -- issuers and the console now names the one it is acting as.
+  --
+  -- A single issuer used to sign the announcements on all three bonds, so the
+  -- party hinted `Northwind-Rail` was the issuer of record for "Pentland
+  -- Water 3.25% 2029" as well. Nothing on screen showed it while the issuer
+  -- desk inherited its bond from the paying agent's register rail. It became
+  -- visible the moment that desk started listing bonds of its own
+  -- (9 October): three companies' bonds offered under one company's name.
+  --
+  -- They sit on the agent's participant, exactly as the single issuer did.
+  -- The five-participant topology and the privacy claim are about holders,
+  -- and giving issuers nodes of their own would change the participant count
+  -- the film quotes to demonstrate nothing this seat is about.
+  bIssuer     <- named "Pentland-Water" "agent"
+  cIssuer     <- named "Caledon-Energy" "agent"
   holders     <- forA [1..n] $ \i -> named (holderName i) (holderParticipant i)
 
   -- The cash: a V2 instrument administered by the registry.
@@ -274,6 +300,7 @@ demo_seat args = do
     amountPerUnit = 21.875
     recordDate
     paymentDate
+    requiresApprovers = None
   awaitVisible payingAgent actionCid
 
   -- Record date: freeze, entitle.
@@ -285,50 +312,26 @@ demo_seat args = do
     policy = LargestRemainder
   Some schedule <- queryContractId payingAgent scheduleCid
 
-  -- The NEXT coupon on the same bond, entitled and deliberately left without
-  -- a run.
+  -- **The governed coupon is NOT seeded, and that is a recording decision.**
   --
-  -- This is what lets one stack carry both demonstrations. Until 8 October the
-  -- governed path needed a stack of its own, because a DistributionRun is
-  -- created once per run id and an approver cannot be added afterwards, so a
-  -- seat that created the run had already decided the answer. INDIVISA_GOVERNED
-  -- existed only to stop the seat before that point. Now the page creates runs
-  -- itself, with or without an approver, and a run id is derived per bond and
-  -- payment date - so the second coupon is simply a second run id, and the
-  -- operator decides at the panel which way it is released.
+  -- Until 9 October the seat announced and entitled this bond's next coupon,
+  -- so the governed demonstration started from a schedule that was already
+  -- on the ledger. That worked, and it made the film weaker: the issuer's
+  -- release term is the answer to "who protects against the paying agent",
+  -- and a term nobody is seen setting is a term the viewer takes on trust.
   --
-  -- A bond paying semi-annually, so the next payment date is six months on.
-  -- Entitled but not prepared, which is exactly the state the agent's panel
-  -- calls "the run is the one step left".
+  -- So the issuer announces it on camera instead, with the term, and the
+  -- agent then freezes, derives, creates the run, authorises and asks. One
+  -- coupon, four companies, every step visible and nothing pre-cooked.
   --
-  -- **Every holder has settlement instructions by the time this one is
-  -- worked**, because working it comes after the first coupon, where the last
-  -- holder provides them. That matters: on a governed run the ask button is
-  -- disabled while anything is outstanding (5 October), since the approvers
-  -- decide whether a payment goes out and should not be asked to approve one
-  -- that cannot execute.
-  let recordDate2 = date 2028 May 15
-      paymentDate2 = date 2028 Jun 1
-  action2Cid <- submit issuer $ createCmd CorporateAction with
-    issuer
-    payingAgent
-    isin = demoIsin
-    kind = Coupon
-    currency = "USD"
-    amountPerUnit = 21.875
-    recordDate = recordDate2
-    paymentDate = paymentDate2
-  awaitVisible payingAgent action2Cid
-  -- Instrument_Snapshot is nonconsuming, so the same instrument and the same
-  -- positions serve both record dates. The register is a plain Daml template
-  -- and settling a coupon does not touch it.
-  snapshot2Cid <- submit payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
-    recordDate = recordDate2
-    positionCids
-  schedule2Cid <- submit payingAgent $ exerciseCmd action2Cid CorporateAction_Entitle with
-    snapshotCid = snapshot2Cid
-    policy = LargestRemainder
-  Some schedule2 <- queryContractId payingAgent schedule2Cid
+  -- Two consequences worth knowing before anybody re-seeds it. Every holder
+  -- has settlement instructions by the time that coupon is worked, because
+  -- working it comes after the first coupon where the last holder provides
+  -- them - which is what lets the approvers be asked at all, since the ask
+  -- button is disabled while anything is outstanding (5 October). And the
+  -- agent is funded for one coupon plus a float, so a second settlement on
+  -- this bond needs `fund` again; `govern-devnet.ps1 fund` exists for exactly
+  -- that reason.
 
   -- A second bond, and its coupon is already paid.
   --
@@ -349,7 +352,7 @@ demo_seat args = do
   bAgreements <- onboardAll payingAgent cash bHolders
   bInstrumentCid <- submit payingAgent $ createCmd Instrument with
     registrar = payingAgent
-    issuer
+    issuer = bIssuer
     isin = pentlandIsin
     name = "Pentland Water 3.25% 2029"
     currency = "USD"
@@ -363,7 +366,7 @@ demo_seat args = do
       isin = pentlandIsin
       quantity = if i == 1 then 400.0 else 125.0
   -- Its coupon, paid, so the register opens with something finished on it.
-  _ <- paidCoupon registry issuer payingAgent cash bInstrumentCid pentlandIsin
+  _ <- paidCoupon registry bIssuer payingAgent cash bInstrumentCid pentlandIsin
          bPositionCids bAgreements 16.25 (date 2027 May 15) (date 2027 Jun 1)
 
   -- A second coupon on the second bond, so the register shows a history
@@ -377,7 +380,7 @@ demo_seat args = do
   -- holders; the fill has to come from instruments whose holders the demo
   -- never pays. **A register row is cheap, a holder's starting balance is
   -- not.**
-  _ <- paidCoupon registry issuer payingAgent cash bInstrumentCid pentlandIsin
+  _ <- paidCoupon registry bIssuer payingAgent cash bInstrumentCid pentlandIsin
          bPositionCids bAgreements 16.25 (date 2026 Nov 15) (date 2026 Dec 1)
 
   -- A third instrument, with two holders of its own: one coupon paid and one
@@ -395,7 +398,7 @@ demo_seat args = do
   cAgreements <- onboardAll payingAgent cash cHolders
   cInstrumentCid <- submit payingAgent $ createCmd Instrument with
     registrar = payingAgent
-    issuer
+    issuer = cIssuer
     isin = caledonIsin
     name = "Caledon Energy 5.125% 2033"
     currency = "USD"
@@ -408,25 +411,44 @@ demo_seat args = do
       holder
       isin = caledonIsin
       quantity = if i == 1 then 250.0 else 90.0
-  _ <- paidCoupon registry issuer payingAgent cash cInstrumentCid caledonIsin
+  _ <- paidCoupon registry cIssuer payingAgent cash cInstrumentCid caledonIsin
          cPositionCids cAgreements 25.625 (date 2027 Feb 15) (date 2027 Mar 1)
-  -- Announced only: no snapshot, no schedule, no run, nothing funded.
-  _ <- submit issuer $ createCmd CorporateAction with
-    issuer
-    payingAgent
-    isin = caledonIsin
-    kind = Coupon
-    currency = "USD"
-    amountPerUnit = 25.625
-    recordDate = date 2027 Aug 15
-    paymentDate = date 2027 Sep 1
+  -- **No announced-only coupon here any more, and the reason is the film.**
+  --
+  -- This bond used to carry one, so that the register showed the state
+  -- between an issuer declaring an event and the agent freezing the register
+  -- for it. That was worth a row when nothing else demonstrated it. It stopped
+  -- being worth one on 9 October, when the issuer began announcing the
+  -- governed coupon on camera: that press *creates* the announced state, far
+  -- more vividly than a seeded row ever showed it.
+  --
+  -- And leaving it would have been a trap. Two rows reading "announced" during
+  -- the take, one of them scenery, is a mis-click in the middle of the one
+  -- sequence that cannot be repeated without a reseat. Exactly one row is
+  -- announced at any point in the film now, and it is always the one being
+  -- worked.
 
-  -- Fund the agent for the two coupons this seat leaves WORKABLE, plus a
-  -- float. Everything already paid funded itself with exactly what it paid,
-  -- so the float is the only surplus and `demo_smoke` asserts it at the end.
-  -- The seat once funded one run's worth and the agent ran out mid-demo
-  -- (1 October), so this is counted rather than estimated. SIMULATED cash.
-  fund cash payingAgent (schedule.total + schedule2.total + 10000.0)
+  -- Fund the agent for **two** coupons on this bond, plus a float. SIMULATED
+  -- cash.
+  --
+  -- Two, not one, and the second one is the whole reason this line is
+  -- counted rather than estimated. The seat prepares the first coupon; the
+  -- issuer announces the next one **on camera**, and that one needs funding
+  -- too. Same bond, same positions, same rate, so it costs the same again.
+  --
+  -- **There is no fund button on the page**, deliberately: topping up a
+  -- paying agent is treasury's job and not a settlement console's. So an
+  -- under-funded agent does not fail visibly at the moment of funding. It
+  -- fails later, when the send allocation cannot be created, and the screen
+  -- offers "Set the agent's own cash aside" with no cash to set aside. That
+  -- is exactly what happened on 9 October during a rehearsal, and it is the
+  -- same fault as 1 October: the seat funded one run's worth and the agent
+  -- ran out mid-demo. **Count the coupons the seat leaves workable, and fund
+  -- for all of them.**
+  --
+  -- Everything already paid funded itself with exactly what it paid, so the
+  -- float is the only surplus, and `demo_smoke` asserts that at the end.
+  fund cash payingAgent (schedule.total * 2.0 + 10000.0)
 
   let run = runFromSchedule registry scheduleCid schedule
       seat = DemoSeat with
@@ -434,6 +456,7 @@ demo_seat args = do
         tag
         registry
         issuer
+        issuers = [issuer, bIssuer, cIssuer]
         payingAgent
         holders
         rulesCid
@@ -637,21 +660,46 @@ demo_smoke = do
     Rejected {..} -> fail ("expected settlement, got: " <> reason)
   forA_ schedule.entries $ \e -> awaitBalance cash e.holder e.amount
 
-  -- The SECOND coupon on the same bond, which is what lets one stack carry
-  -- both demonstrations. The seat entitled it and deliberately left it
-  -- without a run; this is the page's work, done here as a script.
-  --
-  -- The schedule is found by payment date rather than carried in the seat,
-  -- which is the same thing the page has to do: a bond has several coupons
-  -- and `EntitlementSchedule` for this ISIN is now more than one contract.
-  live <- query @EntitlementSchedule seat.payingAgent
-  let mine = [ (cid, s) | (cid, s) <- live, s.isin == seat.isin ]
-      next = maximumBy (\a b -> compare (snd a).paymentDate (snd b).paymentDate) mine
-  (schedule2Cid, schedule2) <- pure next
+  -- The next coupon on the same bond, **announced here rather than seeded**,
+  -- which is the order the film follows: the issuer declares the event with
+  -- its release term, and only then does the agent do anything.
+  positions <- query @Position seat.payingAgent
+  let thisBond = [ cid | (cid, pos) <- positions, pos.isin == seat.isin ]
+      recordDate2 = date 2028 May 15
+      paymentDate2 = date 2028 Jun 1
+  action2Cid <- submit seat.issuer $ createCmd CorporateAction with
+    issuer = seat.issuer
+    payingAgent = seat.payingAgent
+    isin = seat.isin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 21.875
+    recordDate = recordDate2
+    paymentDate = paymentDate2
+    -- The issuer's term, and the only party who may set it.
+    requiresApprovers = Some True
+  awaitVisible seat.payingAgent action2Cid
+
+  -- The agent's three steps on somebody else's announcement: freeze the
+  -- register on the record date, derive the schedule from that snapshot and
+  -- the announcement, and the run follows from the schedule leg for leg.
+  snapshot2Cid <- submit seat.payingAgent $ exerciseCmd seat.instrumentCid Instrument_Snapshot with
+    recordDate = recordDate2
+    positionCids = thisBond
+  schedule2Cid <- submit seat.payingAgent $ exerciseCmd action2Cid CorporateAction_Entitle with
+    snapshotCid = snapshot2Cid
+    policy = LargestRemainder
+  Some schedule2 <- queryContractId seat.payingAgent schedule2Cid
+
+  -- The term survived the announcement being archived: `CorporateAction_Entitle`
+  -- is consuming, so by the time anybody settles, the schedule is the only
+  -- record of what the issuer asked for.
+  schedule2.requiresApprovers === Some True
   assertMsg "the second coupon is a later payment date than the first"
     (schedule2.paymentDate > schedule.paymentDate)
+
   -- Every holder has settlement instructions by now, including the one who
-  -- provided them above, so this coupon needs nothing from anybody.
+  -- provided them above, so this coupon needs nothing from any holder.
   agreements <- query @PaymentAgreement seat.payingAgent
   let forThisCash = [ (a.holder, cid) | (cid, a) <- agreements, a.instrument == cash.instrument ]
       run2 = runFromSchedule seat.registry schedule2Cid schedule2
@@ -659,15 +707,34 @@ demo_smoke = do
       forThisRun = [ (h, cid) | (h, cid) <- forThisCash, h `elem` recipients ]
   length forThisRun === 12
   assertMsg "the second coupon has a run id of its own" (run2.runId /= seat.runId)
+
+  -- **And it cannot be paid by the agent alone**, because the issuer said so.
+  -- Everything the agent controls is in place - every holder's instructions,
+  -- every authorisation, the cash funded - and the ledger refuses it anyway.
+  -- That is the whole 0.5.0 change in one assertion: the protection is not
+  -- the agent's to waive.
+  run2.approver === None
+  -- No `fund` here: the seat funds both coupons on this bond, because the
+  -- page has no way to top the agent up and the issuer announces the second
+  -- one from the page. Funding again would leave a surplus the closing
+  -- assertion would have to absorb, which is how that assertion stops meaning
+  -- anything.
   run2Cid <- submit seat.payingAgent $ createCmd run2
   send2 <- allocateSend seat.payingAgent cash run2
   receipts2 <- allocateReceipts seat.payingAgent cash run2 forThisRun
-  (_, _) <- settle seat.payingAgent cash run2Cid (send2 :: receipts2)
-  -- Paid twice, so each holder now holds both coupons.
-  forA_ schedule.entries $ \e -> awaitBalance cash e.holder (e.amount * 2.0)
+  r2 <- trySettle seat.payingAgent cash run2Cid (send2 :: receipts2)
+  refusedBy "cannot be released by the paying agent alone" r2
 
-  -- The float, and only the float: the seat funds the agent for every coupon
-  -- it leaves workable, and all of them have now settled.
+  -- Paid once, not twice: this coupon is waiting on the approvers, and the
+  -- governed settlement itself is `Indivisa.Governance`'s to test.
+  forA_ schedule.entries $ \e -> awaitBalance cash e.holder e.amount
+
+  -- The float, exactly. The seat funded both coupons on this bond and a
+  -- float; the first coupon spent its share; and the second one's share is now
+  -- **locked** behind the send allocation the refused attempt created, because
+  -- a committed allocation outlives a failed settlement by design. So what is
+  -- left unlocked is the float and nothing else, which is the one number worth
+  -- asserting: it goes wrong if any coupon is funded twice or not at all.
   awaitBalance cash seat.payingAgent 10000.0
 
   -- Nothing about the run reached a holder's view.

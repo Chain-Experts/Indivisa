@@ -193,6 +193,7 @@ announced = do
     amountPerUnit = 17.1234
     recordDate
     paymentDate
+    requiresApprovers = None
   pure Announced with ..
 
 -- | The announcement record that `announced` created, so a negative test can
@@ -207,3 +208,4 @@ couponFor f = CorporateAction with
   amountPerUnit = 17.1234
   recordDate = f.recordDate
   paymentDate = f.paymentDate
+  requiresApprovers = None

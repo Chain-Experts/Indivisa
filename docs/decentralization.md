@@ -160,7 +160,7 @@ The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
 
 - **Real:** the governance engine (BitSafe's, unmodified), the threshold refusal, the settlement through `Run_Settle`, the audit trail, every number on screen.
 - **Simulated:** the cash (`TestTokenV2`, the reference Token Standard V2 asset, with our own registry party); the holders; and, in the sandbox, operator independence, as section 4 says.
-- **Runnable by anyone, since 24 Sep:** the governed settlement is in `quickstart/`. One command, `docker compose --profile govern up -d`, brings up the ledger, the console and three Decentralization Manager nodes, and the seat carries a second coupon on the same bond for them to release. Everything after that is on the page: it files the request, the approvers desk holds the vote, and the page executes once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust, and no terminal after the first command: see `quickstart/README.md`.
+- **Runnable by anyone, since 24 Sep:** the governed settlement is in `quickstart/`. One command, `docker compose --profile govern up -d`, brings up the ledger, the console and three Decentralization Manager nodes. The coupon they release is one the **issuer declares on the page**, with the term that it cannot be released by the paying agent alone; the seat deliberately does not seed it, because a term nobody is seen setting is a term taken on trust. Everything after that is on the page: it files the request, the approvers desk holds the vote, and the page executes once the threshold is met. One confirmation is refused by the ledger; two settle. No account, no toolchain, no sandbox of ours to trust, and no terminal after the first command: see `quickstart/README.md`.
 - **Real, on DevNet, with BitSafe as the second operator (29 September).** A coupon settled through the decentralised party at 2 of 2: our confirmation and theirs, on their own node.
 
   | | |
@@ -183,6 +183,18 @@ The Daml proofs need no network: `cd daml/indivisa-governance-test && dpm test`.
   On DevNet, where their manager is wired to Keycloak and the operator signs in, the card and its Confirm button are there, and that is the clip in our recording. So the mechanism is theirs and it works; what the judges' package lacks is an identity provider, and asking a judge to stand one up to watch a threshold work is not a reasonable price.
 
   Hence the button, on each member's page, posting to that member's own node. The page says in as many words that it would not exist in a deployment.
+
+**Who decides that a payment needs more than one authority, since the paying agent deciding would protect nobody.** Until `indivisa` 0.5.0 the agent did, on its own screen, which is not a control: the party being guarded against chose the guard. The term now belongs to the **issuer**, on its own `CorporateAction`, for the reason that the cash is the issuer's and the paying agent is a conduit.
+
+| Step | Carries the term |
+| --- | --- |
+| The issuer announces the event | `CorporateAction.requiresApprovers` |
+| The agent freezes the register and derives the schedule | `CorporateAction_Entitle` copies it to `EntitlementSchedule` |
+| The agent settles | `Run_Settle` refuses when the term is set and the run names no approver |
+
+It is a **Bool and not a party**: an issuer stipulates that one party may not release the money alone, while which second party satisfies that is the agent's own arrangement. And the check sits on the settlement rather than on run creation, so a client that ignored the term can build the run and still cannot pay with it. The paying agent's own screen states the term read-only.
+
+**What this does not claim.** In a deployment the more common arrangement is the agent's own standing policy, a threshold amount set by its risk function rather than by the operator releasing the payment. That is the same one-field decision in the model, and a real deployment would likely have both. The issuer's term is the clearest way to show on screen that the party releasing the money is not the party deciding whether it may be released alone.
 
 **What a member can and cannot do, since "can an approver reject it?" is the first question anyone asks.** There are four moves and only three of them exist, which is a property of thresholds rather than a gap:
 
