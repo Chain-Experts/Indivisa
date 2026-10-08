@@ -9,7 +9,7 @@ import type { Party } from "../ledger/client";
  * about anyone else. It stays at zero while the batch settles, which is the
  * moment it would leak if it were going to.
  */
-export function Privacy({ config, currency, byNode }: { config: Config; currency: string; byNode: Map<string, Party[]> }) {
+export function Privacy({ config, currency, byNode, isin, runId }: { config: Config; currency: string; isin: string; runId: string; byNode: Map<string, Party[]> }) {
   return (
     <div className="privacy">
       <p className="grid-note">
@@ -27,7 +27,7 @@ export function Privacy({ config, currency, byNode }: { config: Config; currency
       ) : null}
       <div className="nodes">
         {[...byNode.entries()].map(([node, parties]) => (
-          <NodeCard key={node} config={config} currency={currency} node={node} parties={parties} />
+          <NodeCard key={node} config={config} currency={currency} node={node} parties={parties} isin={isin} runId={runId} />
         ))}
       </div>
     </div>
@@ -35,14 +35,14 @@ export function Privacy({ config, currency, byNode }: { config: Config; currency
 }
 
 function NodeCard({
-  config, currency, node, parties,
+  config, currency, node, parties, isin, runId,
 }: {
-  config: Config; currency: string; node: string; parties: Party[];
+  config: Config; currency: string; node: string; parties: Party[]; isin: string; runId: string;
 }) {
   // One holder speaks for the node: the answer is a property of what this
   // participant was sent, and every holder on it gets the same one. Any
   // individual holder can still be checked from its own card.
-  const probe = useNodeProbe(config, currency, parties[0], true);
+  const probe = useNodeProbe(config, currency, parties[0], true, isin, runId);
   return (
     <section className="node-card">
       <header className="node-head">

@@ -16,6 +16,8 @@ export type Executing = { kind: "idle" } | { kind: "busy" } | { kind: "failed"; 
 
 export interface VoteHandle {
   vote: Vote | null;
+  /** The request being voted on, so the approvers desk can confirm it. */
+  proposalCid: ContractId | null;
   /** Null until the first poll answers; a string when DecMan cannot be reached. */
   error: string | null;
   executing: Executing;
@@ -82,7 +84,7 @@ export function useVote(
     }
   }, [agent, party, poll, proposalCid, refreshLedger, registry, rulesCid, v]);
 
-  return { vote: v, error, executing, onExecute };
+  return { vote: v, proposalCid, error, executing, onExecute };
 }
 
 function decManHint(e: unknown): string {

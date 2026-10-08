@@ -1,20 +1,33 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Money } from "../components/Money";
 import { StatusPill } from "../components/StatusPill";
 import { displayName, type Config } from "../config";
 import type { AgentHandle } from "../state/useAgent";
 import type { VoteHandle } from "../state/useVote";
-import type { CouponTerms } from "../ledger/queries";
+import type { Announcement } from "../ledger/queries";
 import type { Party } from "../ledger/client";
+import { TURN, type LegStatus } from "../components/LegTable";
+import { committee, type Committee } from "../ledger/decman";
 
 export interface RunSummary {
+  /** The bond on screen, and its latest coupon. Both follow the operator's
+   *  choice rather than the seat file, so every pane reads the same one. */
+  isin: string;
+  runId: string;
+  /** Announcements on this bond the agent has not entitled yet. */
+  pending: Announcement[];
   currency: string;
   legs: number;
   expectedAllocations: number;
   haveAllocations: number;
-  /** Holders whose own receipt allocation is on the ledger. */
+  /** Holders whose own side of the payment is authorised on the ledger. */
   authorised: Set<string>;
-  missing: string[];
+  /** Holders who have given the agent no settlement instructions. Nothing the
+   *  agent presses can fix this: the holder has to provide them. */
+  noInstructions: string[];
+  /** How many legs sit in each state. The strip beside the button reads these
+   *  rather than counting the name lists, so it cannot drift from the cards. */
+  counts: Record<LegStatus, number>;
   settled: boolean;
   /** Units on the schedule, and what they come to before rounding. */
   units: number;
@@ -65,82 +78,182 @@ function CancelRun({ busy, onCancel }: { busy: boolean; onCancel: () => Promise<
 }
 
 /**
- * Setting a coupon up, where it used to be a terminal.
+ * Who may release this payment, chosen before the run exists.
  *
- * Four ledger steps in the order the model requires: the issuer announces, the
- * register is frozen on the record date, the schedule is derived from those two
- * on the ledger, and the run is created from the schedule. Each is idempotent,
- * so the form doubles as the way to finish a set-up that stopped half way.
+ * This was a checkbox, and a checkbox was wrong for it twice over. It named
+ * nobody - "needs the approvers", with no answer to which approvers, how many
+ * there are or how many have to agree - and it made the most consequential
+ * choice on the panel look like a formatting preference. It is not: it decides
+ * whether one company can move this money by itself.
  *
- * It opens by itself when there is no run, because that is the state an
- * operator is stuck in and the panel is the way out. Otherwise it is a link,
- * because the page is about the run, not about making another one.
+ * So: two options, both spelled out, with the committee read from the live
+ * governance rules rather than described in prose. The threshold shown is the
+ * real one and the members are the real member parties.
+ *
+ * The honest caveat is on the page too. Counting members is not counting
+ * companies: on a stack where the approver nodes run beside each other, three
+ * members are three processes on one machine. The claim this control supports
+ * is that no single MEMBER can release the payment, which is true everywhere.
+ * Whether those members are independent operators is a property of the
+ * deployment, and the DevNet run is where that was shown.
+ */
+function Release({
+  approver,
+  governed,
+  onChange,
+  busy,
+}: {
+  approver: Party;
+  governed: boolean;
+  onChange: (governed: boolean) => void;
+  busy: boolean;
+}) {
+  const [seats, setSeats] = useState<Committee | null>(null);
+  // Read once per party. A committee changes only through a self-governance
+  // action, which is rare and never while this panel is open; polling it would
+  // be a request every two seconds for a number that does not move.
+  useEffect(() => {
+    let live = true;
+    committee(approver)
+      .then((c) => { if (live) setSeats(c); })
+      .catch(() => { if (live) setSeats(null); });
+    return () => { live = false; };
+  }, [approver]);
+
+  // Party ids are a hint and a fingerprint. The hint is the readable half and
+  // the fingerprint is 68 characters of hex that would bury it. The hint is
+  // itself a UUID where DecMan allocated the member party rather than being
+  // given a name, so it is truncated: three full UUIDs name nobody, which is
+  // the fault this control was built to fix.
+  const hint = (p: string) => {
+    const h = p.split("::")[0];
+    return h.length > 24 ? h.slice(0, 12) + "…" : h;
+  };
+
+  return (
+    <fieldset className="release" disabled={busy}>
+      <legend>How should this run be released?</legend>
+      <label className={governed ? "release-opt" : "release-opt on"}>
+        <input type="radio" name="release" id="release-alone" checked={!governed} onChange={() => onChange(false)} />
+        <span className="release-main">The paying agent alone</span>
+        <span className="release-sub">
+          It settles the moment the agent presses the button. One company decides, which is how a paying agent
+          works today and is the main product.
+        </span>
+      </label>
+      <label className={governed ? "release-opt on" : "release-opt"}>
+        <input type="radio" name="release" id="release-approvers" checked={governed} onChange={() => onChange(true)} />
+        <span className="release-main">
+          The approvers must agree
+          {seats ? <span className="release-th">{seats.threshold} of {seats.members.length}</span> : null}
+        </span>
+        <span className="release-sub">
+          The run names <strong>{hint(approver)}</strong> as a second executor, so the agent cannot settle it
+          alone. The button files a request instead, and the settlement executes only once{" "}
+          {seats ? <strong>{seats.threshold}</strong> : "enough"} of its members have confirmed, each on their own
+          Decentralization Manager node.
+        </span>
+        {seats ? (
+          <span className="release-members">
+            {seats.members.map((m) => (
+              <span key={m} className="release-member">{hint(m)}</span>
+            ))}
+          </span>
+        ) : null}
+        <span className="release-sub quiet">
+          {seats
+            ? "Three member parties, each confirming on its own Decentralization Manager node, and the paying agent operates one of them - so this is not an outside veto, it is a payment no single member can release on its own. Whether those nodes are run by separate companies is a property of the deployment rather than of this control."
+            : "The approvers own manager is not answering, so the membership cannot be shown here. The choice is still real: the run would name the party as a second executor either way."}
+        </span>
+      </label>
+    </fieldset>
+  );
+}
+
+/**
+ * The agent's three steps on a coupon the issuer has already announced.
+ *
+ * The announcement is not here, and that is the point: `CorporateAction` is
+ * the issuer's contract, and a console that filed it was one screen acting
+ * for two companies. The issuer desk files it; this picks one up.
+ *
+ * What is genuinely the agent's is on this panel: which announcement to work,
+ * how to round, and whether the run needs the approvers. A bond with nothing
+ * announced is waiting on the issuer, and says so rather than offering a form.
  */
 function CouponSetup({
   busy,
   open,
-  schedule,
+  pending,
+  scheduleWithoutRun,
   approver,
-  onSetUp,
+  onEntitle,
+  onCreateRun,
 }: {
   busy: boolean;
   open: boolean;
-  schedule: { amountPerUnit: number; recordDate: string; paymentDate: string; policy: string } | null;
+  pending: Announcement[];
+  /** A coupon already entitled and not yet prepared: the run is all it needs. */
+  scheduleWithoutRun: { paymentDate: string; total: number } | null;
   approver: Party | null;
-  onSetUp: (terms: CouponTerms, approver: Party | null) => Promise<void>;
+  onEntitle: (actionCid: string, recordDate: string, paymentDate: string, policy: string, approver: Party | null) => Promise<void>;
+  onCreateRun: (approver: Party | null) => Promise<void>;
 }) {
-  // Null until the operator touches it, so until then the panel follows the
-  // page: open while there is no run, because that is the state they are stuck
-  // in, and a link once there is one. After a click their choice sticks.
-  const [showing, setShowing] = useState<boolean | null>(null);
-  const expanded = showing ?? open;
-  // Prefilled from the coupon on screen, so the common case is "the same terms,
-  // now make the run" and the operator changes only what differs.
-  const [rate, setRate] = useState(schedule ? String(schedule.amountPerUnit) : "");
-  const [recordDate, setRecordDate] = useState(schedule?.recordDate ?? "");
-  const [paymentDate, setPaymentDate] = useState(schedule?.paymentDate ?? "");
-  const [policy, setPolicy] = useState(schedule?.policy ?? "LargestRemainder");
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [policy, setPolicy] = useState("LargestRemainder");
   const [governed, setGoverned] = useState(!!approver);
-  // Seed the fields the first time a schedule arrives, and only then.
-  //
-  // The page polls every two seconds, so the schedule is not there on the
-  // first render. Keying the whole component on it fixed the empty form and
-  // broke something worse: every poll remounted it, so the panel an operator
-  // had just opened closed again within two seconds, taking anything they had
-  // typed with it. Seed once, never remount, and the operator keeps both.
-  const seeded = useRef(false);
-  useEffect(() => {
-    if (seeded.current || !schedule) return;
-    seeded.current = true;
-    setRate(String(schedule.amountPerUnit));
-    setRecordDate(schedule.recordDate);
-    setPaymentDate(schedule.paymentDate);
-    setPolicy(schedule.policy);
-  }, [schedule]);
 
-  if (!expanded) {
+  // No toggle. The panel shows what the SELECTED coupon still needs, and the
+  // register rail is how you move between coupons. It used to collapse to a
+  // "Work another coupon" link, from when the page was pinned to one coupon
+  // and this panel was the only way to reach another; with the rail there,
+  // that link was a second route to the same place under a different name.
+  if (!open) return null;
+
+  if (!pending.length) {
     return (
-      <button className="linklike" disabled={busy} onClick={() => setShowing(true)}>
-        Set up another coupon
-      </button>
+      <div className="action-second">
+        {scheduleWithoutRun ? (
+          <>
+            {approver ? (
+              <Release approver={approver} governed={governed} onChange={setGoverned} busy={busy} />
+            ) : (
+              <span className="action-note quiet">
+                This run will be released by the paying agent alone, because this deployment has no approvers.
+                If you started the stack with <code>--profile govern</code>, the choice appears here by itself
+                once their party has been built, which takes a minute or two after the holders are seated. No
+                reload needed.
+              </span>
+            )}
+            <div className="coupon-actions">
+              <button className="settle fix" disabled={busy} onClick={() => void onCreateRun(governed ? approver : null)}>
+                {busy ? "Creating…" : `Create the run for ${scheduleWithoutRun.paymentDate}`}
+              </button>
+            </div>
+          </>
+        ) : null}
+        <span className="action-note">
+          {scheduleWithoutRun
+            ? "The entitlements for this coupon are already on the ledger, so the run is the one step left. The announcement that produced them is gone: entitling one archives it, and the schedule is the record."
+            : "Nothing announced on this bond for the paying agent to work. The issuer announces an event; the agent acts on it. Switch to the issuer desk at the top of the page to see that side."}
+        </span>
+      </div>
     );
   }
 
-  const ready = rate.trim() !== "" && recordDate !== "" && paymentDate !== "";
+  const pick = pending.find((p) => p.cid === chosen) ?? pending[0];
   return (
     <div className="action-second coupon-setup">
       <div className="coupon-fields">
         <label>
-          Per unit
-          <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" id="coupon-rate" />
-        </label>
-        <label>
-          Record date
-          <input value={recordDate} onChange={(e) => setRecordDate(e.target.value)} type="date" id="coupon-record" />
-        </label>
-        <label>
-          Payment date
-          <input value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} type="date" id="coupon-payment" />
+          Announcement
+          <select value={pick.cid} onChange={(e) => setChosen(e.target.value)} id="coupon-action">
+            {pending.map((p) => (
+              <option key={p.cid} value={p.cid}>
+                {p.paymentDate} · {p.amountPerUnit} per unit · record {p.recordDate}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Rounding
@@ -150,36 +263,20 @@ function CouponSetup({
           </select>
         </label>
       </div>
-      {approver ? (
-        <label className="coupon-governed">
-          <input type="checkbox" checked={governed} onChange={(e) => setGoverned(e.target.checked)} id="coupon-governed" />
-          Needs the approvers. The run names the decentralised party as a second executor, so the agent cannot
-          settle it alone.
-        </label>
-      ) : null}
+      {approver ? <Release approver={approver} governed={governed} onChange={setGoverned} busy={busy} /> : null}
       <div className="coupon-actions">
         <button
           className="settle fix"
-          disabled={busy || !ready}
-          onClick={() =>
-            void onSetUp(
-              { amountPerUnit: rate.trim(), recordDate, paymentDate, policy: policy as CouponTerms["policy"] },
-              governed ? approver : null,
-            )
-          }
+          disabled={busy}
+          onClick={() => void onEntitle(pick.cid, pick.recordDate, pick.paymentDate, policy, governed ? approver : null)}
         >
-          {busy ? "Setting up…" : "Announce, freeze, derive, create the run"}
-        </button>
-        <button className="linklike" disabled={busy} onClick={() => setShowing(false)}>
-          Not now
+          {busy ? "Working…" : "Freeze the register, derive the schedule, create the run"}
         </button>
       </div>
       <span className="action-note">
-        Four ledger steps, in order. The announcement is submitted <strong>as the issuer</strong>, which this
-        console can do only because it is a demo harness holding every party's credential; in a deployment the
-        announcement arrives from the issuer and the agent acts on it. The register is frozen as the registrar,
-        which here is the paying agent. The schedule is then derived on the ledger from those two, so it is
-        checkable rather than uploaded.
+        Three ledger steps, in order. The register is frozen as the registrar, which in this deployment is the
+        paying agent. The schedule is then derived on the ledger from the announcement and that snapshot, so it
+        is checkable rather than uploaded, and the run follows from the schedule leg for leg.
       </span>
     </div>
   );
@@ -199,7 +296,7 @@ export function RunBar({
 }) {
   const { seat } = config;
   const { state, pressed } = agent;
-  const { currency, legs, expectedAllocations, haveAllocations, missing, settled, units, exactTotal } = run;
+  const { currency, legs, expectedAllocations, haveAllocations, settled, units, exactTotal } = run;
   // A run with an approver is not the agent's to settle, so the button asks
   // instead; and once it has asked there is nothing more for the agent to do
   // until the approvers have voted.
@@ -215,6 +312,13 @@ export function RunBar({
   // settlement attempt, the ledger refuses it, and that refusal is the
   // atomicity guarantee being demonstrated rather than an operator mistake.
   const incomplete = haveAllocations < expectedAllocations;
+  // What the agent can authorise RIGHT NOW, which is not the same as what is
+  // missing: a holder who has given no settlement instructions cannot be
+  // authorised by anyone here, and the rest can. Found 7 October, when a run
+  // with one holder outstanding offered no control at all and four cards sat
+  // on TO AUTHORISE with nothing on the page that would move them.
+  const toAuthorise = run.counts.unauthorised;
+  const canAuthorise = !!state?.run && !settled && (toAuthorise > 0 || !state.allocations.some((a) => a.isSend));
   // Once the engine says the threshold is met, the primary button has nothing
   // left to say. It would read "Waiting for the approvers", disabled, directly
   // above a live settle button - so an operator who then settles is left
@@ -271,16 +375,16 @@ export function RunBar({
           <span className="kpi-num accent">{state?.schedule ? <Money amount={state.schedule.total} currency={currency} /> : "—"}</span>
           <span className="kpi-sub">to the cent · {state?.schedule?.policy ?? "—"}</span>
         </Kpi>
-        <Kpi label="Allocations">
+        <Kpi label="Authorised to pay">
           <span className="kpi-num">
             {settled ? expectedAllocations : ready}
             <span className="kpi-of"> / {expectedAllocations}</span>
           </span>
-          <div className="meter" role="img" aria-label={`${ready} of ${expectedAllocations} allocations on the ledger`}>
+          <div className="meter" role="img" aria-label={`${ready} of ${expectedAllocations} payments authorised on the ledger`}>
             <div className={`meter-fill${settled ? " done" : pct === 100 ? " full" : ""}`} style={{ width: `${settled ? 100 : pct}%` }} />
           </div>
           <span className="kpi-sub">
-            1 send + {legs} receipts{settled ? ", consumed by the settlement" : null}
+            the agent's own, plus {legs} holder{legs === 1 ? "" : "s"}{settled ? ", all used by the settlement" : null}
           </span>
         </Kpi>
         <Kpi label="Run">
@@ -311,6 +415,21 @@ export function RunBar({
                   : `Settle ${legs.toLocaleString("en-GB")} legs in one transaction`}
           </button>
         )}
+        {/* The whole run's state in one line, beside the button that acts on
+            it. The numbers are what the cards add up to, and the words say
+            whose move each group is: an operator looking at a disabled settle
+            should not have to open a tab to find out who is holding it up. */}
+        {state?.run || settled ? (
+          <div className="leg-counts" role="group" aria-label="Legs by state">
+            {(["blocked", "unauthorised", "ready", "paid"] as LegStatus[])
+              .filter((s) => run.counts[s] > 0)
+              .map((s) => (
+                <span key={s} className={`leg-status ${s}`}>
+                  {run.counts[s]} {TURN[s]}
+                </span>
+              ))}
+          </div>
+        ) : null}
         {cancellable && !config.readOnly ? <CancelRun busy={pressed.kind === "busy"} onCancel={agent.onCancelRun} /> : null}
         {pressed.kind === "failed" && pressed.what === "cancel" ? (
           <span className="cancel-failed">
@@ -337,33 +456,71 @@ export function RunBar({
                   ? asked
                     ? "Asked. All or nothing, and not alone: this settles only when the approvers have confirmed to their threshold, each on their own node."
                     : incomplete
-                      ? "This run is not ready to ask about: one holder's allocation is not on the ledger yet, so the settlement would fail after the approvers had agreed to it. Their job is to decide whether the payment goes out, not to check the data."
+                      ? "This run is not ready to ask about: not every payment is authorised yet, so the settlement would fail after the approvers had agreed to it. Their job is to decide whether the payment goes out, not to check the data."
                       : "All or nothing, and not alone: this run names an approver, so the agent cannot settle it. The button signs a request instead. The cash these allocations lock is committed to the approvers too, so releasing it is their decision as much as the agent's."
                   : "All or nothing. If any leg cannot settle, nothing moves."}
-          {!settled && !cancelled && missing.length > 0 ? (
-            <span className="warn">
-              {" "}
-              Waiting for {missing.length <= 3 ? missing.join(", ") : `${missing.slice(0, 2).join(", ")} and ${missing.length - 2} more`}.
-            </span>
-          ) : null}
         </div>
         {/* The fix, where the problem is stated. This was a terminal until
             7 October: demo.ps1 prepare, or docker compose run --rm prepare.
             It creates only what is absent, so pressing it twice is safe and
             it is deliberately not disabled after a press. */}
-        {/* Gated on the allocation count, not on holders waiting: a run can be
-            short of its SEND allocation alone, and then no holder is waiting
-            and the fix still has work to do. Seen 7 October. */}
-        {!settled && !config.readOnly && state?.run && incomplete ? (
+        {/* A holder who has given no settlement instructions is not something
+            the agent can fix. Say so, name them, and send the operator to the
+            one page where it can be fixed - but do not let it suppress the
+            work the agent CAN do, which is the rest of the batch. */}
+        {!settled && run.noInstructions.length > 0 ? (
+          <div className="action-second">
+            <span className="action-note">
+              <strong>
+                {run.noInstructions.length === 1
+                  ? `${run.noInstructions[0]} has given no settlement instructions.`
+                  : `${run.noInstructions.length} holders have given no settlement instructions.`}
+              </strong>{" "}
+              The paying agent has nowhere to send their money, so the ledger will refuse the whole run rather
+              than pay everyone else. Nothing here fixes it: the holder provides them, once, on their own page
+              under <strong>Holder</strong>. Every coupon after that needs nothing from them.
+            </span>
+          </div>
+        ) : null}
+        {/* Whose turn it is, said rather than implied. The order matters and
+            only the page knows it: a holder provides instructions, then the
+            agent authorises under them, then the settle can go. Leaving the
+            operator to infer that from a button appearing sent one straight to
+            settle, which was refused for a reason they could not read. */}
+        {!settled && toAuthorise > 0 && state?.run ? (
+          <div className="action-second">
+            <span className="action-note">
+              <strong>
+                {toAuthorise === 1
+                  ? "One payment has settlement instructions on file and is not authorised yet."
+                  : `${toAuthorise} payments have settlement instructions on file and are not authorised yet.`}
+              </strong>{" "}
+              The agent authorises each holder's side under the instructions they gave, and only then can the
+              batch settle. Press the button below first; settling before it is refused, correctly, because the
+              authorisation is not on the ledger.
+            </span>
+          </div>
+        ) : null}
+        {/* Offered whenever there is something the agent can authorise, which
+            is not the same as "the run is incomplete": a run can stay
+            incomplete forever while a holder owes their details, and the
+            agent's own work still has to be doable. The label counts the
+            payments it will actually authorise, not the gap in the meter. */}
+        {!config.readOnly && canAuthorise ? (
           <div className="action-second">
             <button className="settle fix" disabled={pressed.kind === "busy"} onClick={agent.onPrepare}>
               {pressed.kind === "busy"
-                ? "Creating…"
-                : `Create the ${expectedAllocations - haveAllocations} missing allocation${expectedAllocations - haveAllocations === 1 ? "" : "s"}`}
+                ? "Authorising…"
+                : toAuthorise > 0
+                  ? `Authorise the ${toAuthorise} remaining payment${toAuthorise === 1 ? "" : "s"}`
+                  : "Set the agent's own cash aside"}
             </button>
             <span className="action-note">
-              The paying agent creates them alone, under the standing agreement each holder signed at
-              onboarding. No holder is asked for anything.
+              The paying agent does this alone, under the settlement instructions each holder gave once. No
+              holder is asked for anything. In a deployment it happens by itself when the run is prepared.
+              {run.noInstructions.length > 0
+                ? " It cannot authorise the holder above, who has given no instructions, so the run stays short of one payment until they do."
+                : null}
             </span>
           </div>
         ) : null}
@@ -374,9 +531,11 @@ export function RunBar({
           <CouponSetup
             busy={pressed.kind === "busy"}
             open={!state?.run}
-            schedule={state?.schedule ?? null}
+            pending={run.pending}
+            scheduleWithoutRun={!state?.run && state?.schedule ? { paymentDate: state.schedule.paymentDate, total: state.schedule.total } : null}
             approver={config.decmanParty}
-            onSetUp={agent.onSetUpCoupon}
+            onEntitle={agent.onEntitle}
+            onCreateRun={agent.onCreateRun}
           />
         ) : null}
         {pressed.kind === "failed" && pressed.what === "coupon" ? (

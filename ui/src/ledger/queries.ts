@@ -34,22 +34,35 @@ export interface AgentState {
   schedule: { cid: ContractId; entries: Entitlement[]; total: number; amountPerUnit: number; recordDate: string; paymentDate: string; policy: string; kind: string } | null;
   run: { cid: ContractId; legs: number; total: number; approver: Party | null } | null;
   allocations: { cid: ContractId; authorizer: Party | null; legs: number; isSend: boolean }[];
+  /** Holders who have given this agent settlement instructions for the cash
+   *  this run pays in. Read from the agent's own node in the same poll as the
+   *  allocations, deliberately: the card that says whose turn it is compares
+   *  the two, and a card fed from two different polls can show them out of
+   *  step and name the wrong party. The agent is a signatory on every
+   *  PaymentAgreement, so these are its own contracts. */
+  instructed: Party[];
   rejections: { cid: ContractId; attemptedAt: string; legsRequested: number; reason: string }[];
   receipt: { cid: ContractId; legsSettled: number; total: number; offset: number; updateId: string | null; effectiveAt: string | null } | null;
   /** The filed request for approval, when this run names one. Null on an
    *  ungoverned run, and null on a network that does not vet the governance
    *  package at all. */
   proposal: { cid: ContractId; description: string } | null;
+  /** Every live request for approval, newest first, whichever run it belongs
+   *  to. The approvers' desk needs this: a member has no idea which coupon
+   *  the paying agent happens to have open on its own screen, and asking it
+   *  to care would be a fault of ours, not a fact about approving. */
+  openProposals: { cid: ContractId; description: string }[];
 }
 
 export async function agentState(agent: Ledger, runId: string, isin: string): Promise<AgentState> {
-  const [instruments, schedules, runs, allocs, rejected, receipts, proposals] = await Promise.all([
+  const [instruments, schedules, runs, allocs, rejected, receipts, agreements, proposals] = await Promise.all([
     agent.templates(T.instrument),
     agent.templates(T.schedule),
     agent.templates(T.run),
     agent.interfaces(I.allocation),
     agent.templates(T.rejected),
     agent.templates(T.receipt),
+    agent.templates(T.agreement),
     // The governance package is vetted on DevNet and deliberately not on the
     // judges' local stack, where the vote runs in its own containers. A
     // participant that has never seen the package answers with an error, and
@@ -58,7 +71,17 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
   ]);
 
   const inst = instruments.find((c) => c.createdEvent.createArgument.isin === isin)?.createdEvent.createArgument;
-  const sched = schedules.find((c) => c.createdEvent.createArgument.isin === isin);
+  const mySchedules = schedules.filter((c) => c.createdEvent.createArgument.isin === isin);
+  const sched =
+    mySchedules.find((c) => {
+      const s = c.createdEvent.createArgument;
+      return runIdFor(s.isin, s.kind, s.paymentDate) === runId;
+    }) ??
+    // No schedule for the run on screen: fall back to the latest coupon on
+    // this bond, which is what the bond picker itself selects.
+    [...mySchedules].sort((x, y) =>
+      x.createdEvent.createArgument.paymentDate < y.createdEvent.createArgument.paymentDate ? 1 : -1,
+    )[0];
   const run = runs.find((c) => c.createdEvent.createArgument.runId === runId);
   // A run id can settle more than once: preparing a tag whose run has already
   // settled creates a fresh run under the same id, and the earlier receipt is
@@ -79,6 +102,17 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
       legs: v!.allocation.transferLegSides.length,
       isSend: v!.allocation.transferLegSides.some((s) => s.side === "SenderSide"),
     }));
+
+  // Filtered to the cash this run pays in where there is a run to ask; every
+  // agreement otherwise, which is all the page can honestly say before a run
+  // names an instrument.
+  const cash = run?.createdEvent.createArgument.instrument;
+  const instructed = agreements
+    .filter((c) => {
+      const a = c.createdEvent.createArgument;
+      return !cash || (a.instrument.id === cash.id && a.instrument.admin === cash.admin);
+    })
+    .map((c) => c.createdEvent.createArgument.holder as Party);
 
   let receiptOut: AgentState["receipt"] = null;
   if (receipt) {
@@ -111,6 +145,7 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
       : null,
     run: run ? { cid: run.createdEvent.contractId, legs: run.createdEvent.createArgument.legs.length, total: run.createdEvent.createArgument.legs.reduce((s: number, l: any) => s + num(l.amount), 0), approver: run.createdEvent.createArgument.approver ?? null } : null,
     allocations,
+    instructed,
     rejections: rejected
       .filter((c) => c.createdEvent.createArgument.runId === runId)
       // Refusals from an earlier run under the same id are history, not this
@@ -119,6 +154,9 @@ export async function agentState(agent: Ledger, runId: string, isin: string): Pr
       .map((c) => ({ cid: c.createdEvent.contractId, ...c.createdEvent.createArgument, legsRequested: Number(c.createdEvent.createArgument.legsRequested) }))
       .sort((a, b) => (a.attemptedAt < b.attemptedAt ? 1 : -1)),
     receipt: receiptOut,
+    openProposals: [...proposals]
+      .sort((x, y) => y.createdEvent.offset - x.createdEvent.offset)
+      .map((c) => ({ cid: c.createdEvent.contractId, description: c.createdEvent.createArgument.description })),
     proposal: (() => {
       if (!run) return null;
       // The NEWEST proposal for this run, not the first the ledger happens to
@@ -288,6 +326,214 @@ export async function settle(agent: Ledger, runCid: ContractId, allocationCids: 
 }
 
 // ---------------------------------------------------------------------------
+// A holder's own view, read from a holder's own node
+// ---------------------------------------------------------------------------
+
+export interface HolderDesk {
+  /** Bonds this holder is on the register for. */
+  positions: { isin: string; name: string | null; quantity: number }[];
+  /** Cash, in the instrument the register pays in. */
+  cash: number;
+  /** Settlement instructions this holder has given, one per cash instrument. */
+  instructions: { cid: ContractId; instrument: string; admin: Party }[];
+  /** An outstanding request for them, which is the one thing they can act on. */
+  request: { cid: ContractId; instrument: string; admin: Party } | null;
+}
+
+/**
+ * What one holder can see, read as that holder from that holder's own node.
+ *
+ * **Everything here is party-scoped, and that is the point.** A holder's node
+ * holds their own positions, their own settlement instructions and their own
+ * cash, and nothing about anybody else: no schedule, no total, no other
+ * holder. If this page could show those, the product's central claim would be
+ * false. The zeros a holder sees elsewhere are absence, not filtering.
+ *
+ * `Instrument` is signed by the registrar and observed by the issuer, so a
+ * holder cannot read the bond's name from their own node. The name is passed
+ * in from the register where one is known and left blank where it is not,
+ * rather than quietly read with somebody else's credential.
+ */
+export async function holderDesk(holder: Ledger): Promise<HolderDesk> {
+  const [positions, agreements, proposals, holdings] = await Promise.all([
+    holder.templates(T.position),
+    holder.templates(T.agreement),
+    holder.templates(T.proposal_),
+    holder.interfaces(I.holding),
+  ]);
+
+  const mine = positions.filter((c) => c.createdEvent.createArgument.holder === holder.party);
+  const cash = holdings
+    .map((c) => view<HoldingView>(c, ":Holding"))
+    .filter((v) => v && v.lock == null && v.account.owner === holder.party)
+    .reduce((s, v) => s + num(v!.amount), 0);
+
+  const instructions = agreements
+    .filter((c) => c.createdEvent.createArgument.holder === holder.party)
+    .map((c) => ({
+      cid: c.createdEvent.contractId,
+      instrument: c.createdEvent.createArgument.instrument.id,
+      admin: c.createdEvent.createArgument.instrument.admin,
+    }));
+
+  const outstanding = proposals.filter((c) => c.createdEvent.createArgument.holder === holder.party)[0];
+
+  return {
+    positions: mine.map((c) => ({
+      isin: c.createdEvent.createArgument.isin,
+      name: null,
+      quantity: num(c.createdEvent.createArgument.quantity),
+    })),
+    cash,
+    instructions,
+    request: outstanding
+      ? {
+          cid: outstanding.createdEvent.contractId,
+          instrument: outstanding.createdEvent.createArgument.instrument.id,
+          admin: outstanding.createdEvent.createArgument.instrument.admin,
+        }
+      : null,
+  };
+}
+
+/**
+ * The holder provides their settlement instructions. One submission, by the
+ * holder, once in their life.
+ *
+ * This is the only command a holder ever sends. Everything afterwards is the
+ * paying agent acting under it, which is what makes every later coupon
+ * zero-touch for the holder.
+ */
+export async function provideInstructions(holder: Ledger, proposalCid: ContractId) {
+  return holder.submitAndWait([
+    {
+      ExerciseCommand: {
+        templateId: T.proposal_,
+        contractId: proposalCid,
+        choice: "Accept",
+        choiceArgument: {},
+      },
+    },
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// The book: every coupon the agent has to work, and where each one has got to
+// ---------------------------------------------------------------------------
+
+export type Stage = "announced" | "scheduled" | "prepared" | "settled";
+
+/**
+ * One row of the register rail: **one coupon**, not one bond.
+ *
+ * It was one row per instrument carrying that instrument's latest coupon, and
+ * that was wrong as soon as a bond had two. A bond pays twice a year for ten
+ * years, so an instrument is not the unit of work: the unit of work is the
+ * event, and a paying agent's blotter is a list of events with dates and
+ * states. The old shape also made the earlier coupon unreachable, because the
+ * rail only ever offered the latest one.
+ *
+ * Several rows therefore share `isin`, `name`, `holders` and the rest of the
+ * instrument's own fields. `key` identifies the row.
+ */
+export interface Coupon {
+  /** Identifies this row: the run id where there is a coupon, and the bond's
+   *  own id where the bond has no event at all. */
+  key: string;
+  isin: string;
+  name: string;
+  currency: string;
+  couponRate: number;
+  maturity: string;
+  /** The holders on the register for this bond, from its `Position` contracts. */
+  holders: Party[];
+  /** This coupon's run id. Null only for a bond with nothing announced. */
+  runId: string | null;
+  paymentDate: string | null;
+  stage: Stage | null;
+}
+
+/**
+ * Every coupon on the agent's register, each with the state it has reached.
+ *
+ * The console used to be pinned to the one instrument named in the seat file,
+ * which is a demo of a paying agent with exactly one bond. A paying agent
+ * keeps a book: several instruments, each paying several times, most of those
+ * payments already made. This reads the book from the ledger, so a coupon the
+ * issuer announces while the page is open appears by itself.
+ *
+ * The agent is the registrar here, which is why it can see the positions.
+ * Where a separate company keeps the register, this list arrives from the
+ * register feed instead and nothing else changes.
+ */
+export async function book(agent: Ledger): Promise<Coupon[]> {
+  const [instruments, positions, schedules, runs, receipts, actions] = await Promise.all([
+    agent.templates(T.instrument),
+    agent.templates(T.position),
+    agent.templates(T.schedule),
+    agent.templates(T.run),
+    agent.templates(T.receipt),
+    agent.templates(T.action),
+  ]);
+
+  const liveRunIds = new Set(runs.map((c) => c.createdEvent.createArgument.runId));
+  const settledRunIds = new Set(receipts.map((c) => c.createdEvent.createArgument.runId));
+
+  const rows: Coupon[] = [];
+  for (const c of instruments) {
+    const a = c.createdEvent.createArgument;
+    const isin: string = a.isin;
+    const holders = Array.from(
+      new Set(
+        positions
+          .filter((p) => p.createdEvent.createArgument.isin === isin)
+          .map((p) => p.createdEvent.createArgument.holder as Party),
+      ),
+    );
+    const bond = { isin, name: a.name as string, currency: a.currency as string,
+                   couponRate: num(a.couponRate), maturity: a.maturity as string, holders };
+
+    // A schedule means the entitlements exist and the coupon is workable. An
+    // announcement with no schedule has not been entitled yet; it is listed
+    // because the agent's own panel is where that is done.
+    const mine = schedules.filter((s) => s.createdEvent.createArgument.isin === isin);
+    const entitled = new Set(mine.map((s) => s.createdEvent.createArgument.paymentDate as string));
+    const announced = actions.filter(
+      (x) =>
+        x.createdEvent.createArgument.isin === isin &&
+        !entitled.has(x.createdEvent.createArgument.paymentDate),
+    );
+
+    for (const s of mine.map((x) => x.createdEvent.createArgument)) {
+      const runId = runIdFor(isin, s.kind, s.paymentDate);
+      // Settled wins over prepared: `Run_Settle` consumes the run, so a run
+      // that is gone and a receipt that is there is a coupon that is done.
+      const stage: Stage = settledRunIds.has(runId) ? "settled" : liveRunIds.has(runId) ? "prepared" : "scheduled";
+      rows.push({ key: runId, ...bond, runId, paymentDate: s.paymentDate, stage });
+    }
+    for (const x of announced.map((y) => y.createdEvent.createArgument)) {
+      // Not entitled, so there is no run id to derive from a schedule; the
+      // derivation is the same one and the run simply does not exist yet.
+      rows.push({ key: runIdFor(isin, x.kind, x.paymentDate), ...bond,
+                  runId: null, paymentDate: x.paymentDate, stage: "announced" });
+    }
+    // A bond with nothing announced at all still belongs in the register: it
+    // has holders and positions, and the issuer desk is where its first event
+    // comes from.
+    if (!mine.length && !announced.length) {
+      rows.push({ key: isin, ...bond, runId: null, paymentDate: null, stage: null });
+    }
+  }
+  // By bond, then by payment date earliest first, which is the order the work
+  // comes in. A coupon with no date sorts last within its bond.
+  return rows.sort(
+    (x, y) =>
+      (x.name < y.name ? -1 : x.name > y.name ? 1 : 0) ||
+      (x.paymentDate ?? "9999").localeCompare(y.paymentDate ?? "9999"),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Setting a coupon up: announce, freeze, derive, create the run
 // ---------------------------------------------------------------------------
 
@@ -310,6 +556,45 @@ const findAction = (cs: ActiveContract[], isin: string, t: CouponTerms) =>
     const a = c.createdEvent.createArgument;
     return a.isin === isin && a.recordDate === t.recordDate && a.paymentDate === t.paymentDate;
   });
+
+/** An announced event the paying agent has not yet acted on.
+ *
+ *  There is no "already entitled" state to carry: `CorporateAction_Entitle`
+ *  is a consuming choice, so working an announcement archives it and leaves
+ *  an `EntitlementSchedule` in its place. An announcement on the ledger is
+ *  by definition one still waiting on the agent. */
+export interface Announcement {
+  cid: ContractId;
+  kind: string;
+  amountPerUnit: number;
+  recordDate: string;
+  paymentDate: string;
+}
+
+/**
+ * The announcements on one bond that are still waiting on the agent, newest
+ * first.
+ *
+ * The agent observes these; it does not make them. This is the list the
+ * agent's set-up panel offers, and a bond with nothing on it is a bond
+ * waiting on the issuer rather than on the agent.
+ */
+export async function announcements(agent: Ledger, isin: string): Promise<Announcement[]> {
+  const actions = await agent.templates(T.action);
+  return actions
+    .filter((c) => c.createdEvent.createArgument.isin === isin)
+    .map((c) => {
+      const a = c.createdEvent.createArgument;
+      return {
+        cid: c.createdEvent.contractId,
+        kind: a.kind,
+        amountPerUnit: num(a.amountPerUnit),
+        recordDate: a.recordDate,
+        paymentDate: a.paymentDate,
+      };
+    })
+    .sort((x, y) => (x.paymentDate < y.paymentDate ? 1 : -1));
+}
 
 /**
  * Announce the event. **Submitted by the issuer, not the paying agent.**
@@ -553,7 +838,7 @@ export async function allocateMissing(
   existing: { authorizer: Party | null; isSend: boolean }[],
   rulesCid: ContractId,
   factory: DisclosedContract,
-): Promise<{ receipts: number; send: boolean }> {
+): Promise<{ receipts: number; send: boolean; skipped: Party[] }> {
   const runs = await agent.templates(T.run);
   const found = runs.find((c) => c.createdEvent.contractId === runCid);
   if (!found) throw new Error("the run is no longer on the ledger; reload the page");
@@ -575,6 +860,9 @@ export async function allocateMissing(
 
   const allocated = new Set(existing.map((a) => a.authorizer).filter((p): p is Party => !!p));
   const haveSend = existing.some((a) => a.isSend);
+  /** Holders this could not authorise, because they have given the agent no
+   *  settlement instructions. Reported rather than thrown: see below. */
+  const skipped: Party[] = [];
 
   // The receipts. One allocation per holder carrying only that holder's own
   // legs, which is what stops a holder's allocation naming anybody else.
@@ -588,11 +876,23 @@ export async function allocateMissing(
       if (a.instrument.id === run.instrument.id && a.instrument.admin === run.instrument.admin)
         byHolder.set(a.holder, c.createdEvent.contractId);
     }
-    const commands = wanted.map((holder) => {
-      const cid = byHolder.get(holder);
-      // The holder never signed, so there is nothing to allocate under. It is
-      // the one failure here an operator can act on, so it names the holder.
-      if (!cid) throw new Error(`no standing agreement for ${holder}: that holder has not been onboarded`);
+    // A holder with no standing agreement is SKIPPED, not an error. This used
+    // to throw, and throwing was wrong twice over: the throw happened while
+    // the command list was being built, so nothing at all was submitted, and
+    // the four holders who were ready went unauthorised because a fifth was
+    // not. Avraham found it on 7 October - a run with one holder missing their
+    // settlement instructions could not be authorised at all, and the page
+    // then hid the button rather than doing the useful part of the work.
+    // The seat has always behaved this way (`demo_prepare` filters the
+    // agreements on the ledger to this run's recipients); the page did not.
+    //
+    // The SEND allocation still carries every leg, including theirs, which is
+    // correct: the agent is committing to the whole batch, and the ledger
+    // refuses the settle for the missing receipt. That refusal naming the
+    // holder is the atomicity demonstration.
+    skipped.push(...wanted.filter((h) => !byHolder.has(h)));
+    const commands = wanted.filter((h) => byHolder.has(h)).map((holder) => {
+      const cid = byHolder.get(holder)!;
       return {
         ExerciseCommand: {
           templateId: T.agreement,
@@ -636,7 +936,7 @@ export async function allocateMissing(
     }
   }
 
-  if (haveSend) return { receipts, send: false };
+  if (haveSend) return { receipts, send: false, skipped };
 
   // The agent's own side: one committed allocation carrying every leg, funded
   // from its unlocked holdings. Committed on purpose, so the agent cannot
@@ -682,7 +982,7 @@ export async function allocateMissing(
     ],
     [factory],
   );
-  return { receipts, send: true };
+  return { receipts, send: true, skipped };
 }
 
 /**

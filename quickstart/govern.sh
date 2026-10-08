@@ -5,7 +5,13 @@
 #                       decentralised party at threshold 2, give it a member
 #                       party on each node, deploy the governance rules, and
 #                       admit the paying agent as a proposer
-#   govern.sh prepare   set the run's approver and make every allocation ready
+#
+#   There is no `prepare` or `propose` here any more. Both were hardwired to
+#   the seat's own schedule, which is the FIRST coupon, and that one is
+#   settled by the paying agent alone before anybody reaches the governed
+#   demonstration. The page sets the second coupon up and files the request;
+#   `confirm`, `execute` and `status` below find that proposal on the ledger
+#   whoever filed it.
 #   govern.sh propose   the paying agent files the proposal
 #   govern.sh confirm N approver node N confirms
 #   govern.sh execute N approver node N executes: refused below threshold
@@ -271,13 +277,51 @@ admit_agent() {
 # The page reads the vote from DecMan, and it needs the decentralised party's
 # id to ask about. seed.sh wrote the map before this party existed, so add it
 # here, once the party is real. nginx proxies /decman/ to decman-1.
+# The holder seat writes seat.json, then prepares the first coupon, then
+# writes participants.json LAST as its readiness signal. So waiting for
+# participants.json is one wait that covers both files, and it is a wait
+# rather than a race: publish_party EDITS that file, and the seed would
+# overwrite the decentralised party if it were still to write it.
+wait_for_seat() {
+  local tries=0
+  [ -f "$OUT/participants.json" ] && return 0
+  say "Waiting for the holder seat to finish (the approvers are ready)"
+  while [ "$tries" -lt 900 ]; do
+    [ -f "$OUT/participants.json" ] && return 0
+    tries=$((tries + 1)); sleep 2
+  done
+  die "the holder seat never finished; check: docker compose logs seed"
+}
+
+# Written as soon as the party and its members exist, which is minutes before
+# the holder seat finishes. `participants.json` cannot carry it that early:
+# the seed writes that file last as its readiness signal and would overwrite
+# anything put there first. A second file has no such owner, so there is no
+# race and the page needs no timer to catch up.
+publish_approvers() {
+  jq -n --arg p "$(state_get DEC_PARTY_ID)" \
+     --arg m1 "$(state_get MEMBER_1)" --arg m2 "$(state_get MEMBER_2)" --arg m3 "$(state_get MEMBER_3)" \
+     '{party: $p, nodes: [
+        {node: "1", member: $m1, url: "http://localhost:8081"},
+        {node: "2", member: $m2, url: "http://localhost:8082"},
+        {node: "3", member: $m3, url: "http://localhost:8083"}
+      ]}' > "$OUT/approvers.json.tmp" && mv "$OUT/approvers.json.tmp" "$OUT/approvers.json"
+  info "the page can read the approvers now, whenever it loads"
+}
+
 publish_party() {
   local party
   party=$(state_get DEC_PARTY_ID)
   [ -n "$party" ] || die "no decentralised party to publish"
-  jq --arg p "$party" '.decman = {party: $p}' "$OUT/participants.json" \
+  jq --arg p "$party" \
+     --arg m1 "$(state_get MEMBER_1)" --arg m2 "$(state_get MEMBER_2)" --arg m3 "$(state_get MEMBER_3)" \
+     '.decman = {party: $p, nodes: [
+        {node: "1", member: $m1, url: "http://localhost:8081"},
+        {node: "2", member: $m2, url: "http://localhost:8082"},
+        {node: "3", member: $m3, url: "http://localhost:8083"}
+      ]}' "$OUT/participants.json" \
     > "$OUT/participants.json.tmp" && mv "$OUT/participants.json.tmp" "$OUT/participants.json"
-  info "the page can now follow the vote"
+  info "the page can now follow the vote, and link to each approver's own node"
 }
 
 
@@ -335,43 +379,13 @@ case "${1:-seat}" in
     create_party
     member_parties
     governance_core
+    publish_approvers
+    wait_for_seat
     admit_agent
     publish_party
     say "Ready. The approvers exist and the paying agent may propose."
-    printf '    party  %s\n    rules  %s\n\n    Next:  open http://localhost:8080 and set the coupon up there. The panel\n           is open because there is no run yet, and it ticks "Needs the\n           approvers" by itself. `govern prepare` still works if you would\n           rather do it from here.\n\n' \
+    printf '    party  %s\n    rules  %s\n\n    Next:  everything else is on the page. Open http://localhost:8080, pick\n           the SECOND coupon on the first bond in the register, and set it\n           up there. The Approvers desk lists the three members and links to\n           each one own Decentralization Manager, which is where a member\n           confirms - in its own software, not in ours.\n\n' \
       "$(state_get DEC_PARTY_ID)" "$(state_get RULES_CID)"
-    ;;
-
-  prepare)
-    [ -n "$(state_get DEC_PARTY_ID)" ] || die "run: docker compose run --rm govern-seed"
-    party_map
-    say "Naming the approver on the run and making every allocation ready"
-    jq -n --slurpfile s "$OUT/seat.json" --arg a "$(state_get DEC_PARTY_ID)" \
-      '{seat: $s[0], withhold: 0, approver: $a}' > /tmp/prepare-args.json
-    "${RUNNER[@]}" --dar /indivisa/indivisa-test-0.1.0.dar \
-      --script-name Indivisa.Test.Demo:demo_prepare \
-      --input-file /tmp/prepare-args.json --output-file "$OUT/prepared.json" \
-      --participant-config /tmp/participants.json
-    say "Done. The run now needs the approvers, not just the paying agent."
-    printf '    Open http://localhost:8080. The button no longer settles: it reads
-    "Ask the approvers to settle N legs", because the agent cannot act alone.
-    Press it, then: docker compose run --rm govern confirm 1
-
-'
-    ;;
-
-  propose)
-    [ -f "$OUT/prepared.json" ] || die "run: docker compose run --rm govern prepare"
-    party_map
-    say "The paying agent files the proposal"
-    jq -n --slurpfile p "$OUT/prepared.json" --arg a "$(state_get DEC_PARTY_ID)" \
-      '{prepared: $p[0], approver: $a}' > /tmp/propose-args.json
-    "${RUNNER[@]}" --dar "$DAR" \
-      --script-name Indivisa.Governance.Demo:govern_propose \
-      --input-file /tmp/propose-args.json --output-file "$OUT/proposal.json" \
-      --participant-config /tmp/participants.json
-    say "Filed. Now two of the three approvers must confirm."
-    printf '    docker compose run --rm govern confirm 1\n    docker compose run --rm govern execute 2   <- refused, one is not enough\n    docker compose run --rm govern confirm 2\n    docker compose run --rm govern execute 3   <- settles\n\n'
     ;;
 
   confirm|execute)
@@ -382,7 +396,7 @@ case "${1:-seat}" in
     else
       cid=$(ledger_proposal_cid || true)
     fi
-    [ -n "$cid" ] || die "nothing has been proposed yet. Press \"Ask the approvers\" on the page, or run: docker compose run --rm govern propose"
+    [ -n "$cid" ] || die "nothing has been proposed yet. Set the second coupon up on the page and press \"Ask the approvers to settle N legs\"."
 
     # The engine identifies a domain action by proposal_cid. The action field
     # is required by the request schema and ignored in this mode, so it
@@ -459,5 +473,5 @@ case "${1:-seat}" in
     [ -n "$dec" ] && dm_get 1 "/governance/confirmations?party_id=$dec" | jq '{pending: [.actions[]? | {type: .action.type, confirmations: (.confirmations | length)}]}'
     ;;
 
-  *) die "usage: govern.sh [seat|prepare|propose|confirm N|execute N|status]" ;;
+  *) die "usage: govern.sh [seat|confirm N|execute N|status]" ;;
 esac

@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # Seat the demo, or prepare a run, against the canton container.
 #
-#   seed.sh seat      once: parties, the bond, the register, onboarding,
-#                     the schedule, then the allocations with one holder
-#                     deliberately withheld, so the first press is refused
-#   seed.sh prepare   create the one allocation that was withheld
+#   seed.sh seat      once: parties, the bonds, the register, onboarding,
+#                     the schedule, then the run and every payment it can
+#                     authorise. One holder has given no settlement
+#                     instructions, so that one cannot be authorised and the
+#                     first press is refused.
+#   seed.sh prepare   authorise whatever is now authorisable. Only useful
+#                     after that holder has provided their instructions on
+#                     their own page, and the page's own button does the same
+#                     thing - this is the terminal route, kept for anyone who
+#                     prefers it.
 #
 # Output lands in /demo, a volume the web container serves at /demo/*.
 set -euo pipefail
@@ -82,21 +88,15 @@ case "${1:-seat}" in
       --participant-config /tmp/participants.json
 
     party_map
-    # The governed demo needs the run created with its approver named, and
-    # DistributionRun is created once per run id and then reused. So when the
-    # governed path is wanted, the seat stops here and `govern prepare`
-    # creates the run instead.
-    if [ -n "${INDIVISA_GOVERNED:-}" ]; then
-      jq "{network: \"demo\", readOnly: false, party_participants: .party_participants, userId: .default_participant.user_id}"         /tmp/participants.json > "$OUT/participants.json"
-      printf %s "$instance" > "$OUT/instance"
-      say "Seated. The run itself is created by the governed path."
-      printf "    Next:  docker compose run --rm govern-seed
-
-"
-      exit 0
-    fi
-    say "Preparing the run, with one holder deliberately left out"
-    jq -n --slurpfile s "$OUT/seat.json" '{seat: $s[0], withhold: 1, approver: null}' > /tmp/prepare-args.json
+    # One seat carries both demonstrations now, which is why there is no
+    # INDIVISA_GOVERNED any more. It existed because a DistributionRun is
+    # created once per run id and an approver cannot be added afterwards, so a
+    # seat that created the run had already decided how it would be released.
+    # The seat now leaves the bond's SECOND coupon entitled with no run, and
+    # the page creates that one with its approver named. Two coupons, two run
+    # ids, one ledger.
+    say "Preparing the first coupon. One holder has not provided settlement instructions"
+    jq -n --slurpfile s "$OUT/seat.json" '{seat: $s[0], withhold: 0, approver: null}' > /tmp/prepare-args.json
     "${RUNNER[@]}" --dar "$DAR" \
       --script-name Indivisa.Test.Demo:demo_prepare \
       --input-file /tmp/prepare-args.json --output-file "$OUT/prepared.json" \
@@ -120,13 +120,13 @@ case "${1:-seat}" in
       exit 1
     fi
     party_map
-    say "Creating the allocation that was withheld"
+    say "Authorising every payment the holders settlement instructions allow"
     jq -n --slurpfile s "$OUT/seat.json" '{seat: $s[0], withhold: 0, approver: null}' > /tmp/prepare-args.json
     "${RUNNER[@]}" --dar "$DAR" \
       --script-name Indivisa.Test.Demo:demo_prepare \
       --input-file /tmp/prepare-args.json --output-file "$OUT/prepared.json" \
       --participant-config /tmp/participants.json
-    say "Done. The page shows every allocation ready; press the button again."
+    say "Done. A holder with no settlement instructions is still outstanding if there was one; otherwise every payment is authorised and the button will settle."
     ;;
 
   *) echo "usage: seed.sh [seat|prepare]" >&2; exit 2 ;;

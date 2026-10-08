@@ -42,10 +42,11 @@ services:
         condition: service_healthy
     environment:
       INDIVISA_HOLDERS: "${INDIVISA_HOLDERS:-20}"
+      # There is deliberately no INDIVISA_GOVERNED. One seat carries both
+      # demonstrations: the first coupon is released by the paying agent
+      # alone, the second by the approvers, and the page decides which when
+      # it creates each run. See seed.sh.
       INDIVISA_PORT: "${INDIVISA_PORT:-8080}"
-      # Set for the governed demo: the seat stops after seating so that
-      # `govern prepare` can create the run with its approver named.
-      INDIVISA_GOVERNED: "${INDIVISA_GOVERNED:-}"
     volumes:
       - demo:/demo
     command: ["seat"]
@@ -149,7 +150,13 @@ services:
       - demo:/demo
     entrypoint: ["/indivisa/govern.sh"]
     command: ["seat"]
-    profiles: ["manual"]
+    # In the govern profile, not manual: `--profile govern up -d` is then the
+    # only command the demo needs. It waits for the holder seat before the two
+    # steps that depend on it, so its own two minutes overlap the seating
+    # rather than following it. `govern` below stays manual - it is the
+    # confirm/execute runner, and starting it unasked is what raced
+    # `govern-seed` through the same setup on 5 October.
+    profiles: ["govern"]
     restart: "no"
 
   # prepare / propose / confirm N / execute N / status

@@ -30,7 +30,7 @@ module Indivisa.Test.Demo where
 import DA.Assert ((===))
 import DA.Date (date, Month(..))
 import DA.Foldable (forA_)
-import DA.List ((!!))
+import DA.List ((!!), maximumBy)
 import DA.Set qualified as Set
 import DA.Text qualified as T
 import DA.Time (convertRelTimeToMicroseconds, subTime)
@@ -189,8 +189,24 @@ demo_seat args = do
       isin = demoIsin
       quantity = holderQuantity i
 
-  -- Onboarding: the one click per holder. Shown once in the recording.
-  agreements <- onboardAll payingAgent cash holders
+  -- Settlement instructions: the one thing a holder ever provides, and the
+  -- last holder has not provided them yet.
+  --
+  -- The demo used to make the first run fail by having the agent skip one
+  -- holder's receipt allocation. That is not a thing that happens: an agent's
+  -- software does not forget. **Missing settlement instructions are one of the
+  -- commonest reasons a real payment fails** - a holder new to this agent, a
+  -- bank account that changed, details that went stale - so that is what this
+  -- seat arms instead. The fix is the holder providing them, on their own
+  -- page, which is also the only thing a holder ever does.
+  let signed = take (n - 1) holders
+      waiting = holders !! (n - 1)
+  agreements <- onboardAll payingAgent cash signed
+  _ <- submit payingAgent $ createCmd PaymentProposal with
+    payingAgent
+    holder = waiting
+    account = basicAccount waiting
+    instrument = cash.instrument
 
   -- The announcement: a semi-annual coupon, 4.375% on 1,000 -> 21.875 per
   -- unit, so the cents have somewhere to go and the rounding is visible.
@@ -216,8 +232,116 @@ demo_seat args = do
     policy = LargestRemainder
   Some schedule <- queryContractId payingAgent scheduleCid
 
-  -- Fund the agent for the total plus a float. SIMULATED cash.
-  fund cash payingAgent (schedule.total + 10000.0)
+  -- The NEXT coupon on the same bond, entitled and deliberately left without
+  -- a run.
+  --
+  -- This is what lets one stack carry both demonstrations. Until 8 October the
+  -- governed path needed a stack of its own, because a DistributionRun is
+  -- created once per run id and an approver cannot be added afterwards, so a
+  -- seat that created the run had already decided the answer. INDIVISA_GOVERNED
+  -- existed only to stop the seat before that point. Now the page creates runs
+  -- itself, with or without an approver, and a run id is derived per bond and
+  -- payment date - so the second coupon is simply a second run id, and the
+  -- operator decides at the panel which way it is released.
+  --
+  -- A bond paying semi-annually, so the next payment date is six months on.
+  -- Entitled but not prepared, which is exactly the state the agent's panel
+  -- calls "the run is the one step left".
+  --
+  -- **Every holder has settlement instructions by the time this one is
+  -- worked**, because working it comes after the first coupon, where the last
+  -- holder provides them. That matters: on a governed run the ask button is
+  -- disabled while anything is outstanding (5 October), since the approvers
+  -- decide whether a payment goes out and should not be asked to approve one
+  -- that cannot execute.
+  let recordDate2 = date 2028 May 15
+      paymentDate2 = date 2028 Jun 1
+  action2Cid <- submit issuer $ createCmd CorporateAction with
+    issuer
+    payingAgent
+    isin = demoIsin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 21.875
+    recordDate = recordDate2
+    paymentDate = paymentDate2
+  awaitVisible payingAgent action2Cid
+  -- Instrument_Snapshot is nonconsuming, so the same instrument and the same
+  -- positions serve both record dates. The register is a plain Daml template
+  -- and settling a coupon does not touch it.
+  snapshot2Cid <- submit payingAgent $ exerciseCmd instrumentCid Instrument_Snapshot with
+    recordDate = recordDate2
+    positionCids
+  schedule2Cid <- submit payingAgent $ exerciseCmd action2Cid CorporateAction_Entitle with
+    snapshotCid = snapshot2Cid
+    policy = LargestRemainder
+  Some schedule2 <- queryContractId payingAgent schedule2Cid
+
+  -- A second bond, and its coupon is already paid.
+  --
+  -- The console used to open on a register of exactly one instrument, so a
+  -- bond selector would have had nothing to select. A real paying agent runs
+  -- a book: several instruments, each at a different stage, and most of them
+  -- finished.
+  --
+  -- **Its holders are its own two**, not the first bond's. That is both more
+  -- realistic, since a register is holders of overlapping but different
+  -- instruments, and necessary: every holder of the first bond is paid by the
+  -- demo, and the demo's whole visual is a card going from 0.00 to its amount.
+  -- Paying them here first would have started them with cash. Two extra
+  -- parties is the only cost, and parties are the slow part of seating.
+  let pentlandIsin = "XS2888845670"
+  bHolders <- forA [1, 2] $ \i ->
+    named (["Pentland-Trust", "Calder-Pension"] !! (i - 1)) (holderParticipant i)
+  bAgreements <- onboardAll payingAgent cash bHolders
+  bInstrumentCid <- submit payingAgent $ createCmd Instrument with
+    registrar = payingAgent
+    issuer
+    isin = pentlandIsin
+    name = "Pentland Water 3.25% 2029"
+    currency = "USD"
+    denomination = 1000.0
+    couponRate = 0.0325
+    maturity = date 2029 Jun 30
+  bPositionCids <- forA (zip [1, 2] bHolders) $ \(i, holder) ->
+    submit payingAgent $ createCmd Position with
+      registrar = payingAgent
+      holder
+      isin = pentlandIsin
+      quantity = if i == 1 then 400.0 else 125.0
+  let bRecordDate = date 2027 May 15
+      bPaymentDate = date 2027 Jun 1
+  bActionCid <- submit issuer $ createCmd CorporateAction with
+    issuer
+    payingAgent
+    isin = pentlandIsin
+    kind = Coupon
+    currency = "USD"
+    amountPerUnit = 16.25
+    recordDate = bRecordDate
+    paymentDate = bPaymentDate
+  awaitVisible payingAgent bActionCid
+  bSnapshotCid <- submit payingAgent $ exerciseCmd bInstrumentCid Instrument_Snapshot with
+    recordDate = bRecordDate
+    positionCids = bPositionCids
+  bScheduleCid <- submit payingAgent $ exerciseCmd bActionCid CorporateAction_Entitle with
+    snapshotCid = bSnapshotCid
+    policy = LargestRemainder
+  Some bSchedule <- queryContractId payingAgent bScheduleCid
+
+  -- Fund the agent for every coupon this seat leaves workable, plus a float.
+  -- Three runs now: this bond's two coupons and the second bond's one. The
+  -- seat funded exactly one run's worth once and the agent ran out mid-demo
+  -- (1 October), so this is counted rather than estimated. SIMULATED cash.
+  fund cash payingAgent (schedule.total + schedule2.total + bSchedule.total + 10000.0)
+
+  -- Pay the second bond now, so the selector opens with a coupon that is
+  -- done: a receipt, an update id, and both of its holders paid.
+  let bRun = runFromSchedule registry bScheduleCid bSchedule
+  bRunCid <- submit payingAgent $ createCmd bRun
+  bSendCid <- allocateSend payingAgent cash bRun
+  bReceiptCids <- allocateReceipts payingAgent cash bRun bAgreements
+  _ <- settle payingAgent cash bRunCid (bSendCid :: bReceiptCids)
 
   let run = runFromSchedule registry scheduleCid schedule
       seat = DemoSeat with
@@ -315,7 +439,24 @@ demo_prepare args = do
       else (:: []) <$> allocateSend agent cash run
 
   -- Receipt allocations for holders who have none, minus the withheld ones.
-  let wanted = [ (h, a) | (h, a) <- seat.agreements, not (Set.member (basicAccount h) allocated) ]
+  --
+  -- The agreements are read from the ledger rather than from the seat record,
+  -- because a holder can provide settlement instructions after the seat was
+  -- written, which is exactly what the demo now turns on. The page's
+  -- `allocateMissing` does the same for the same reason.
+  -- Only holders this run actually pays. An agreement is about the CASH
+  -- instrument, which every bond shares, so a holder of another bond has one
+  -- too and would otherwise get an allocation carrying no legs, which the
+  -- token refuses outright.
+  live <- query @PaymentAgreement agent
+  let recipients = Set.fromList (map (.recipient) run.legs)
+      onLedger =
+        [ (a.holder, cid)
+        | (cid, a) <- live
+        , a.instrument == run.instrument
+        , Set.member a.holder recipients
+        ]
+      wanted = [ (h, a) | (h, a) <- onLedger, not (Set.member (basicAccount h) allocated) ]
       toCreate = take (length wanted - args.withhold) wanted
       withheld = drop (length wanted - args.withhold) wanted
   receiptCids <- allocateReceipts agent cash run toCreate
@@ -380,18 +521,29 @@ demo_smoke = do
   sum (map (.amount) schedule.entries) === schedule.total
   cash <- cashFor seat.registry seat.rulesCid
 
-  -- Run two, but first: one holder is not ready. Nothing moves.
-  first <- demo_attempt DemoAttemptArgs with seat; withhold = 1; approver = None
+  -- Run two, but first: one holder has given no settlement instructions, so
+  -- the agent cannot authorise their side and nobody is paid.
+  first <- demo_attempt DemoAttemptArgs with seat; withhold = 0; approver = None
   case first of
     Rejected {..} -> do
       assertMsg "reason names the missing authorisation" ("missing authorizations" `T.isInfixOf` reason)
       legsRequested === 12
-    Settled {} -> fail "settled with a receipt allocation withheld"
+    Settled {} -> fail "settled with one holder's settlement instructions missing"
   forA_ seat.holders $ \h -> awaitBalance cash h 0.0
   rejected <- query @SettlementRejected seat.payingAgent
   length rejected === 1
 
-  -- Then the retry: the one missing receipt is created, and everyone is paid.
+  -- The holder provides them. One submission, by the holder, once in their
+  -- life: this is the only command a holder ever sends.
+  let waiting = seat.holders !! (length seat.holders - 1)
+  proposals <- query @PaymentProposal waiting
+  case proposals of
+    (cid, _) :: _ -> do
+      _ <- submit waiting $ exerciseCmd cid Accept
+      pure ()
+    [] -> fail "the waiting holder had no settlement instructions to provide"
+
+  -- Then the retry: the last receipt is created, and everyone is paid.
   second <- demo_attempt DemoAttemptArgs with seat; withhold = 0; approver = None
   case second of
     Settled {..} -> do
@@ -399,6 +551,38 @@ demo_smoke = do
       total === schedule.total
     Rejected {..} -> fail ("expected settlement, got: " <> reason)
   forA_ schedule.entries $ \e -> awaitBalance cash e.holder e.amount
+
+  -- The SECOND coupon on the same bond, which is what lets one stack carry
+  -- both demonstrations. The seat entitled it and deliberately left it
+  -- without a run; this is the page's work, done here as a script.
+  --
+  -- The schedule is found by payment date rather than carried in the seat,
+  -- which is the same thing the page has to do: a bond has several coupons
+  -- and `EntitlementSchedule` for this ISIN is now more than one contract.
+  live <- query @EntitlementSchedule seat.payingAgent
+  let mine = [ (cid, s) | (cid, s) <- live, s.isin == seat.isin ]
+      next = maximumBy (\a b -> compare (snd a).paymentDate (snd b).paymentDate) mine
+  (schedule2Cid, schedule2) <- pure next
+  assertMsg "the second coupon is a later payment date than the first"
+    (schedule2.paymentDate > schedule.paymentDate)
+  -- Every holder has settlement instructions by now, including the one who
+  -- provided them above, so this coupon needs nothing from anybody.
+  agreements <- query @PaymentAgreement seat.payingAgent
+  let forThisCash = [ (a.holder, cid) | (cid, a) <- agreements, a.instrument == cash.instrument ]
+      run2 = runFromSchedule seat.registry schedule2Cid schedule2
+      recipients = map (.recipient) run2.legs
+      forThisRun = [ (h, cid) | (h, cid) <- forThisCash, h `elem` recipients ]
+  length forThisRun === 12
+  assertMsg "the second coupon has a run id of its own" (run2.runId /= seat.runId)
+  run2Cid <- submit seat.payingAgent $ createCmd run2
+  send2 <- allocateSend seat.payingAgent cash run2
+  receipts2 <- allocateReceipts seat.payingAgent cash run2 forThisRun
+  (_, _) <- settle seat.payingAgent cash run2Cid (send2 :: receipts2)
+  -- Paid twice, so each holder now holds both coupons.
+  forA_ schedule.entries $ \e -> awaitBalance cash e.holder (e.amount * 2.0)
+
+  -- The float, and only the float: the seat funds the agent for every coupon
+  -- it leaves workable, and all of them have now settled.
   awaitBalance cash seat.payingAgent 10000.0
 
   -- Nothing about the run reached a holder's view.

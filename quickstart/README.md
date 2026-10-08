@@ -10,6 +10,8 @@ docker compose up
 
 Wait for `Ready. Open http://localhost:8080` in the terminal (see **When is it ready?** just below; the first run takes a few minutes, most of it seating the holders), then open that page.
 
+**To see everything the package can do, start it with the approvers instead:** `docker compose --profile govern up -d`. That adds three Decentralization Manager nodes and builds a decentralised party while the holders are being seated, so it costs no extra waiting, and the second coupon in the register can then be released by the approvers rather than by the paying agent alone. It is one command either way, and nothing has to be torn down between the two.
+
 You will need Docker with Compose v2, **6 GB of memory** given to it (Docker Desktop: Settings → Resources) and ~2 GB of disk. The optional governed run at the end adds about 0.5 GB, so 6 GB covers everything here.
 
 If `docker compose up` is not available as one word on your system, use `docker-compose up`; everything else is the same.
@@ -35,9 +37,8 @@ What you see before them, so you can tell progress from a stall:
 | `Container indivisa-canton Healthy` | the network is ready for a client | |
 | `==> Waiting for the ledger` … `all five participants are answering` | | seconds |
 | `==> Seating N holders` | each holder is a party, and a party takes a few seconds. Nothing prints while it works | 2 min for 8, 4 min for 20 |
-| `seated N holders; schedule total …` | the bond, the register, the onboarding and the payment schedule exist | |
-| `==> Preparing the run, with one holder deliberately left out` | the cash is set aside and the receipts are made ready | ~20 s |
-| `withholding the receipt allocation of '…'` | **the holder that will block the first attempt.** Note the name; you will see it again in the refusal | |
+| `seated N holders; schedule total …` | the two bonds, the register, the onboarding and two coupons exist. One holder has given no settlement instructions, and the second coupon is deliberately left without a run | |
+| `==> Preparing the first coupon. One holder has not provided settlement instructions` | the cash is set aside and every payment the agent can authorise is authorised | ~20 s |
 | `==> Ready…` | go to the browser | |
 
 The terminal stays busy after that: Canton and the web server keep running in the foreground, which is normal. Leave the window open: `Ctrl+C` there stops the demo.
@@ -47,52 +48,59 @@ The terminal stays busy after that: Canton and the web server keep running in th
 A bond pays its coupon. The paying agent must pay every holder. Every figure on the page is read live from the participant that holds it. There is no application server in between, and nothing is cached:
 
 - **The header**: the bond, the event, how many holders, the total due, and how many allocations are on the ledger out of how many the batch needs. That count is one more than the number of holders: each holder authorises its own receipt, and the paying agent adds one send allocation carrying every leg. Token Standard V2 wants both sides of every leg. Below it, the one button.
-- **Holders**: a card for every holder, all twenty, each read from the participant that hosts it, showing its units, what it is due and what cash it has. Search them, filter by leg state, sort by amount.
+- **Holders**: a card for every holder, all twenty, each read from the participant that hosts it, showing its units, what it is due and what cash it has. Search them, filter by leg state, sort by amount. Each card carries one of four states, and between them they say whose move it is: **NO DETAILS** (the holder has given no settlement instructions, so nothing on the agent's screen can fix it), **TO AUTHORISE** (instructions on file, the payment not authorised yet, which the agent does alone), **READY** (authorised and waiting for the batch) and **PAID**. The same four are counted on one line beside the button, so you can see where a run stands without opening a tab.
 - **Click any card.** The page asks that holder's node, as that holder and nobody else, what it will hand over: its own position, agreement, allocation and cash, and then six counts of what that node holds about *anyone else*. They are zero, and they stay zero through the settlement. Not filtered. Never delivered.
 - **Schedule** is the same twenty rows as the executor sees them, sortable, and it shows its own arithmetic: the coupon rate is finer than a cent, so a few holders land between cents and largest-remainder rounding decides which way each one goes, marked in the table, with the parts still summing to the total exactly. **Privacy** runs that check once per participant, continuously. **Activity** is what the ledger did, with the update id.
 
 ## The thing worth testing
 
-The run has been prepared with **one holder deliberately left out**, so:
+One holder has not given the paying agent their **settlement instructions**, which is one of the commonest reasons a real payment fails: a holder new to this agent, a bank account that changed, details that went stale. So:
 
-1. Press **Settle N legs in one transaction**. It is refused. A red strip appears across the page: `SETTLEMENT REJECTED · N payments requested · 0 executed · NO PARTIAL SETTLEMENT`, with the ledger's own reason, which names the holder that is missing. The page names them too, before you press: the note under the button reads **Waiting for <name>**, the **Waiting 1** chip filters the grid down to that one card, and its row in the schedule is the one marked **waiting**. Check the other cards: nothing moved, for anyone. That is atomicity, demonstrated rather than claimed.
-2. Fix the missing holder, on the page. A second button sits under the first: **Create the 1 missing allocation**. Press it. The paying agent creates that holder's receipt allocation alone, under the standing agreement the holder signed at onboarding, so nobody is asked for anything. The allocations meter fills to N+1, the **Waiting for <name>** note disappears and every card turns **ready**. Nothing to reload, nothing to restart.
+1. Press **Settle N legs in one transaction**. It is refused. A red strip appears across the page: `SETTLEMENT REJECTED · N payments requested · 0 executed · NO PARTIAL SETTLEMENT`, with the ledger's own reason, which names the holder that is missing. The page names them too, before you press: the line beside the button reads **1 waiting on the holder**, the **No details 1** chip filters the grid down to that one card, and its row in the schedule is the one marked **no details**. Check the other cards: nothing moved, for anyone. That is atomicity, demonstrated rather than claimed.
+2. Fix it. The page names the holder and tells you it cannot be fixed from the agent's screen, because the holder has given no **settlement instructions**: the paying agent has nowhere to send their money. Click **Holder** at the top, open that holder, and press **Provide settlement instructions**. That is the only thing a holder ever does, and it is done once: every coupon after this one lands without them doing anything.
 
-   If you would rather watch it happen in a terminal, the same work is `docker compose run --rm prepare` from a second terminal in the same folder. Leave the browser open and leave the first terminal running: that one is the network itself.
+   Go back to **Paying agent**. That holder's card has moved from **NO DETAILS** to **TO AUTHORISE**, which is the whole point of the two states: the holder has done their part and the run is now waiting on the agent. Press **Authorise the 1 remaining payment**. The meter fills to N+1 of N+1 and every card reads **READY**. In a deployment this step happens by itself when the run is prepared; it is a button here so you can watch it.
+**Two of those buttons would not exist in a real deployment, and it is worth knowing which.**
+
+**Authorise the N remaining payments** is a button here so you can watch it. In a deployment the agent's software does it by itself the moment the run is prepared: it has the holders' settlement instructions, so there is nothing to decide and nobody to ask. It is separated out here because it is the step that turns "the holder said where to pay them" into "this payment is authorised on the ledger", and that is worth seeing happen.
+
+**Settle would not be pressable while a holder's details are missing.** A real payout system does not let an operator fire a batch it already knows the ledger will refuse. We leave it enabled on this path on purpose, because the refusal **is** the demonstration: it is how you see that nobody is paid rather than everybody but one. On the governed run below it is disabled while anything is outstanding, for exactly that reason, since the approvers decide whether a payment goes out and should not be asked to approve one that cannot execute.
+
 3. Press the button again. Settled. Every holder is paid in the same transaction, the update id of that transaction appears on screen, every card turns green and every row in the schedule turns **paid**, while each holder's counts of other holders stay at zero. Open a card again and check that for yourself.
 
-To start over: `docker compose down -v && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. If the next thing you want is the governed run below, use `docker compose --profile govern down -v` instead: it clears the approver nodes too.
+To start over: `docker compose down -v && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. You do **not** need to start over for the governed run below: it is the next coupon on the same bond, on the same stack.
 
 ## Optional: make it need more than one signature
 
 Everything above settles on the paying agent pressing one button. A coupon worth millions should not. The package can also run the same settlement **governed**: a party that no single company controls, which acts only when two of its three members agree.
 
-This is BitSafe's Decentralization Manager, unmodified, running as three approver nodes beside the ledger. Nothing above changes: the governed path is opt-in and starts differently:
+This is BitSafe's Decentralization Manager, unmodified, running as three approver nodes beside the ledger. Nothing above changes, and **nothing has to be torn down**: the same seat carries a second coupon on the same bond, six months later, deliberately left without a run. The coupon you just paid was released by the paying agent alone; this one will need the approvers.
+
+**If you started with `--profile govern` at the top, you have everything already** and there is nothing to run here: the approvers were built while the holders were being seated. If you started with the plain `docker compose up`, add them now, to the stack you already have:
 
 ```bash
-docker compose --profile govern down -v                  # start clean
-INDIVISA_GOVERNED=1 docker compose --profile govern up -d
-docker compose run --rm govern-seed                      # ~2 min, once
+docker compose --profile govern up -d
 ```
 
-**That first line matters even if you have already stopped the stack.** Two things survive a plain `docker compose down -v`: the approver nodes' own volumes, which then carry a party the new ledger has never heard of, and the run the ungoverned demo seated, which names no approver. An approver cannot be added to a run that already exists, so starting the governed path on top of the first one gives a run the agent could settle alone. The page refuses and says so rather than letting that pass, but the fix is to start clean.
+That is the whole terminal, and it is the same command either way. It builds the decentralised party itself: three nodes, a peer mesh, and rules at a threshold of two. Everything after this is on the page.
 
-That is the whole terminal. `govern-seed` builds the decentralised party itself: three nodes, a peer mesh, and rules at a threshold of two. The coupon is then set up on the page.
+Open http://localhost:8080. In the **register** down the left, the first bond now has two coupons: the one you paid, marked **paid**, and the next one, marked **entitled**. Click the second one.
 
-Open http://localhost:8080. There is no run yet, so the set-up panel is open, prefilled, with **Needs the approvers** already ticked because the stack has a decentralised party. Press **Announce, freeze, derive, create the run**, then **Create the N missing allocations**.
+The panel offers the one step left: **Create the run for <date>**. The entitlements are already on the ledger, because the seat froze the register on that coupon's record date and derived the schedule from it.
+
+Above that button is the choice that matters, and the page makes you look at it: **how should this run be released?** Either the paying agent alone, which settles the moment it presses the button, or the approvers must agree. The second option is selected by itself here because this stack has a decentralised party, and it is filled in from that party's live governance rules rather than from anything we wrote in this document: the threshold it shows (**2 of 3**) and the three member names under it are read from the rules contract through the approvers' own software. Press **Create the run**, then **Authorise the N remaining payments**.
+
+Every card reads **TO AUTHORISE**, and none reads **NO DETAILS**: this is a new run so nothing is authorised yet, and every holder gave their settlement instructions once, during the first coupon, which is the whole point of giving them once. That is also why the approvers can be asked at all. On a governed run the ask button stays disabled while anything is outstanding, because the approvers decide whether a payment goes out and should not be asked to approve one the ledger would refuse.
+
+One honest note on that **2 of 3**. Counting members is not counting companies. All three approver nodes here run on your machine, so what this demonstrates locally is that no single *member* can release the payment. Members on separate nodes at separate companies is what the DevNet run showed, with BitSafe holding one of two confirmations on their own infrastructure.
 
 **The button has changed.** It no longer settles. It reads *Ask the approvers to settle 20 legs* (or however many holders you seated), because the run now names an approver and the paying agent alone no longer has the authority to pay. Press it: that files the request, and nothing moves.
 
-Now two of the three approvers must agree. Each has their own node:
+Now two of the three approvers must agree, and that happens on the **Approver** desk at the top of the page. It lists the three members, the threshold read from the party's own governance rules, and where each member stands on the request in front of it. Open one and confirm as that member; open a second and do the same. The strip goes from one of two to two of two, read live from the approvers' own software.
 
-```bash
-docker compose run --rm govern confirm 1    # one approver agrees
-docker compose run --rm govern confirm 2    # a second agrees
-```
+At two, the greyed-out *Waiting for the approvers* button on the paying agent's desk disappears and a green **Settle N legs, now approved** takes its place, so there is only ever one thing to press. Press it, and the coupon settles.
 
-Watch the strip on the page as you do: it goes from one of two to two of two, read live from the approvers' own software. At two, the greyed-out *Waiting for the approvers* button disappears and a green **Settle N legs, now approved** takes its place, so there is only ever one thing to press. Press it, and the coupon settles.
-
-The refusal below threshold is worth seeing. Between the two confirms, try:
+**Read the note on a member's page before you press anything there.** That button would not exist in a deployment: a member confirms in its own application, at its own company, behind its own sign-in, and the paying agent's console would have no route to it. It is on this stack because the demo holds every party's credential. What is not theatre is the rule it cannot get around, and you can check that yourself: with one confirmation in, ask the ledger to execute anyway.
 
 ```bash
 docker compose run --rm govern execute 2    # REFUSED, one is not enough
@@ -104,7 +112,7 @@ It is not our code declining; it is the ledger:
 The requirement 'Enough confirmations to execute action' was not met.
 ```
 
-`docker compose run --rm govern status` shows where a vote stands at any point. The three approver nodes have their own web interfaces on http://localhost:8081, 8082 and 8083 if you want to see the invitations and the confirmations from their side.
+`docker compose run --rm govern status` shows where a vote stands at any point. The three approver nodes have their own web interfaces on http://localhost:8081, 8082 and 8083, linked from each member's page, if you want to see the party, the peers and the audit trail from their side. One honest note about them: v1.8.0 does not list a **custom** proposal like ours under its own Approvals view, which is why the confirming is on our page at all, and it is a finding we owe BitSafe.
 
 If you would rather not use the page at all, the whole thing also runs from the terminal: `govern propose` files the same request, and `govern execute 3` settles it once two approvers have confirmed.
 ## What is real and what is not
@@ -125,5 +133,5 @@ This is a local network, so it proves the mechanism, not a deployment. The same 
 | The page says it is waiting for the demo to finish seating | That is the normal first few minutes. It picks the demo up by itself. To watch the seed: `docker compose logs -f seed`. |
 | Port 8080 is taken | `INDIVISA_PORT=8081 docker compose up` |
 | The page says there is no run yet and opens a set-up panel | On the ungoverned path the seed did not finish; see above. On the governed path that is correct: the run is yours to create, from that panel. |
-| Setting a coupon up says a run already exists and names no approver | You are on the governed path over the ungoverned one's leftovers. `docker compose --profile govern down -v`, then start the governed path again. |
-| The governed seat fails with a 409, or DecMan says onboarding is already complete | The approver nodes keep their own volumes, and a plain `docker compose down -v` does not clear them, so they carry a party the new ledger has never heard of. Use `docker compose --profile govern down -v`. |
+| Setting a coupon up says a run already exists and names no approver | You are asking for the approvers on a coupon whose run was already created without them, and an approver cannot be added to a run that exists. Settle or cancel that run, or pick a coupon that has none. The page refuses rather than quietly handing back the ungoverned run, which would be a payment one company could release while you believed it needed two. |
+| The governed seat fails with a 409, or DecMan says onboarding is already complete | The approver nodes keep their own volumes, and a plain `docker compose down -v` does not clear them, so they carry a party the new ledger has never heard of. If you are starting the whole stack again, use `docker compose --profile govern down -v`. |

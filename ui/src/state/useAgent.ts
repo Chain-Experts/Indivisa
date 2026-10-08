@@ -38,7 +38,11 @@ export interface AgentHandle {
   /** Announce, freeze, derive and create the run, in that order. Each step is
    *  idempotent, so this both sets a coupon up from scratch and finishes one
    *  that stopped half way. `approver` set makes the run governed. */
-  onSetUpCoupon: (terms: CouponTerms, approver: Party | null) => Promise<void>;
+  onAnnounce: (terms: CouponTerms) => Promise<void>;
+  /** The agent's three steps on an announcement the issuer has already made. */
+  onEntitle: (actionCid: string, recordDate: string, paymentDate: string, policy: string, approver: Party | null) => Promise<void>;
+  /** The last step on a coupon whose schedule exists but whose run does not. */
+  onCreateRun: (approver: Party | null) => Promise<void>;
   /** The run the page is reading. Starts as the seat's and follows the page
    *  when it sets up a later coupon, which has a run id of its own. */
   runId: string;
@@ -46,7 +50,11 @@ export interface AgentHandle {
   ledgers: { agent: Ledger; registry: Ledger };
 }
 
-export function useAgent(config: Config): AgentHandle {
+/**
+ * @param isin          the bond on screen, which the operator picks
+ * @param selectedRunId its latest coupon, and the run the panes read
+ */
+export function useAgent(config: Config, isin: string, selectedRunId: string): AgentHandle {
   const { seat } = config;
   const agent = useMemo(
     () => new Ledger(config.baseOf(config.participantOf(seat.payingAgent)), seat.payingAgent),
@@ -64,18 +72,34 @@ export function useAgent(config: Config): AgentHandle {
     [config, seat.issuer],
   );
 
-  // The seat names one run. Setting up a later coupon makes another, with a
-  // run id derived from its own payment date, and the page follows it.
-  const [runId, setRunId] = useState(seat.runId);
+  // The run the panes read. It follows the operator's choice of bond, and
+  // also follows the page itself when it sets up a later coupon, which has a
+  // run id of its own.
+  const [runId, setRunId] = useState(selectedRunId);
   const [state, setState] = useState<AgentState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAt, setLastAt] = useState<number | null>(null);
   const [pressed, setPressed] = useState<Pressed>({ kind: "idle" });
+  // Picking a different coupon clears what was last pressed, and that is not
+  // tidiness: `pressed` carries the OUTCOME of a press, and the rejection
+  // strip renders on `pressed.kind === "rejected"` without looking at which
+  // run was refused. So a coupon refused for a missing holder put a red
+  // SETTLEMENT REJECTED banner over every other unsettled coupon the operator
+  // then opened - found by Avraham on 8 October. `state.rejections` was always
+  // filtered by run id correctly; this was the pressed state outliving its run.
+  //
+  // Only fires when the OPERATOR picks a coupon. The actions below move
+  // `runId` themselves after creating a run, and set their own `pressed`.
+  useEffect(() => {
+    setRunId(selectedRunId);
+    setPressed({ kind: "idle" });
+  }, [selectedRunId]);
+
   const failures = useRef(0);
 
   const refresh = useCallback(async () => {
     try {
-      setState(await agentState(agent, runId, seat.isin));
+      setState(await agentState(agent, runId, isin));
       setError(null);
       setLastAt(Date.now());
       failures.current = 0;
@@ -84,7 +108,7 @@ export function useAgent(config: Config): AgentHandle {
       failures.current += 1;
       if (failures.current >= 2) setError(String(e));
     }
-  }, [agent, runId, seat.isin]);
+  }, [agent, runId, isin]);
 
   useEffect(() => {
     refresh();
@@ -202,53 +226,104 @@ export function useAgent(config: Config): AgentHandle {
     }
   }, [agent, registry, refresh, seat.rulesCid, state]);
 
-  // Announce, freeze, derive, create the run. The four steps that were
-  // `demo.ps1 seat` and `govern prepare`, in the order the model requires and
-  // with each one idempotent, so pressing it again after a failure finishes
-  // the job instead of filing a second announcement.
+  // The issuer's one action, and the only thing the issuer desk does.
   //
-  // The first step submits as the ISSUER. That is somebody else's contract in
-  // a deployment, and the console can do it only because it is a harness that
-  // holds every party's credential. The panel offering this says so.
-  const onSetUpCoupon = useCallback(async (terms: CouponTerms, approver: Party | null) => {
-    const isin = seat.isin;
+  // It is a separate call on a separate screen because it is a separate
+  // company: `CorporateAction` is signed by the issuer and only observed by
+  // the agent. Keeping it on the agent's console made one screen act for two
+  // firms, which is not what a deployment looks like and is not what we claim.
+  const onAnnounce = useCallback(async (terms: CouponTerms) => {
     const currency = state?.instrument?.currency;
-    const kind = state?.schedule?.kind ?? "Coupon";
     if (!currency) {
       setPressed({ kind: "failed", what: "coupon", reason: "the instrument has not been read yet; wait for the page to load" });
       return;
     }
     setPressed({ kind: "busy" });
-    // Which step failed matters more than the message: an operator can act on
-    // "the register could not be frozen" and cannot act on a bare stack trace.
-    let step = "announce the event";
     try {
-      const actionCid = await announce(issuer, agent.party, isin, kind, currency, terms);
-      step = "freeze the register";
-      const snapshotCid = await freezeRegister(agent, isin, terms.recordDate);
-      step = "derive the schedule";
-      const scheduleCid = await entitle(agent, actionCid, snapshotCid, isin, terms.paymentDate, terms.policy);
-      step = "create the run";
-      const fresh = await agentState(agent, runIdFor(isin, kind, terms.paymentDate), isin);
-      if (!fresh.schedule) throw new Error("the schedule was derived but the page could not read it back");
+      await announce(issuer, agent.party, isin, "Coupon", currency, terms);
+      setPressed({ kind: "idle" });
+    } catch (e) {
+      setPressed({ kind: "failed", what: "coupon", reason: `could not announce the event: ${reasonOf(e)}` });
+    } finally {
+      refresh();
+    }
+  }, [agent, isin, issuer, refresh, state]);
+
+  // A schedule that has no run yet.
+  //
+  // Entitling an announcement consumes it, so a coupon stopped between the
+  // schedule and the run has nothing left to "work": the announcement is gone
+  // and the entitlements are the record of it. This is the one step left, and
+  // it is how the governed quickstart starts, because its seat entitles and
+  // then stops so that the run can be created with an approver named.
+  const onCreateRun = useCallback(async (approver: Party | null) => {
+    const currency = state?.instrument?.currency;
+    const schedule = state?.schedule;
+    if (!currency || !schedule) {
+      setPressed({ kind: "failed", what: "coupon", reason: "there is no schedule on this bond to create a run from" });
+      return;
+    }
+    setPressed({ kind: "busy" });
+    try {
       const id = await createRun(
         agent,
         seat.registry,
-        scheduleCid,
-        { isin, kind, currency, paymentDate: terms.paymentDate, entries: fresh.schedule.entries },
+        schedule.cid,
+        { isin, kind: schedule.kind, currency, paymentDate: schedule.paymentDate, entries: schedule.entries },
         approver,
       );
       setRunId(id);
       setPressed({ kind: "idle" });
     } catch (e) {
-      const reason = reasonOf(e);
-      setPressed({ kind: "failed", what: "coupon", reason: `could not ${step}: ${reason}` });
+      setPressed({ kind: "failed", what: "coupon", reason: `could not create the run: ${reasonOf(e)}` });
     } finally {
       refresh();
     }
-  }, [agent, issuer, refresh, seat.isin, seat.registry, state]);
+  }, [agent, isin, refresh, seat.registry, state]);
 
-  return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, onCancelRun, onPrepare, onSetUpCoupon, runId, ledgers: { agent, registry } };
+  // The agent's three steps, on an announcement the issuer has already made.
+  //
+  // Freeze the register on the record date, derive the schedule from the
+  // announcement and that snapshot, create the run. Each is idempotent, so
+  // pressing again after a failure finishes the job. `approver` set makes the
+  // run governed, and that is the agent's decision, not the issuer's.
+  const onEntitle = useCallback(
+    async (actionCid: string, recordDate: string, paymentDate: string, policy: string, approver: Party | null) => {
+      const currency = state?.instrument?.currency;
+      if (!currency) {
+        setPressed({ kind: "failed", what: "coupon", reason: "the instrument has not been read yet; wait for the page to load" });
+        return;
+      }
+      setPressed({ kind: "busy" });
+      // Which step failed matters more than the message: an operator can act
+      // on "the register could not be frozen" and cannot act on a trace.
+      let step = "freeze the register";
+      try {
+        const snapshotCid = await freezeRegister(agent, isin, recordDate);
+        step = "derive the schedule";
+        const scheduleCid = await entitle(agent, actionCid, snapshotCid, isin, paymentDate, policy);
+        step = "create the run";
+        const fresh = await agentState(agent, runIdFor(isin, "Coupon", paymentDate), isin);
+        if (!fresh.schedule) throw new Error("the schedule was derived but the page could not read it back");
+        const id = await createRun(
+          agent,
+          seat.registry,
+          scheduleCid,
+          { isin, kind: "Coupon", currency, paymentDate, entries: fresh.schedule.entries },
+          approver,
+        );
+        setRunId(id);
+        setPressed({ kind: "idle" });
+      } catch (e) {
+        setPressed({ kind: "failed", what: "coupon", reason: `could not ${step}: ${reasonOf(e)}` });
+      } finally {
+        refresh();
+      }
+    },
+    [agent, isin, refresh, seat.registry, state],
+  );
+
+  return { state, error, pressed, lastAt, refresh, onSettle, onWithdraw, onCancelRun, onPrepare, onAnnounce, onEntitle, onCreateRun, runId, ledgers: { agent, registry } };
 }
 
 /** What to show an operator. A ledger refusal carries its cause in the body;

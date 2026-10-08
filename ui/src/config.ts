@@ -29,7 +29,7 @@ export interface ParticipantMap {
   // The decentralised party whose members approve a governed run, when this
   // network has one. The party id only: the token that reaches its
   // Decentralization Manager stays on the server.
-  decman?: { party: Party } | null;
+  decman?: { party: Party; nodes?: { node: string; member: Party; url: string }[] } | null;
   // The ledger user to submit as, from the participant map. Null on an
   // unauthenticated network, where the default name does.
   userId?: string | null;
@@ -62,16 +62,39 @@ export interface Config {
   distinctNodes: number | null;
   /** The approvers' party, when a Decentralization Manager is configured. */
   decmanParty: Party | null;
+  /** One per approver node: its member party, and where a browser reaches that
+   *  node's own Decentralization Manager. Empty where none is configured.
+   *
+   *  The URL is published by `govern.sh` rather than derived here, because a
+   *  browser reaches those nodes on host-published ports while the scripts
+   *  reach them on container hostnames, and only the deployment knows both. */
+  approverNodes: { node: string; member: Party; url: string }[];
   /** Where operators sign in, or null on an unauthenticated deployment. */
   operatorAuth: { issuer: string; clientId: string } | null;
 }
 
 export async function loadConfig(): Promise<Config> {
-  const [seatR, mapR] = await Promise.all([fetch("/demo/seat.json"), fetch("/demo/participants.json")]);
+  // Three files, and only the first two are required. `approvers.json` is
+  // written by `govern.sh` the moment the decentralised party exists, which
+  // is minutes before the holder seat finishes; `participants.json` carries
+  // the same facts on a deployment that has no `govern.sh` (DevNet), where
+  // they are in the file from the start. Absent means this deployment has no
+  // approvers, which is the main product.
+  const [seatR, mapR, approversR] = await Promise.all([
+    fetch("/demo/seat.json"),
+    fetch("/demo/participants.json"),
+    fetch("/demo/approvers.json").catch(() => null),
+  ]);
   if (!seatR.ok) throw new Error("No seat file. Run: pwsh infra/demo.ps1 seat -Tag <tag>, then start the UI with INDIVISA_TAG=<tag>.");
   if (!mapR.ok) throw new Error("No participant map. Run: pwsh infra/participants-with-parties.ps1");
   const seat = (await seatR.json()) as Seat;
   const map = (await mapR.json()) as ParticipantMap;
+  // Tolerated absent, and tolerated unreadable: a 404 means this deployment
+  // has no approvers, and that is a normal state rather than a fault.
+  const approvers =
+    approversR && approversR.ok
+      ? ((await approversR.json()) as { party: Party; nodes: { node: string; member: Party; url: string }[] })
+      : null;
   // Set before any submission: an authenticated Canton takes the user from
   // the token and refuses a command naming a different one.
   if (map.userId) Ledger.userId = map.userId;
@@ -119,7 +142,8 @@ export async function loadConfig(): Promise<Config> {
     nodeIdOf,
     sharingWithAgent,
     distinctNodes,
-    decmanParty: map.decman?.party ?? null,
+    decmanParty: approvers?.party ?? map.decman?.party ?? null,
+    approverNodes: approvers?.nodes ?? map.decman?.nodes ?? [],
     operatorAuth: map.operator ?? null,
   };
 }

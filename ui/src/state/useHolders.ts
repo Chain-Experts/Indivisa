@@ -31,9 +31,12 @@ export interface HoldersHandle {
   refresh: () => Promise<void>;
 }
 
-export function useHolders(config: Config, currency: string): HoldersHandle {
-  const { seat } = config;
-  const byNode = useMemo(() => groupByNode(config, seat.holders), [config, seat.holders]);
+/**
+ * @param holders the register of the bond on screen, not the seat's fixed list:
+ *                a second bond has holders of its own.
+ */
+export function useHolders(config: Config, currency: string, holders: Party[], isin: string, runId: string): HoldersHandle {
+  const byNode = useMemo(() => groupByNode(config, holders), [config, holders]);
 
   const [facts, setFacts] = useState<Map<Party, HolderFacts>>(new Map());
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export function useHolders(config: Config, currency: string): HoldersHandle {
           // The connection acts as the first holder on the node and reads as
           // all of them; no paying-agent credential is involved.
           const ledger = new Ledger(config.baseOf(node), parties[0]);
-          return nodeHolders(ledger, parties, seat.runId, seat.isin, currency);
+          return nodeHolders(ledger, parties, runId, isin, currency);
         }),
       );
       const merged = new Map<Party, HolderFacts>();
@@ -60,7 +63,7 @@ export function useHolders(config: Config, currency: string): HoldersHandle {
       failures.current += 1;
       if (failures.current >= 2) setError(String(e));
     }
-  }, [byNode, config, currency, seat.isin, seat.runId]);
+  }, [byNode, config, currency, isin, runId]);
 
   useEffect(() => {
     refresh();
@@ -90,8 +93,7 @@ export interface Probe {
  * is the privacy claim, run live rather than asserted, and it is deliberately
  * a separate read from the grid's.
  */
-export function useNodeProbe(config: Config, currency: string, party: Party | null, live: boolean): Probe | null {
-  const { seat } = config;
+export function useNodeProbe(config: Config, currency: string, party: Party | null, live: boolean, isin: string, runId: string): Probe | null {
   const [probe, setProbe] = useState<Probe | null>(null);
 
   const run = useCallback(async () => {
@@ -100,12 +102,12 @@ export function useNodeProbe(config: Config, currency: string, party: Party | nu
     setProbe((p) => (p && p.party === party ? { ...p, busy: true } : { party, node, state: null, error: null, busy: true }));
     try {
       const ledger = new Ledger(config.baseOf(node), party);
-      const state = await holderState(ledger, seat.runId, seat.isin, currency);
+      const state = await holderState(ledger, runId, isin, currency);
       setProbe({ party, node, state, error: null, busy: false });
     } catch (e) {
       setProbe({ party, node, state: null, error: String(e), busy: false });
     }
-  }, [config, currency, party, seat.isin, seat.runId]);
+  }, [config, currency, party, isin, runId]);
 
   useEffect(() => {
     if (!party) {

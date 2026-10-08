@@ -40,6 +40,9 @@ export const T = {
   action: "#indivisa:Indivisa.Model.Event:CorporateAction",
   schedule: "#indivisa:Indivisa.Model.Entitlement:EntitlementSchedule",
   agreement: "#indivisa:Indivisa.Model.Payment:PaymentAgreement",
+  // The request a holder answers once: trailing underscore because `proposal`
+  // below is the governance one, and confusing the two would be expensive.
+  proposal_: "#indivisa:Indivisa.Model.Payment:PaymentProposal",
   run: "#indivisa:Indivisa.Model.Distribution:DistributionRun",
   receipt: "#indivisa:Indivisa.Model.Distribution:DistributionReceipt",
   rejected: "#indivisa:Indivisa.Model.Distribution:SettlementRejected",
@@ -65,6 +68,12 @@ type IdentifierFilter =
 
 // Under the node default of 200 list elements; the server clamps larger values.
 const PAGE_SIZE = 200;
+
+/** Nodes that answered 405 to the paged ACS endpoint, so it is not asked
+ *  twice. A property of the participant, not of a connection, hence module
+ *  scope: the quickstart image is Canton 3.5.8 and every Ledger instance on
+ *  it would otherwise rediscover the same 405 on every single read. */
+const UNPAGED = new Set<string>();
 
 export class LedgerError extends Error {
   constructor(public status: number, public body: string) {
@@ -134,7 +143,12 @@ export class Ledger {
   // The page token carries the offset the first page was taken at; sending
   // that offset back explicitly makes the token INVALID_ACS_PAGE_TOKEN, so
   // every page request is the first request plus the token and nothing else.
+  //
+  // Whether the node HAS that endpoint is remembered per node (see UNPAGED),
+  // because asking it again on every read costs a wasted round trip and the
+  // answer cannot change under a running participant.
   private async activeContracts(filters: IdentifierFilter[], verbose = true): Promise<ActiveContract[]> {
+    if (UNPAGED.has(this.base)) return this.unpagedContracts(filters, verbose);
     const eventFormat = {
       filtersByParty: Object.fromEntries(
         (this.readers ?? [this.party]).map((p) => [p, { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) }]),
@@ -152,8 +166,8 @@ export class Ledger {
         // endpoint and answers 405; fall back to the unpaged one, which is
         // enough below the node's 200-element cap.
         if (e instanceof LedgerError && e.status === 405 && !pageToken) {
-          const entries = await this.post<any[]>("/v2/state/active-contracts", { eventFormat, activeAtOffset: await this.ledgerEnd() });
-          return entries.map((x) => x.contractEntry?.JsActiveContract).filter(Boolean) as ActiveContract[];
+          UNPAGED.add(this.base);
+          return this.unpagedContracts(filters, verbose);
         }
         throw e;
       }
@@ -164,6 +178,32 @@ export class Ledger {
       if (!page.nextPageToken) return out;
       pageToken = page.nextPageToken;
     }
+  }
+
+  /**
+   * The pre-3.5.9 route, taken once the node has answered 405.
+   *
+   * Remembering that answer matters more than it looks. Every template read
+   * went paged-endpoint-405, then ledger-end, then the unpaged read: three
+   * round trips where two would do. The agent's own poll makes eight template
+   * reads and the register's makes six, every few seconds, on a host the
+   * browser gives six connections. **The register's poll was being starved
+   * outright** - found 8 October, when the rail went on saying a coupon was
+   * "prepared" for as long as the page stayed open after it had been paid, and
+   * a reload fixed it. A third of those requests existed only to be refused.
+   */
+  private async unpagedContracts(filters: IdentifierFilter[], verbose: boolean): Promise<ActiveContract[]> {
+    const eventFormat = {
+      filtersByParty: Object.fromEntries(
+        (this.readers ?? [this.party]).map((p) => [p, { cumulative: filters.map((identifierFilter) => ({ identifierFilter })) }]),
+      ),
+      verbose,
+    };
+    const entries = await this.post<any[]>("/v2/state/active-contracts", {
+      eventFormat,
+      activeAtOffset: await this.ledgerEnd(),
+    });
+    return entries.map((x) => x.contractEntry?.JsActiveContract).filter(Boolean) as ActiveContract[];
   }
 
   /** Active contracts of one template, as this party sees them. */

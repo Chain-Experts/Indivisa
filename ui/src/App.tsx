@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { displayName, loadConfig, type Config } from "./config";
 import { Tabs } from "./components/Tabs";
 import { Money } from "./components/Money";
@@ -8,10 +8,15 @@ import { RunBar, type RunSummary } from "./panes/RunBar";
 import { Holders, type HolderRow } from "./panes/Holders";
 import { Privacy } from "./panes/Privacy";
 import { Activity } from "./panes/Activity";
+import { HolderList, HolderPage } from "./panes/Holder";
+import { ApproverList, ApproverPage } from "./panes/Approver";
+import { committee, type Committee } from "./ledger/decman";
 import { completeSignIn, currentOperator, resumeSession, signIn, signOut, type Operator, type OperatorAuth } from "./auth";
 import { useAgent } from "./state/useAgent";
 import { useVote } from "./state/useVote";
 import { groupByNode, useHolders } from "./state/useHolders";
+import { Ledger } from "./ledger/client";
+import { book as readBook, announcements, type Coupon, type Announcement, type CouponTerms } from "./ledger/queries";
 
 // The console: one working header, one command, and four ways of looking at
 // the same run. Every figure is read from the participant that holds it;
@@ -83,6 +88,42 @@ export function App() {
     if (auth && !operator) return;
     loadConfig().then(setConfig).catch((e) => setError(String(e)));
   }, [ready, auth, operator]);
+
+  // The approvers can arrive AFTER the config has been read, and this is a
+  // race I made on 8 October by running `govern-seed` in parallel with the
+  // holder seat.
+  //
+  // `participants.json` is the seed's readiness signal, written last, and the
+  // page loads its config the moment it appears. `govern-seed` then **edits
+  // that same file** to add the decentralised party, a few seconds later. So a
+  // page opened at "Ready" had no approvers party, the release choice offered
+  // no options, and only a reload fixed it. Avraham hit it on the first clean
+  // run; I had not, because I reloaded between steps while testing.
+  //
+  // Re-read while the party is absent, and **only swap the config when it
+  // actually appears**: `config` is a dependency of the ledger connections and
+  // the register poll, so replacing it on a timer would restart those every
+  // five seconds. On a stack with no approvers at all this polls one small
+  // local file and changes nothing, which is the honest cost of there being no
+  // signal that tells "not yet" from "never".
+  useEffect(() => {
+    if (!config || config.decmanParty) return;
+    let live = true;
+    const t = window.setInterval(async () => {
+      try {
+        const r = await fetch("/demo/participants.json");
+        if (!r.ok) return;
+        const m = (await r.json()) as { decman?: { party?: string } | null };
+        if (!live || !m.decman?.party) return;
+        window.clearInterval(t);
+        const fresh = await loadConfig();
+        if (live) setConfig(fresh);
+      } catch {
+        // Keep trying: a 404 while the seed rewrites the file is normal.
+      }
+    }, 5000);
+    return () => { live = false; window.clearInterval(t); };
+  }, [config]);
 
   if (error) return <div className="boot error">{error}</div>;
   if (auth === undefined)
@@ -173,11 +214,319 @@ function Withdraw({ busy, confirmations, onWithdraw }: { busy: boolean; confirma
   );
 }
 
+/**
+ * The register, down the left.
+ *
+ * A paying agent works a book, so the book is the first thing on the page and
+ * stays there: which instrument you are looking at is a standing fact, not a
+ * control you reach for. Everything to the right follows it, including which
+ * desk you are at.
+ *
+ * Finished coupons stay on the list on purpose. Most of a real book is
+ * finished, and a settled coupon is still something an operator opens, to read
+ * its receipt and its update id.
+ */
+/**
+ * Which desk you are at, from the address.
+ *
+ * Three pages rather than a toggle, because in a deployment these are three
+ * companies: `/` the paying agent, `/issuer` the issuer, `/holders` the
+ * register and each holder's own page. nginx already serves index.html for
+ * every path, so no server change is needed.
+ *
+ * It is still one deployment with one login, and each page says so. The links
+ * between them are a convenience of the demo, not something a real operator
+ * would have.
+ */
+function useRoute() {
+  const [path, setPath] = useState(window.location.pathname);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const go = useCallback((to: string) => {
+    window.history.pushState({}, "", to);
+    setPath(to);
+  }, []);
+  return { path, go };
+}
+
+/**
+ * The way between the three desks, marked as what it is.
+ *
+ * It used to sit inside the header, where it read as one application's
+ * navigation. That is the opposite of the point: these are three companies,
+ * and no operator would ever have a button that turns them into another firm.
+ * It is a convenience of the demo, so it sits above the application and says
+ * so, instead of pretending to be part of it.
+ */
+function DeskSwitch({ path, go }: { path: string; go: (to: string) => void }) {
+  const here = (p: string) => (p === "/" ? path === "/" : path.startsWith(p));
+  const desks: [string, string][] = [
+    ["/", "Paying agent"],
+    ["/issuer", "Issuer"],
+    ["/holders", "Holder"],
+    ["/approvers", "Approver"],
+  ];
+  return (
+    <div className="deskbar">
+      <span className="deskbar-note">
+        <strong>Demo.</strong> These are four different companies. In a deployment each runs its own
+        application and signs in to it; here they are four pages so you can walk between them. You are at the
+      </span>
+      <nav className="desks" aria-label="Desk">
+        {desks.map(([to, label]) => (
+          <button
+            key={to}
+            className={here(to) ? "desk on" : "desk"}
+            aria-current={here(to) ? "page" : undefined}
+            onClick={() => go(to)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      <span className="deskbar-note">desk.</span>
+    </div>
+  );
+}
+
+/**
+ * The register, down the left: every coupon the agent has to work, grouped
+ * under the bond that pays it.
+ *
+ * One row per bond was wrong as soon as a bond had two coupons, because the
+ * row carried only the latest one and the earlier one could not be selected
+ * at all. A bond pays twice a year for ten years; the unit of work is the
+ * event, not the instrument, which is also what a paying agent's blotter
+ * looks like.
+ */
+function RegisterRail({ book, picked, onPick }: { book: Coupon[]; picked: string; onPick: (key: string) => void }) {
+  const label: Record<string, string> = {
+    announced: "announced",
+    scheduled: "entitled",
+    prepared: "prepared",
+    settled: "paid",
+  };
+  // Already sorted by bond then payment date, so grouping is a fold.
+  const groups: { isin: string; name: string; rows: Coupon[] }[] = [];
+  for (const row of book) {
+    const last = groups[groups.length - 1];
+    if (last && last.isin === row.isin) last.rows.push(row);
+    else groups.push({ isin: row.isin, name: row.name, rows: [row] });
+  }
+  return (
+    <nav className="rail" aria-label="Register">
+      <div className="rail-head">Register</div>
+      {book.length === 0 ? <div className="rail-empty">Reading the ledger…</div> : null}
+      {groups.map((g) => (
+        <div className="rail-group" key={g.isin}>
+          <div className="rail-bond">
+            <span className="rail-name">{g.name}</span>
+            <span className="rail-isin">{g.isin}</span>
+          </div>
+          {g.rows.map((r) => (
+            <button
+              key={r.key}
+              className={`rail-coupon${r.key === picked ? " on" : ""}`}
+              aria-current={r.key === picked ? "true" : undefined}
+              onClick={() => onPick(r.key)}
+            >
+              <span className="rail-date">{r.paymentDate ?? "no coupon yet"}</span>
+              {r.stage ? <span className={`rail-state ${r.stage}`}>{label[r.stage]}</span> : null}
+            </button>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * The issuer's desk.
+ *
+ * A separate screen because it is a separate company. `CorporateAction` is
+ * signed by the issuer and only observed by the paying agent: the issuer
+ * declares the terms of an event, and the agent then works out who is owed
+ * what and pays them. One console doing both was a harness pretending to be a
+ * product.
+ *
+ * It is still one browser tab holding both credentials, and that is said here
+ * rather than hidden, the same way the holders tab says it. In a deployment
+ * these are two applications at two companies, each with its own sign-in and
+ * its own ledger credential; the split here is honest about the shape and not
+ * about the isolation.
+ */
+function IssuerDesk({
+  book,
+  isin,
+  announced,
+  busy,
+  failure,
+  onAnnounce,
+}: {
+  book: Coupon[];
+  isin: string;
+  announced: Announcement[];
+  busy: boolean;
+  failure: string | null;
+  onAnnounce: (terms: CouponTerms) => Promise<void>;
+}) {
+  const bond = book.find((b) => b.isin === isin) ?? null;
+  const [rate, setRate] = useState("");
+  const [recordDate, setRecordDate] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
+  const ready = rate.trim() !== "" && recordDate !== "" && paymentDate !== "";
+
+  return (
+    <div className="issuer">
+      <div className="issuer-head">
+        <h2>Announce an event</h2>
+        <p>
+          You are at the <strong>issuer's</strong> desk. An issuer declares the terms of a coupon, a dividend or a
+          redemption and nothing else: it does not see the register, work out the entitlements or move the cash.
+          The paying agent picks the announcement up on its own screen.
+        </p>
+      </div>
+
+      {bond ? (
+        <div className="issuer-form">
+          <div className="coupon-fields">
+            <label>
+              Per unit
+              <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" id="ann-rate" />
+            </label>
+            <label>
+              Record date
+              <input value={recordDate} onChange={(e) => setRecordDate(e.target.value)} type="date" id="ann-record" />
+            </label>
+            <label>
+              Payment date
+              <input value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} type="date" id="ann-payment" />
+            </label>
+          </div>
+          <div className="coupon-actions">
+            <button
+              className="settle"
+              disabled={busy || !ready}
+              onClick={() =>
+                void onAnnounce({ amountPerUnit: rate.trim(), recordDate, paymentDate, policy: "LargestRemainder" })
+              }
+            >
+              {busy ? "Announcing…" : `Announce a coupon on ${bond.name}`}
+            </button>
+          </div>
+          <p className="action-note">
+            The rate is cash per unit of quantity, so 21.875 on a 1,000 denomination is a 4.375% semi-annual
+            coupon. The record date decides who is paid; the payment date decides when, and names the run. How the
+            rounding is done is the paying agent's decision, not yours, so it is not on this form.
+          </p>
+          <p className="action-note disclosure">
+            <strong>A real issuer would not type these three figures.</strong> A bond's terms are fixed in its
+            prospectus at issuance, so the rate and the coupon dates for its whole life are already known: the
+            issuer's own system announces the next one from that calendar, and an operator confirms rather than
+            composes it. This form stands in for that calendar, and for the register feed that would carry the
+            instrument and the positions. The ledger steps it files are the real ones.
+          </p>
+          {failure ? <p className="action-note warn">{failure}</p> : null}
+        </div>
+      ) : null}
+
+      <div className="issuer-list">
+        <h3>Waiting on the paying agent</h3>
+        {announced.length ? (
+          <table className="plain">
+            <thead>
+              <tr><th>Pays</th><th>Record</th><th>Per unit</th><th>Kind</th></tr>
+            </thead>
+            <tbody>
+              {announced.map((a) => (
+                <tr key={a.cid}>
+                  <td>{a.paymentDate}</td>
+                  <td>{a.recordDate}</td>
+                  <td className="num">{a.amountPerUnit}</td>
+                  <td>{a.kind}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="action-note">
+            Nothing waiting. An announcement leaves this list when the paying agent works it: entitling one
+            archives it and puts an entitlement schedule in its place, so the ledger keeps the result rather than
+            the request.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Console({ config, operator, auth }: { config: Config; operator: Operator | null; auth: OperatorAuth | null }) {
   const { seat } = config;
-  const agent = useAgent(config);
+
+  // The book: every bond on the agent's register, re-read with the page. The
+  // seat file names only the one it created, and a paying agent keeps more
+  // than one, so the list comes from the ledger and the seat is only the
+  // default selection.
+  const [book, setBook] = useState<Coupon[]>([]);
+  const bookLedger = useMemo(
+    () => new Ledger(config.baseOf(config.participantOf(seat.payingAgent)), seat.payingAgent),
+    [config, seat.payingAgent],
+  );
+  useEffect(() => {
+    let live = true;
+    const read = () => readBook(bookLedger).then((b) => { if (live) setBook(b); }).catch(() => {});
+    read();
+    const t = setInterval(read, 5000);
+    return () => { live = false; clearInterval(t); };
+  }, [bookLedger]);
+
+  // Who the approvers are, read once from the live governance rules. Both the
+  // release choice and the approvers desk need it, so it is read here rather
+  // than twice.
+  const [theCommittee, setTheCommittee] = useState<Committee | null>(null);
+  useEffect(() => {
+    if (!config.decmanParty) return;
+    let live = true;
+    committee(config.decmanParty)
+      .then((c) => { if (live) setTheCommittee(c); })
+      .catch(() => { if (live) setTheCommittee(null); });
+    return () => { live = false; };
+  }, [config.decmanParty]);
+
+  // The announcements on the bond in view. The agent observes these; the
+  // issuer desk is where they are made.
+  const [allAnnounced, setAllAnnounced] = useState<Announcement[]>([]);
+  const pending = allAnnounced;
+  // The selection is a COUPON, keyed by its run id, not a bond. The seat's
+  // own run is the default, which is the first coupon on the first bond and
+  // the one the walkthrough starts on.
+  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const picked = book.find((b) => b.key === (pickedKey ?? seat.runId)) ?? null;
+  const isin = picked?.isin ?? seat.isin;
+  // A coupon that has been announced but not entitled has no run to read, and
+  // the seat's run id would be the wrong one. An id nothing matches is the
+  // honest answer: the panes then show the register and no coupon figures.
+  const runId = picked ? (picked.runId ?? `${picked.key}/none`) : seat.runId;
+
+  const agent = useAgent(config, isin, runId);
+  useEffect(() => {
+    let live = true;
+    const read = () =>
+      announcements(bookLedger, isin)
+        .then((a) => { if (live) setAllAnnounced(a); })
+        .catch(() => {});
+    read();
+    const t = setInterval(read, 5000);
+    return () => { live = false; clearInterval(t); };
+  }, [bookLedger, isin]);
   // The vote only exists while a proposal is outstanding, and only on a
   // network that has a Decentralization Manager configured.
+  // The agent's own strip votes on the SELECTED run's request, and only that:
+  // feeding it the newest request on the ledger would put an execute button on
+  // a coupon that was never asked about.
   const voting = useVote(
     config.decmanParty,
     agent.state?.proposal?.cid ?? null,
@@ -186,10 +535,40 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
     seat.rulesCid,
     agent.refresh,
   );
-  const currency = agent.state?.instrument?.currency ?? "USD";
-  const holders = useHolders(config, currency);
-  const byNode = useMemo(() => groupByNode(config, seat.holders), [config, seat.holders]);
+  // Read before the votes below: one of them polls only while the approvers'
+  // desk is open, so it needs the route.
+  const { path, go } = useRoute();
+  // A second vote, for the approvers' desk, on whatever request is actually
+  // outstanding. Deliberately NOT the same one: a member does not know which
+  // coupon the agent has open, and feeding the agent's strip this one would
+  // put an execute button on a coupon nobody asked about. It polls only while
+  // that desk is open, which is what the null does.
+  const approverVoting = useVote(
+    config.decmanParty,
+    path.startsWith("/approvers") ? (agent.state?.openProposals[0]?.cid ?? null) : null,
+    agent.ledgers.agent,
+    agent.ledgers.registry,
+    seat.rulesCid,
+    agent.refresh,
+  );
+  const currency = agent.state?.instrument?.currency ?? picked?.currency ?? "USD";
+  // The register of the bond on screen, not the seat's fixed list: a second
+  // bond has holders of its own, and some of them hold nothing else.
+  const bondHolders = picked?.holders ?? seat.holders;
+  const holders = useHolders(config, currency, bondHolders, isin, agent.runId);
+  const byNode = useMemo(() => groupByNode(config, bondHolders), [config, bondHolders]);
   const [tab, setTab] = useState("holders");
+  const desk: "agent" | "issuer" | "holders" | "approvers" = path.startsWith("/issuer")
+    ? "issuer"
+    : path.startsWith("/holders")
+      ? "holders"
+      : path.startsWith("/approvers")
+        ? "approvers"
+        : "agent";
+  // /holders/<party> opens one holder; /holders alone is the register.
+  const openHolder = path.startsWith("/holders/") ? decodeURIComponent(path.slice("/holders/".length)) : null;
+  // /approvers/<node> opens one member; /approvers alone is the committee.
+  const openApprover = path.startsWith("/approvers/") ? decodeURIComponent(path.slice("/approvers/".length)) : null;
 
   const state = agent.state;
   const settled = state?.receipt != null;
@@ -200,13 +579,24 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
     () => new Set((state?.allocations ?? []).filter((a) => !a.isSend).map((a) => a.authorizer).filter(Boolean) as string[]),
     [state?.allocations],
   );
-  const statusOf = (party: string): LegStatus => (settled ? "paid" : authorised.has(party) ? "ready" : "waiting");
+  // Who has given the agent somewhere to send the money. From the agent's own
+  // state, not the holders' cards, so it arrives in the same poll as
+  // `authorised` above: a card that says whose turn it is would otherwise be
+  // able to read the two halves from different moments and name the wrong one.
+  const instructed = useMemo(() => new Set(state?.instructed ?? []), [state?.instructed]);
+  // Four states, and between them they say whose move it is. "Not ready" was
+  // one state until 7 October and it conflated two different problems: a
+  // holder who owes their settlement instructions, which nothing on this page
+  // can fix, and a payment the agent has not authorised yet, which is one
+  // button away. On the governed path every card read WAITING for both.
+  const statusOf = (party: string): LegStatus =>
+    settled ? "paid" : authorised.has(party) ? "ready" : instructed.has(party) ? "unauthorised" : "blocked";
 
   const rows: HolderRow[] = useMemo(() => {
     const due = new Map<string, { units: number; amount: number; exact: number }>();
     for (const e of state?.schedule?.entries ?? [])
       due.set(e.holder, { units: Number(e.quantity), amount: Number(e.amount), exact: Number(e.exact) });
-    return seat.holders.map((party) => {
+    return bondHolders.map((party) => {
       const facts = holders.facts.get(party);
       const d = due.get(party);
       return {
@@ -222,9 +612,16 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
         status: statusOf(party),
       };
     });
-  }, [config, holders.facts, seat.holders, seat.tag, state?.schedule, authorised, settled]);
+  }, [config, holders.facts, bondHolders, seat.tag, state?.schedule, authorised, instructed, settled]);
 
-  const missing = rows.filter((r) => r.status === "waiting").map((r) => r.name);
+  // The holders nothing on this desk can fix, named so the note can name them.
+  // Everything else the page needs about who is where comes from `counts`.
+  const noInstructions = rows.filter((r) => r.status === "blocked").map((r) => r.name);
+  const counts = useMemo(() => {
+    const c = { blocked: 0, unauthorised: 0, ready: 0, paid: 0 } as Record<LegStatus, number>;
+    for (const r of rows) c[r.status] += 1;
+    return c;
+  }, [rows]);
   // Straight from the schedule, not from the cards: these are the figures the
   // amounts were derived from.
   const entries = state?.schedule?.entries ?? [];
@@ -233,12 +630,16 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
   const roundedUp = entries.filter((e) => Number(e.amount) > Number(e.exact)).length;
   const roundedDown = entries.filter((e) => Number(e.amount) < Number(e.exact)).length;
   const run: RunSummary = {
+    isin,
+    runId: agent.runId,
+    pending,
     currency,
     legs,
     expectedAllocations: legs + 1,
     haveAllocations: state?.allocations.length ?? 0,
     authorised,
-    missing,
+    noInstructions,
+    counts,
     settled,
     units,
     exactTotal,
@@ -246,6 +647,7 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
 
   return (
     <div className="app">
+      <DeskSwitch path={path} go={go} />
       <header className="top">
         <div className="brand">
           <img className="logo" src="/indivisa-logo.png" alt="" width={66} height={44} />
@@ -283,7 +685,50 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
 
       {agent.error ? <div className="error pad">{agent.error}</div> : null}
 
-      <RunBar config={config} agent={agent} run={run} voting={voting} />
+      {desk === "holders" ? (
+        <div className="desk-page">
+          {openHolder ? (
+            <>
+              <button className="linklike back" onClick={() => go("/holders")}>Back to the register</button>
+              <HolderPage config={config} party={openHolder} book={book} />
+            </>
+          ) : (
+            <HolderList config={config} book={book} onOpen={(p) => go("/holders/" + encodeURIComponent(p))} />
+          )}
+        </div>
+      ) : null}
+      {desk === "approvers" ? (
+        <div className="desk-page">
+          {openApprover ? (
+            <>
+              <button className="linklike back" onClick={() => go("/approvers")}>Back to the approvers</button>
+              <ApproverPage config={config} committee={theCommittee} voting={approverVoting} node={openApprover} />
+            </>
+          ) : (
+            <ApproverList
+              config={config}
+              committee={theCommittee}
+              voting={approverVoting}
+              onOpen={(n) => go("/approvers/" + encodeURIComponent(n))}
+            />
+          )}
+        </div>
+      ) : null}
+      {desk === "holders" || desk === "approvers" ? null : (
+      <div className="with-rail">
+      <RegisterRail book={book} picked={picked?.key ?? seat.runId} onPick={setPickedKey} />
+      <div className="rail-main">
+      {desk === "issuer" ? (
+        <IssuerDesk
+          book={book}
+          isin={isin}
+          announced={allAnnounced}
+          busy={agent.pressed.kind === "busy"}
+          failure={agent.pressed.kind === "failed" && agent.pressed.what === "coupon" ? agent.pressed.reason : null}
+          onAnnounce={agent.onAnnounce}
+        />
+      ) : null}
+      {desk === "issuer" ? null : <RunBar config={config} agent={agent} run={run} voting={voting} />}
 
       {settled && state?.receipt ? (
         <div className="outcome ok">
@@ -348,6 +793,10 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
         </div>
       ) : null}
 
+      {/* The agent's panes. The issuer sees none of this: it declares the
+          terms of an event and has no business in the register, the
+          schedule, the privacy readings or the settlement. */}
+      {desk === "issuer" ? null : (<>
       <Tabs
         active={tab}
         onPick={setTab}
@@ -399,9 +848,13 @@ function Console({ config, operator, auth }: { config: Config; operator: Operato
             <p className="muted pad">Reading the ledger…</p>
           )
         ) : null}
-        {tab === "privacy" ? <Privacy config={config} currency={currency} byNode={byNode} /> : null}
+        {tab === "privacy" ? <Privacy config={config} currency={currency} byNode={byNode} isin={isin} runId={agent.runId} /> : null}
         {tab === "activity" ? <Activity agent={agent} run={run} /> : null}
       </main>
+      </>)}
+      </div>
+      </div>
+      )}
 
       <footer className="foot">
         seat <code>{seat.tag}</code> · run <code>{seat.runId}</code> · {seat.holders.length} holders ·{" "}

@@ -1,8 +1,18 @@
 import { useMemo, useState } from "react";
 import { Money } from "./Money";
 
-/** Where a holder's leg stands, read from the ledger, not assumed. */
-export type LegStatus = "waiting" | "ready" | "paid";
+/**
+ * Where a holder's leg stands, read from the ledger, not assumed.
+ *
+ * Four states, not two, and the reason is whose turn it is. A leg that is not
+ * ready is held up by one of two different parties, and until 7 October both
+ * read "waiting": on the governed path, where the seat stops before anything
+ * is authorised, every card said WAITING and an operator could not tell the
+ * holder who owes their bank details from the four payments the agent has
+ * simply not authorised yet. The two are not the same problem, and nothing on
+ * the agent's page can fix the first one.
+ */
+export type LegStatus = "blocked" | "unauthorised" | "ready" | "paid";
 
 export interface LegRow {
   who: string;
@@ -12,15 +22,28 @@ export interface LegRow {
   note?: string;
 }
 
-const LABEL: Record<LegStatus, string> = {
-  // No receipt allocation for this holder yet: the batch cannot settle.
-  waiting: "waiting",
+export const LABEL: Record<LegStatus, string> = {
+  // The holder has given the agent no settlement instructions, so the agent
+  // has nowhere to send the money. The holder's move, on the holder's page.
+  blocked: "no details",
+  // Instructions on file and the payment not authorised yet. The agent's move,
+  // and it needs nothing from anybody else.
+  unauthorised: "to authorise",
   // Authorised and funded; this leg is ready for the one transaction.
   ready: "ready",
   paid: "paid",
 };
 
-const ORDER: Record<LegStatus, number> = { waiting: 0, ready: 1, paid: 2 };
+/** Worst first: sorting by state puts what holds the batch up at the top. */
+const ORDER: Record<LegStatus, number> = { blocked: 0, unauthorised: 1, ready: 2, paid: 3 };
+
+/** Whose move it is, for the counts beside the button. */
+export const TURN: Record<LegStatus, string> = {
+  blocked: "waiting on the holder",
+  unauthorised: "to authorise",
+  ready: "ready",
+  paid: "paid",
+};
 
 type Col = "who" | "units" | "amount" | "status";
 
@@ -57,12 +80,14 @@ export function LegTable({ rows, currency }: { rows: LegRow[]; currency: string 
     }
   };
 
-  const waiting = rows.filter((r) => r.status === "waiting");
-  // Name them. The waiting row can be anywhere in a schedule of hundreds, and
-  // whoever is watching should not have to scroll to find out who is holding
-  // the batch up.
-  const names = waiting.slice(0, 3).map((r) => r.who).join(", ");
-  const rest = waiting.length - Math.min(waiting.length, 3);
+  // Name them. The row that is not ready can be anywhere in a schedule of
+  // hundreds, and whoever is watching should not have to scroll to find out
+  // who is holding the batch up. Split by whose move it is: one of these is
+  // fixed on the agent's own screen and the other is not.
+  const blocked = rows.filter((r) => r.status === "blocked");
+  const toAuthorise = rows.filter((r) => r.status === "unauthorised");
+  const name3 = (rs: LegRow[]) =>
+    rs.slice(0, 3).map((r) => r.who).join(", ") + (rs.length > 3 ? " and " + (rs.length - 3) + " more" : "");
 
   return (
     <div className="legs-wrap">
@@ -77,7 +102,7 @@ export function LegTable({ rows, currency }: { rows: LegRow[]; currency: string 
         </thead>
         <tbody>
           {sorted.map((r) => (
-            <tr key={r.who} className={r.status === "waiting" ? "waiting" : undefined}>
+            <tr key={r.who} className={r.status === "blocked" ? "blocked" : undefined}>
               <td>{r.who}{r.note ? <span className="note"> {r.note}</span> : null}</td>
               <td className="num">{r.units.toLocaleString("en-GB")}</td>
               <td className="num"><Money amount={r.amount} currency={currency} /></td>
@@ -86,11 +111,21 @@ export function LegTable({ rows, currency }: { rows: LegRow[]; currency: string 
           ))}
         </tbody>
       </table>
-      {waiting.length > 0 ? (
+      {blocked.length > 0 || toAuthorise.length > 0 ? (
+        <div className="legs-foots">
+      {blocked.length > 0 ? (
         <div className="legs-foot warn">
-          <strong>{names}{rest > 0 ? ` and ${rest} more` : ""}</strong>{" "}
-          {waiting.length === 1 ? "is not ready" : "are not ready"}: the batch settles all of them or none, so nothing
-          moves until every leg is authorised.
+          <strong>{name3(blocked)}</strong> {blocked.length === 1 ? "has" : "have"} given no settlement
+          instructions, so the paying agent has nowhere to send that money. The batch settles all of them or
+          none, so nothing moves until every holder's details are on file.
+        </div>
+      ) : null}
+      {toAuthorise.length > 0 ? (
+        <div className="legs-foot">
+          <strong>{name3(toAuthorise)}</strong> {toAuthorise.length === 1 ? "is" : "are"} not authorised yet.
+          The agent does that alone, under the instructions those holders gave once.
+        </div>
+      ) : null}
         </div>
       ) : null}
     </div>

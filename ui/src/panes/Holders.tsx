@@ -7,7 +7,7 @@ import type { Config } from "../config";
 import type { Party } from "../ledger/client";
 import type { HolderFacts } from "../ledger/queries";
 import { useNodeProbe, type HoldersHandle } from "../state/useHolders";
-import type { LegStatus } from "../components/LegTable";
+import { LABEL, type LegStatus } from "../components/LegTable";
 import type { RunSummary } from "./RunBar";
 
 export interface HolderRow {
@@ -26,10 +26,28 @@ type SortKey = "name" | "due" | "units" | "status";
 
 const FILTERS: { id: "all" | LegStatus; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "waiting", label: "Waiting" },
+  { id: "blocked", label: "No details" },
+  { id: "unauthorised", label: "To authorise" },
   { id: "ready", label: "Ready" },
   { id: "paid", label: "Paid" },
 ];
+
+/** The card pill: red is the holder's move, amber the agent's, green done. */
+const TONE: Record<LegStatus, "bad" | "ready" | "set" | "ok"> = {
+  blocked: "bad",
+  unauthorised: "ready",
+  ready: "set",
+  paid: "ok",
+};
+
+/** What is actually outstanding, in the holder's own terms. One source, so
+ *  the foot line and the pill above it cannot disagree. */
+const FOOT: Record<LegStatus, string> = {
+  blocked: "no settlement instructions · the paying agent cannot pay this holder",
+  unauthorised: "instructions on file · awaiting the agent's authorisation",
+  ready: "instructions on file · payment authorised",
+  paid: "instructions on file · paid",
+};
 
 /**
  * One card per holder, however many there are, each filled from the node
@@ -55,7 +73,7 @@ export function Holders({
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = rows.filter((r) => (filter === "all" || r.status === filter) && (q === "" || r.name.toLowerCase().includes(q)));
-    const order: Record<LegStatus, number> = { waiting: 0, ready: 1, paid: 2 };
+    const order: Record<LegStatus, number> = { blocked: 0, unauthorised: 1, ready: 2, paid: 3 };
     out.sort((a, b) => {
       switch (sort) {
         case "due": return b.due - a.due;
@@ -68,7 +86,7 @@ export function Holders({
   }, [rows, query, filter, sort]);
 
   const counts = useMemo(() => {
-    const c = { waiting: 0, ready: 0, paid: 0 } as Record<LegStatus, number>;
+    const c = { blocked: 0, unauthorised: 0, ready: 0, paid: 0 } as Record<LegStatus, number>;
     for (const r of rows) c[r.status] += 1;
     return c;
   }, [rows]);
@@ -134,7 +152,7 @@ export function Holders({
           >
             <span className="hcard-top">
               <span className="hcard-name">{r.name}</span>
-              <StatusPill tone={r.status === "paid" ? "ok" : r.status === "ready" ? "ready" : "bad"}>{r.status}</StatusPill>
+              <StatusPill tone={TONE[r.status]}>{LABEL[r.status]}</StatusPill>
             </span>
             <span className="hcard-node">
               <code>{r.node}</code>
@@ -157,12 +175,7 @@ export function Holders({
             </span>
             <span className="hcard-foot">
               <span className="hcard-facts">
-                {r.facts?.agreement ? "agreement signed" : "no agreement"} ·{" "}
-                {r.status === "paid"
-                  ? "allocation consumed"
-                  : r.facts?.allocated != null
-                    ? "allocation on ledger"
-                    : "awaiting allocation"}
+                {FOOT[r.status]}
               </span>
               <span className="hcard-open">{selected === r.party ? "close" : "inspect node"}</span>
             </span>
@@ -184,7 +197,7 @@ export function Holders({
 }
 
 function HolderDrawer({ config, run, row, onClose }: { config: Config; run: RunSummary; row: HolderRow; onClose: () => void }) {
-  const probe = useNodeProbe(config, run.currency, row.party, true);
+  const probe = useNodeProbe(config, run.currency, row.party, true, run.isin, run.runId);
   // Read from the ledger, not inferred from the names in the config.
   const sharing = config.sharingWithAgent(row.node);
 
