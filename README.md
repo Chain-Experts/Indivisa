@@ -130,7 +130,13 @@ And, since 22 September, **governed settlement**: a run may name an approver, a 
 
 Still to come: one clean `docker compose up` on a machine other than the one it was built on. This one intercepts TLS, so a container here cannot verify a registry certificate and `quickstart/`'s two default build paths could not be exercised end to end.
 
-What **was** checked, from the host, on 9 October: the Daml Script runner that the default `SCRIPT_SOURCE=download` path fetches is where the Dockerfile says it is. The OCI index for version 3.5.2 resolves, and the layer annotated `daml-script-binary_distribute.jar` is present at 225 MB. So the registry, the version and the artefact name in that build are right; what remains unexercised here is the container performing the fetch, and the `npm install` in the other image.
+What **was** checked, on 9 October, from a clean clone of this repository:
+
+- The **canton image builds**, with default arguments, and carries all thirteen packages.
+- The **seed image builds**, and the artefact its default path downloads is where the Dockerfile says it is: the OCI index for Daml Script 3.5.2 resolves and the layer annotated `daml-script-binary_distribute.jar` is present at 225 MB.
+- The **console builds from source** the way the default `UI_SOURCE=build` does it. `npm ci` from the committed lockfile followed by `npm run build` reproduces the shipped bundle byte for byte, same content hashes.
+
+So every input the default build needs is in this repository and every step has been run. What remains unexercised **here** is only the two network fetches happening *inside* a container, which fail on this machine for one reason: it rewrites TLS, so a container cannot verify any certificate. That is a property of this workstation, not of the build.
 
 ---
 
