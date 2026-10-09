@@ -30,8 +30,14 @@ FROM script-${SCRIPT_SOURCE} AS final
 RUN apt-get update && apt-get install -y --no-install-recommends curl jq ca-certificates  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /indivisa
-COPY daml/indivisa-test/.daml/dist/indivisa-test-0.1.0.dar ./
-COPY daml/indivisa-governance-test/.daml/dist/indivisa-governance-test-0.1.0.dar ./
+# Staged copies at the package root, not the build output under `.daml/dist/`.
+# `*.dar` is gitignored, so these are force-added, exactly as the model and
+# governance DARs are: a clone has to carry them or this image cannot build,
+# and a judge has no Daml toolchain to produce them. Copying from `.daml/`
+# instead would have meant committing into a build directory, which every
+# later `dpm build` would then dirty.
+COPY daml/indivisa-test/indivisa-test-0.1.0.dar ./
+COPY daml/indivisa-governance-test/indivisa-governance-test-0.1.0.dar ./
 COPY quickstart/participants.json quickstart/seed.sh quickstart/govern.sh ./
 RUN chmod +x seed.sh govern.sh
 

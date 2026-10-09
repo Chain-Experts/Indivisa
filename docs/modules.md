@@ -46,7 +46,9 @@ Indivisa/
 │   │   └── daml/Governance/Settlement/BatchSettlement.daml     governed action; no Indivisa in it (for BitSafe's repo)
 │   ├── indivisa-governance/       package `indivisa-governance-v0`: SettleRunProposal over Run_Settle
 │   │   └── daml/Indivisa/Governance/SettleRunProposal.daml
-│   ├── indivisa/indivisa-0.6.0.dar   a copy of the build output, committed so CI can upload it with no Daml toolchain
+│   ├── indivisa/indivisa-0.6.0.dar   a copy of the build output, force-added past `.gitignore` so a clone can build the images with no Daml toolchain
+│   ├── indivisa-test/indivisa-test-0.1.0.dar                     likewise, copied by seed.Dockerfile
+│   ├── indivisa-governance-test/indivisa-governance-test-0.1.0.dar  likewise
 │   └── indivisa-governance-test/  the governance proofs (IDE ledger) and the propose script
 │       ├── Indivisa/Test/Governance.daml          1 of 3 refused, agent alone refused, 2 of 3 settles
 │       ├── Indivisa/Governance/Demo.daml         govern_propose, driven by infra/govern.ps1
