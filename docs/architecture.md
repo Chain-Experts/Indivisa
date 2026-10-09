@@ -161,7 +161,7 @@ The paying agent as executor is the whole design. CIP-112's own worked example g
 | `Governance.Settlement` (package `governance-settlement-v0`) | A V2 batch settlement as a governed action for BitSafe's Decentralization Manager; no Indivisa in it. | **built** |
 | `Indivisa.Governance` (package `indivisa-governance-v0`) | `SettleRunProposal`: `Run_Settle` as the governed action. | **built** |
 
-Package `indivisa`, version 0.4.0 (0.3.0 on the LocalNet of 18 Sep); every change to a deployed template is either a version bump that passes `dpm upgrade-check` or a new package lineage (the `name` in `daml.yaml` is the upgrade identity and never changes; only `version` moves). Everything else is off-ledger.
+Package `indivisa`, version 0.6.0 (0.4.0 carried the approver, 0.5.0 the issuer's release term, 0.6.0 reworded the refusal; 0.3.0 on the LocalNet of 18 Sep); every change to a deployed template is either a version bump that passes `dpm upgrade-check` or a new package lineage (the `name` in `daml.yaml` is the upgrade identity and never changes; only `version` moves). Everything else is off-ledger.
 
 **Rounding is not a detail.** Coupon arithmetic produces fractions of the smallest unit and the residual has to go somewhere. Decide the policy once, in `Entitlement`, record it on-ledger, and make the total of the legs equal the announced distribution exactly. A settlement that is off by one cent does not settle.
 

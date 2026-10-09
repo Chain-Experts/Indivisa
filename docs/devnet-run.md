@@ -57,7 +57,7 @@ The full write-up, including what is simulated, is [`decentralization.md`](decen
 | Canton | 3.5.17 (`GET /v2/version`) |
 | Synchronizer | `global-domain::1220be58c29e65de40bf273be1dc2b266d43a9a002ea5b18955aeef7aac881bb471a`, the global DevNet synchronizer, not a private one |
 | Participant | `chain-experts-admin-1::1220d41692257b6921b95b7a4f8e76bb30dd0c6da92718b1758a559f842e8a2ba553` |
-| Packages | all thirteen vetted, `indivisa-0.4.0` included |
+| Packages | all thirteen vetted, `indivisa-0.4.0` included. **The model is 0.6.0 now and has not been uploaded there**, so a run on DevNet today would use the old one, without the issuer's release term |
 
 ## Both halves were run
 
