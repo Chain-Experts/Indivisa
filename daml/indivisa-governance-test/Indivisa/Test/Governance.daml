@@ -13,6 +13,7 @@
 module Indivisa.Test.Governance where
 
 import DA.Assert ((===))
+import DA.Date (date, Month(..))
 import DA.Foldable (forA_)
 import DA.Set qualified as Set
 import DA.Text qualified as T
@@ -31,6 +32,7 @@ import Splice.Testing.Tokens.TestTokenV2.Holding qualified as TestTokenV2
 
 import Indivisa.Types
 import Indivisa.Model.Distribution
+import Indivisa.Model.Entitlement (EntitlementSchedule(..), Entitlement(..))
 import Indivisa.Governance.SettleRunProposal
 import Indivisa.Test.Agent
 import Indivisa.Test.Fixtures
@@ -64,15 +66,40 @@ setupCommittee payingAgent = do
     additionalProposers = Some (Set.fromList [payingAgent])
   pure Committee with ..
 
--- | A run that names the committee as its approver.
+-- | A run that names the committee as its approver, **and carries the
+-- schedule it pays**.
+--
+-- The schedule is not decoration. `Run_Settle` fetches it to honour the
+-- issuer's release term, which arrived in 0.5.0, and a run created with
+-- `schedule = None` never reaches that fetch. This test did exactly that
+-- until 9 October, which is why sixty green scripts did not catch a governed
+-- execute that could not see the schedule: the executing member is on its own
+-- node, the schedule is signed by the paying agent, and nothing disclosed it.
+-- The run shape here now matches the one the console creates.
 createGovernedRun : Cast -> Cash -> Party -> Text -> [PaymentLeg] -> Script (ContractId DistributionRun, DistributionRun)
 createGovernedRun cast cash approver runId legs = do
+  scheduleCid <- submit cast.payingAgent $ createCmd EntitlementSchedule with
+    payingAgent = cast.payingAgent
+    isin = "XS0000000001"
+    kind = Coupon
+    recordDate = date 2027 Nov 15
+    paymentDate = date 2027 Dec 1
+    currency = cash.instrument.id
+    amountPerUnit = 1.0
+    policy = LargestRemainder
+    entries = [ Entitlement with holder = l.recipient; quantity = l.amount; exact = l.amount; amount = l.amount
+              | l <- legs ]
+    total = sum [l.amount | l <- legs]
+    -- The issuer required approvers, which is the whole reason this run names
+    -- one. With `None` the guard holds vacuously and the test would pass
+    -- whether or not the schedule were reachable.
+    requiresApprovers = Some True
   let run = DistributionRun with
         payingAgent = cast.payingAgent
         runId
         instrument = cash.instrument
         agentAccount = basicAccount cast.payingAgent
-        schedule = None
+        schedule = Some scheduleCid
         approver = Some approver
         legs
   cid <- submit cast.payingAgent $ createCmd run
@@ -122,16 +149,24 @@ confirm p member = do
   pure r.confirmationCid
 
 -- | A member's attempt to execute. The executing node must be able to see
--- the registry's rules contract and the agent's locked cash, neither of
--- which it hosts, so both are disclosed, as the execute call on a network
--- would carry them.
+-- the registry's rules contract, the agent's locked cash **and the run's
+-- entitlement schedule**, none of which it hosts, so all three are disclosed,
+-- as the execute call on a network carries them.
+--
+-- The schedule was added on 9 October after a governed execute failed on a
+-- real ledger with CONTRACT_NOT_FOUND, naming a contract that was alive one
+-- participant away. `Run_Settle` fetches it for the issuer's term, and
+-- `executeDisclosures` in the console did not send it. **Remove it from this
+-- list and this test goes red**, which is the point of it being here.
 tryExecute : Proposed -> Party -> [ContractId GovernanceConfirmation] -> Script (Either SubmitError ExecuteConfirmedActionResult)
 tryExecute p member confirmations = do
   lockedCids <- lockedHoldingCids p.cash p.cast.payingAgent
   holdingDisclosures <- forA lockedCids $ \cid -> do
     Some d <- queryDisclosure p.cast.payingAgent (fromInterfaceContractId @TestTokenV2.Token cid)
     pure d
-  trySubmit (actAs member <> readAs p.committee.approvers <> disclose p.cash.rules <> discloseMany holdingDisclosures) $
+  Some scheduleCid <- pure p.run.schedule
+  Some scheduleDisclosure <- queryDisclosure p.cast.payingAgent scheduleCid
+  trySubmit (actAs member <> readAs p.committee.approvers <> disclose p.cash.rules <> disclose scheduleDisclosure <> discloseMany holdingDisclosures) $
     exerciseCmd p.committee.rulesCid GovernanceRules_ExecuteConfirmedAction with
       executor = member
       actionProposalCid = p.actionCid

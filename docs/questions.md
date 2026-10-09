@@ -160,6 +160,16 @@ Our estimate for that pilot is **one quarter of focused engineering**, assuming 
 
 Not if the run names an **approver**. The approver is a decentralised party that no single company controls, and Token Standard V2 requires the authority of every party named among the executors. With an approver named, the paying agent's button stops paying and starts asking: it files a request, and the settlement executes only once the members have confirmed to their threshold.
 
+### Who decides that a payment needs more than one authority?
+
+**The issuer, on the announcement, and this moved in `indivisa` 0.5.0 because the first answer was wrong.** Until then the paying agent ticked it on its own screen, which protects nobody: the approvers exist to stop an agent releasing a payout unchecked, so letting the agent decide whether that applies lets the party being guarded against choose the guard.
+
+The term now lives on `CorporateAction`, the issuer's own contract, as `requiresApprovers`. The cash is the issuer's and the paying agent is a conduit, so the term belongs to the issuer in the same way the rate and the dates do. `CorporateAction_Entitle` copies it onto the payment schedule, because entitling a coupon consumes the announcement and the schedule becomes the only surviving record of what the issuer asked for.
+
+**It is enforced where the money moves, not where the run is made.** `Run_Settle` fetches the schedule and refuses when the term is set and the run names no approver. Guarding run *creation* instead would have been easy to bypass: a client that ignored the term could create the run anyway and nothing on the ledger would object. A run built without the approver it needed can exist. It cannot pay.
+
+**It is a `Bool`, not a party.** An issuer stipulates that one party may not release the money alone; **which** second party satisfies that is the paying agent's own arrangement, and naming a specific decentralised party on a specific ledger would be the wrong kind of thing to write into a term of the event.
+
 ### Is the decentralised party real, or three nodes on one laptop?
 
 Both, and we separate them. The local demo runs three approver nodes on one machine: the threshold is real and enforced by the ledger, the independence is not. On Canton DevNet the second approval came from **BitSafe, on their own node**, which is the version that counts.
@@ -183,14 +193,18 @@ The bond, the holders and their positions are generated. The ledger, the settlem
 Yes, and it is one command with nothing to install but Docker:
 
 ```bash
-cd quickstart && docker compose up
+cd quickstart && docker compose --profile govern up -d
 ```
 
-Press the button and watch it refuse, press **Create the missing allocation**, press the first button again. Nothing but Docker is needed: the fix is a button because every command behind it is the paying agent's own, through the standing agreement each holder signed once. Then open the Privacy tab, which asks each node as one holder alone and shows what it answers.
+Press **Settle** and watch the ledger refuse it: twenty payments requested, zero executed, because one holder has given the paying agent no settlement instructions. Open that holder on the **Holder** desk and press **Provide settlement instructions** there, because only the holder can say where to pay them. Back on the agent's desk, press **Authorise the 1 remaining payment**, then settle again, and it goes through in one transaction.
+
+Then open the **Privacy** tab, which asks each node as one holder alone and shows what it answers: their own line, and zeros for everybody else.
+
+For the second half, go to the **Issuer** desk and declare the next coupon with the term that it cannot be released by the paying agent alone. The agent's settle button then files a request instead of paying, and the **Approver** desk holds the vote. `--profile govern` is what starts the three approver nodes; without it you get the first coupon only.
 
 ### How is the model tested?
 
-**52 Daml Script tests, no network needed**, in two packages:
+**60 Daml Script scripts, no network needed**, in two packages:
 
 ```bash
 cd daml/indivisa-test && dpm test
@@ -198,6 +212,8 @@ cd ../indivisa-governance-test && dpm test
 ```
 
 `dpm test` reports **60 scripts** across the two test packages, 48 for the model and 12 for the governance layer, because it also runs the shared fixtures. They run against `TestTokenV2`, the Token Standard's own reference asset, the same way Splice's own token tests run. **26 of the 60 assert a refusal rather than a success**, because most of what this engine promises is something it will not do: pay four holders out of five, let a paying agent spend a holder's consent on another holder's account, pay from a register nobody attested, or release a governed run on one approval.
+
+One of those sixty was not reaching what it appeared to test, and the fix is worth stating because it is a general trap. The governed settle test built its run with no entitlement schedule attached. `Run_Settle` only fetches the schedule when there is one, so the issuer's release term and the disclosure it needs were both unreachable from the suite, and a governed execute that could not see the schedule reached a real ledger before anything went red. The test now uses the run shape the console actually creates. **An `Optional` field makes a guard skippable, so a fixture that leaves one empty quietly opts out of everything behind it.**
 
 **Every refusal test is the passing test with exactly one thing changed**, and the change is the property under test. That rule exists because we broke it once: a test in the contributed BitSafe module asserted a refusal, passed, and would have gone on passing with the check it was testing deleted, because the submission was failing for an unrelated reason. The fix is in `CLAUDE.md` as a rule and in the suite as a shape. It is checked by mutation, not by reading: undo the one changed field and the test has to go red.
 

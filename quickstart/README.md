@@ -70,7 +70,7 @@ One holder has not given the paying agent their **settlement instructions**, whi
 
 3. Press the button again. Settled. Every holder is paid in the same transaction, the update id of that transaction appears on screen, every card turns green and every row in the schedule turns **paid**, while each holder's counts of other holders stay at zero. Open a card again and check that for yourself.
 
-To start over: `docker compose down -v && docker compose up`. The demo is seated again from scratch, so it takes as long as the first run. You do **not** need to start over for the governed run below: it is the next coupon on the same bond, on the same stack.
+To start over: `docker compose --profile govern down -v`, then bring it up again. **Use `--profile govern` on the way down even if you did not use it on the way up**: the approver nodes keep their own volumes behind that profile, and a plain `down -v` leaves them holding a party the new ledger has never heard of, which shows up later as a 409 from the governed seat. The demo is seated again from scratch, so it takes as long as the first run. You do **not** need to start over for the governed run below: it is the next coupon on the same bond, on the same stack.
 
 ## Optional: make it need more than one signature
 

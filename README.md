@@ -119,7 +119,7 @@ On top of the proofs, built and running on LocalNet (18 Sep):
 - **The model** (`daml/indivisa`, package `indivisa`): register (`Instrument`, `Position`, record-date `RegisterSnapshot`), `CorporateAction`, on-ledger `EntitlementSchedule` with largest-remainder rounding, `PaymentAgreement`, `DistributionRun.Run_Settle`, `DistributionReceipt`, `SettlementRejected`.
 - **The demo driver** (`Indivisa.Test.Demo`, `infra/demo.ps1`): seats a realistic holder base, arms a deliberate failure, settles.
 - **The settlement console** (`ui/`): the whole distribution and one button; a card for every holder, each read live from the participant that hosts it over the JSON Ledger API; and, on any card, the same node asked as that holder alone, which answers with its own line and six zeros for everyone else. On a deployment that names an identity provider, **an operator signs in before the console reads or writes anything**, and the check sits in the proxy that holds the ledger credential rather than in the page: two identities kept apart: the paying agent is a party, the operator is a person. On a run that needs approval the button files a request rather than attempting a payment, and **a request can be withdrawn** until it executes: the agent is the sole signatory, archiving is itself a ledger event, and the request and its withdrawal both stay in the history. After settlement there is nothing to withdraw - the correction is a new payment, not an edit, which is what an atomic settlement means. Releasing the cash a prepared run has locked is a separate and deliberately harder thing: the allocation is **committed**, so only the settlement executors may cancel it, and on a governed run those are the agent *and* the approver. The commitment is symmetric, which is what makes an approval worth anything.
-- **A one-command package for anyone who wants to run it** (`quickstart/`, 23 Sep): `docker compose up` gives the whole thing on a machine with nothing installed but Docker: five participants, the thirteen DARs, two bonds, twenty seated holders, and the console. One holder has given no settlement instructions, so the first press is refused and nobody is paid; that holder provides them on their own page, the agent authorises, and it settles in under a second. The same stack carries a **second coupon** that needs the approvers rather than the agent alone, so both demonstrations run on one seat with no teardown between them.
+- **A one-command package for anyone who wants to run it** (`quickstart/`, 23 Sep): one `docker compose` command gives the whole thing on a machine with nothing installed but Docker: five participants, the thirteen DARs, **three bonds and four coupons**, twenty seated holders, and the console. One holder has given no settlement instructions, so the first press is refused and nobody is paid; that holder provides them on their own page, the agent authorises, and it settles in under a second. The **issuer** then declares the next coupon on the page, with the term that it cannot be released by the paying agent alone, and the approvers release it. Both demonstrations run on one seat with no teardown between them and no environment variable to set.
 
 And, since 22 September, **governed settlement**: a run may name an approver, a decentralised party managed by BitSafe's Decentralization Manager, and then the paying agent alone can no longer settle. It proposes; a threshold of approvers confirms; the engine executes `Run_Settle`. Below threshold the ledger refuses and nothing moves. One optional field on the run (`indivisa` 0.4.0), a forty-line proposal template, and a generic module for any Token Standard V2 batch settlement (`governance-settlement-v0`) that has no Indivisa in it. Proven on the IDE ledger, in BitSafe's three-node sandbox, and **on DevNet with BitSafe themselves as the second approver**; see [`docs/decentralization.md`](docs/decentralization.md).
 
@@ -128,7 +128,9 @@ And, since 22 September, **governed settlement**: a run may name an approver, a 
 - **24 Sep** - five holders, one transaction, update id `1220652e2e4d32822c39d2ad72088e163eed04718ad1108998001b01aa3483ff466b`, with the deliberate failure refused first. Indivisa settles on the real network.
 - **29 Sep, governed** - the same coupon through a decentralised party at **2 of 2**, one member ours and one BitSafe's, on BitSafe's own node. Update id `1220eb437ef12213805d81db4f425056c1b0fdf2eb4f1de3f1882d037eefbd60c6ac`. Chain-Experts could not have produced that transaction alone, which is the difference between a threshold that exists and one that constrains anybody.
 
-Still to come: one clean `docker compose up` on a machine other than the one it was built on. This one intercepts TLS, so `quickstart/`'s two download paths could not be exercised here.
+Still to come: one clean `docker compose up` on a machine other than the one it was built on. This one intercepts TLS, so a container here cannot verify a registry certificate and `quickstart/`'s two default build paths could not be exercised end to end.
+
+What **was** checked, from the host, on 9 October: the Daml Script runner that the default `SCRIPT_SOURCE=download` path fetches is where the Dockerfile says it is. The OCI index for version 3.5.2 resolves, and the layer annotated `daml-script-binary_distribute.jar` is present at 225 MB. So the registry, the version and the artefact name in that build are right; what remains unexercised here is the container performing the fetch, and the `npm install` in the other image.
 
 ---
 
@@ -137,7 +139,7 @@ Still to come: one clean `docker compose up` on a machine other than the one it 
 ```bash
 dpm build --all          # model package indivisa-<version> (see daml/indivisa/daml.yaml), scripts indivisa-test
 cd daml/indivisa-test
-dpm test                 # 47 scripts: the proofs, the model tests, the refusals and a 12-holder demo
+dpm test                 # 48 scripts: the proofs, the model tests, the refusals and a 12-holder demo
 cd ../indivisa-governance-test
 dpm test                 # 12 scripts: 1 of 3 refused, 2 of 3 settles, and what a proposal must carry
 ```
@@ -154,10 +156,10 @@ pwsh infra/demo.ps1 prepare -Tag t1 -Withhold 1    # allocations, one holder del
 cd ui && npm install && INDIVISA_TAG=t1 npm run dev   # http://localhost:5173, press the button
 ```
 
-Or with Docker, needing none of the above: the same topology, the same contracts, seated and served:
+Or with Docker, needing none of the above: the same topology, the same contracts, seated and served. `--profile govern` adds the three approver nodes, which the second half of the demo and of the film both need; plain `docker compose up` is the shorter path and gives the first coupon only:
 
 ```bash
-cd quickstart && docker compose up                 # http://localhost:8080, then press the buttons
+cd quickstart && docker compose --profile govern up -d   # http://localhost:8080, then press the buttons
 ```
 
 ---

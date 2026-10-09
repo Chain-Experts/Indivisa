@@ -748,11 +748,53 @@ Done:
 
   **Checked before deciding it was safe to defer:** the issuer desk names no issuer party anywhere, on any screen. The only "Northwind Rail" a viewer sees is the bond name, so nothing on the page contradicts itself today and the film is unaffected either way. The defect is visible on the ledger and in `Demo.daml`, which is where a judge reading the repository would find it.
 
+- [x] **The test could not reach the guard, which is why 60 green scripts missed it** (9 October). `Indivisa.Test.Governance` created its run with `schedule = None`, and `Run_Settle` only fetches the schedule when there is one, so the issuer's term and the disclosure it needs were both unreachable from the suite. The test now builds a real `EntitlementSchedule` with `requiresApprovers = Some True`, links it to the run and discloses it on execute, which is the shape the console creates. **Proved by mutation:** removing the disclosure turns `governance_atThresholdSettles` red with `NotVisible` on that contract, the Script equivalent of the ledger's `CONTRACT_NOT_FOUND`; restored, 60 green. The rule out of it: an `Optional` field makes a guard skippable, so when a guard goes in behind one, check that some test populates it.
+
 - [x] **The governed execute could not see the entitlement schedule** (found and fixed 9 October, while verifying the four jobs on a live ledger). `Run_Settle` fetches the `EntitlementSchedule` to honour the issuer's release term, added in 0.5.0, and `executeDisclosures` disclosed only the registry's `TokenRules` and the agent's locked holdings. An ungoverned settle is fine because the agent submits from its own participant. A **governed execute** submits as the decentralised party from its own node: `indivisa-approvers` is hosted on `alice`, the agent on `agent`, so the ledger answered `CONTRACT_NOT_FOUND` for a contract that was live in the agent's ACS at that moment. **It failed at the last press of the whole sequence**, which is the worst place to find anything.
 
   The fix discloses **that run's** schedule and no other, because the executor already sees every leg of the batch it is settling but a schedule names every holder and amount for its coupon. Verified end to end afterwards: 20 of 20 legs, 83,321.88 USD, no run and no proposal left, agent holding exactly its 10,000 float.
 
   **The lesson: adding a `fetch` to a choice changes the disclosure requirements of every path that exercises it**, and the governed path is the one whose submitter is another company's node. An earlier governed run the same day passed without this fix and that cannot be explained from the evidence that survives; the likely reading is that the staged governance DAR was still built against 0.4.0 and the guard was never reached, in which case that run did not test the issuer's term at all.
+
+- [ ] **Regenerate `docs/Indivisa-pitch.pdf` and `.pptx` from the deck.** Both are exports dated 7 October, so they predate everything after it. `docs/deck.html` was corrected on 9 October and the exports were not, so the three now disagree: the HTML says the twenty holders sit across **three** of the five participants, which is what the console shows and what the privacy claim rests on, and the exports still say five. Both exports also carry `docker compose up`, which starts the stack without the approver nodes that half the film is about.
+
+  **And one gap rather than an error, worth a slide or a line:** the deck never says **who** decides a coupon needs more than one authority. That is the sharpest design decision in the project, it is the second half of the film, and it is the most likely hard question at the Grand Final. `docs/questions.md` now answers it in full under "Who decides that a payment needs more than one authority?".
+
+## After HackCanton: what to build next, in order
+
+Written 9 October 2026, from the full review. `docs/production-readiness.md` has the costed table and the honest sizes; this is the **order**, which that table deliberately does not give. Ordered by what unblocks a real coupon, then a pilot, then the market.
+
+### First, because without them nobody can run a real coupon
+
+1. **Tax withholding.** A real coupon pays **net**. The rate depends on each holder's jurisdiction and the documentation they have filed, so one event produces a different net amount per holder against one gross rate. `entitlements` computes a single gross figure today. This is engine work, not a screen, and it is the first thing a paying agent asks about. **Medium.**
+2. **A register feed, and reconciliation against it.** The console settles; it does not keep the register, and that boundary is a design position worth keeping. But a pilot has to ingest holders and positions from the registrar - a file, ISO 20022, an API - and reconcile, including when the two disagree. **Medium.**
+3. **Maker-checker.** One person prepares a run, another releases it. For a payout this is the control an auditor asks about first. Most of the machinery exists: operator sign-in answers "who asked", and the approvers desk is the same shape across companies. This is the version inside one company. **Medium.**
+
+### Then, the small things that finish what is already built
+
+4. **The rounding policy on the issuer's form.** Everything else on that screen moved onto the page on 7 to 9 October; the policy is still passed as an argument. It is a commercial decision an operator should make deliberately. **Small.**
+5. **A redemption retires the position.** `EventKind` carries coupon, dividend and redemption. A dividend is the same engine with a different rate, but a redemption also retires the holding and nothing in `Register.daml` archives one. **Small.**
+6. **The scheduled agent.** A payment date should fire the run without a person. Cut deliberately because a daemon is invisible on film. **Small.**
+7. **Cancelling a governed run, as a governed action.** The known honesty gap: the cash is committed, so only the executors may release it, and on a governed run that is the agent and the approver together. The ledger supports it; the console does not. **Medium.**
+
+### Then, quality that has already cost us time
+
+8. **One poll, one reader.** Measured 8 October: **144 fetches every twelve seconds on a five-holder seat**, against the twenty the package ships. It has starved a `setInterval` past eleven seconds, stalled the inspector, and left a stale panel after a selection change. Nothing wrong has settled because of it, but it will be worse at 250 holders and it makes every timing-sensitive bug harder to see. **Medium.**
+9. **Regression tests for the console.** Every UI defect this week was found by a person clicking, and two of them reached the camera: the refusal strip that survived a reload, and the Announce button that gave no sign it had worked. There is no automated test of the page at all. A small Playwright suite driven against the quickstart - refuse, fix, authorise, settle, announce, confirm, release - would have caught both, and would catch the next one before a judge does. **Medium, and the highest ratio of risk removed to work done on this list.**
+
+### Then, the market
+
+10. **An answer for registers above ~6,400 holders.** Past that a run exceeds Canton's 10 MB budget and must be split, and splitting breaks the single promise the product makes. This needs a **product** answer before an engineering one: a compensating mechanism, a staged commit, or an explicit statement that above N the guarantee is per batch. **Medium, and a decision first.**
+11. **Market claims.** A trade settling around the record date sends the coupon to the holder who no longer owns the bond, and the correction is manual almost everywhere. The snapshot already holds what computing it would need. **Medium, and a differentiator.**
+12. **Cash against securities in one batch.** The standard's own worked example spans two instrument administrators in a single transaction with neither registry seeing the other's legs. Indivisa only ever uses one. The same engine would settle delivery against payment, which is a larger market than corporate actions with the same privacy argument. **Large.**
+
+### Debt to clear whenever there is room
+
+- **Upload `indivisa` 0.6.0 to DevNet.** That network still vets 0.4.0, so a governed run there today would use a model without the issuer's release term.
+- **Withdraw through `GovernableAction_ProposerCancel`** rather than archiving our own `SettleRunProposal`. Same outcome, but it is BitSafe's published interface and it would work for any `GovernableAction`.
+- **`governance-settlement-v1`** with the reviewer's `ensure` fix, as a real new lineage rather than a silent package-id change.
+
+---
 
 - [ ] Post the benchmark to the Canton forum.
 - [ ] **Withdraw through `GovernableAction_ProposerCancel`** rather than archiving `SettleRunProposal` directly. Same outcome, but it is BitSafe's published interface rather than our template, it is what they assume we already do, and it would work for any `GovernableAction`. Needs a DevNet test, so it was deliberately not done on recording day. Then correct `decentralization.md`, which still implies the mechanism was missing when only the button was.

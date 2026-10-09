@@ -21,12 +21,13 @@ Stated first, because everything after it is measured against this.
 | **The settlement** | One `SettlementFactory_SettleBatch`, every leg or none. Holders see only their own leg; the paying agent, as executor, sees all of them |
 | **The consent model** | Holders authorise **once**, at onboarding, through a standing agreement. The Token Standard requires the receiver's authority on every leg; this is how a coupon then lands with no holder action |
 | **Scale** | 13,000 legs settled in one transaction in 10.4 s. 14,000 were refused - not by the settlement, by the Ledger API's 10 MB gRPC message limit, at 13,869 legs. A realistic one-leg-per-holder run reaches that budget near **6,400 holders**. Caveat: one machine, five nodes in one JVM. See `benchmark.md` |
-| **Privacy across nodes** | Demonstrated with five participants: a holder's own node answers with zeros where the executor's schedule has everything |
+| **Privacy across nodes** | The twenty holders sit on **three separate participants** of the five, and a holder's own node answers with zeros where the executor's schedule has everything. The registry and the paying agent hold no positions, so they are not part of that proof |
 | **A live network** | The packages are vetted and a real batch has committed on DevNet. See `devnet-run.md` |
 | **Shared control** | A settlement that one company cannot release alone: the run is proposed, approved by an independent operator on their own node, and only then executed. See `decentralization.md` |
+| **Who imposes that control** | The **issuer**, on its own announcement, not the paying agent. `Run_Settle` fetches the schedule and refuses a settlement that ignores the term, so it is enforced where the money moves rather than where the run is made. Added in 0.5.0, after the first version let the agent decide, which protected nobody |
 | **The asset is not hardcoded** | The model never names a cash asset. See `canton-coin.md` |
 
-About 620 lines of Daml in the model and 150 in the governance packages. It is small because the Token Standard does the heavy lifting; that is the point.
+About 670 lines of Daml in the model and 150 in the governance packages. It is small because the Token Standard does the heavy lifting; that is the point.
 
 ---
 
@@ -64,15 +65,15 @@ So this is not a coding task. It needs a product answer - a compensating mechani
 
 **This is the bulk of the work ahead, and it is deliberate.** The project set out to answer one question - whether this settlement is possible privately and atomically on Canton - and built exactly what answers it. The operational software that would wrap it is a product build, and a product build is what comes after a proof, not before.
 
-The boundary is a design position, not an omission: **the console settles; it does not keep the register.** Holders, positions and the schedule come from systems a paying agent already runs, which is why Indivisa works against registers that exist today rather than requiring the industry to rebuild them. In the demo a script stands in for those systems, and the film says so on a card.
+The boundary is a design position, not an omission: **the console settles; it does not keep the register.** Holders, positions and the schedule come from systems a paying agent already runs, which is why Indivisa works against registers that exist today rather than requiring the industry to rebuild them. In the demo a script stands in for those systems, and both the film and the console say so.
 
 What a production build adds:
 
 | What a product build adds | Why it matters | Size |
 |---|---|---|
 | **A register feed** | The demo generates holders and positions. A deployment ingests them from the registrar - a file, ISO 20022, or an API - and reconciles against the ledger | Medium |
-| **An event-setup screen, and the allocations with it** | Rate, denomination, record date, payment date, rounding policy. The engine takes all of them; the demo passes them as arguments. The rounding policy in particular is a commercial decision an operator should make on a screen. The same screen creates the run and every allocation, all of them submitted by the paying agent alone, so the only terminal left is the one that starts Docker. Scoped in `TASKS.md`; it is also what a Canton Coin adapter needs, because Daml Script cannot call the registry API and a browser client can | Medium |
-| **The scheduled agent** | A payment date should fire the run without a person. Scoped and costed from the start, then deliberately cut: a daemon is invisible in a two-minute film, and a button demonstrates the same settlement | Small |
+| **The rounding policy on a screen** | **Mostly built, 7 to 9 October.** The issuer declares a coupon on its own desk, and the paying agent freezes the register, derives the schedule, creates the run and authorises every payment from its own, so the only terminal left is the one that starts Docker. What is still passed as an argument rather than chosen is the **rounding policy**, which is a commercial decision an operator should make deliberately. The rest of that row is now a thing a reader can press, and it is also what a Canton Coin adapter needs, because Daml Script cannot call a registry API and a browser client can | Small |
+| **The scheduled agent** | A payment date should fire the run without a person. Scoped and costed from the start, then deliberately cut: a daemon is invisible on film, and a button demonstrates the same settlement | Small |
 | **Roles on top of sign-in** | An operator signs in, and the check sits in the proxy that holds the credentials, so "who asked for this settlement" has an answer. The next control is maker-checker: one person prepares a run, another releases it. For a payout that is the control an auditor asks about first | Medium |
 | **Scoping a run** | If one holder has not signed the standing agreement the batch refuses, for everyone - which is correct, and is the product working. An operator then wants to settle the rest today and carry that holder into a second run. The model supports it; the workflow and the audit trail that records why are a product build | Medium |
 | **Reconciliation and reporting** | What was paid, to whom, against what entitlement, in the formats an auditor and a regulator accept. The ledger holds the facts; the reports are a build | Medium |
